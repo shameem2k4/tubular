@@ -1225,19 +1225,22 @@ class OneHotEncodingTransformer(
             self.new_feature_names_[c] = self._get_feature_names(column=c)
         missing_levels = {}
         present_levels = set(X.select(nw.col(c).unique()).get_column(c).to_list())
-        missing_levels = self.warn_missing_levels(present_levels, c, missing_levels)
+        missing_levels = self._warn_missing_levels(present_levels, c, missing_levels)
 
         return self
 
-    def warn_missing_levels(
-        self, present_levels, c: str, missing_levels: dict[str, list[str]]
-    ):
+    def _warn_missing_levels(
+        self,
+        present_levels: list,
+        c: str,
+        missing_levels: dict[str, list[str]],
+    ) -> list:
         # print warning for missing levels
         missing_levels[c] = list(
             set(self.categories_[c]).difference(present_levels),
         )
         if missing_levels:
-            warning_msg = (f"{self.classname()}: column {c} includes user-specified values not found in the dataset")
+            warning_msg = f"{self.classname()}: column {c} includes user-specified values not found in the dataset"
             warnings.warn(warning_msg, UserWarning, stacklevel=2)
 
         return missing_levels
@@ -1260,7 +1263,7 @@ class OneHotEncodingTransformer(
         ]
 
     @nw.narwhalify
-    def transform(self, X: FrameT, present_levels) -> FrameT:
+    def transform(self, X: FrameT) -> FrameT:
         """Create new dummy columns from categorical fields.
 
         Parameters
@@ -1290,11 +1293,16 @@ class OneHotEncodingTransformer(
                     f"{self.classname()}: column %s has nulls - replace before proceeding"
                     % c,
                 )
+
             # print warning for unseen levels
+            present_levels = set(X.select(nw.col(c).unique()).get_column(c).to_list())
             unseen_levels = present_levels.difference(set(self.categories_[c]))
             if len(unseen_levels) > 0:
                 warning_msg = f"{self.classname()}: column {c} has unseen categories: {unseen_levels}"
                 warnings.warn(warning_msg, UserWarning, stacklevel=2)
+
+            # print warning for missing levels
+            self._warn_missing_levels(present_levels, c, missing_levels)
 
             dummies = X.get_column(c).to_dummies(separator=self.separator)
 
