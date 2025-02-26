@@ -26,6 +26,19 @@ class TestInit(
     def setup_class(cls):
         cls.transformer_name = "OneHotEncodingTransformer"
 
+    @pytest.mark.parametrize(
+            "values", 
+            [{'b': ['a', 'b']}, 'a', ['a', 'b'], 123, True],
+    )
+    def test_wanted_values_is_dict(self, values):
+        df= d.create_df_1()
+ 
+        with pytest.raises(
+            TypeError,
+            match= 'OneHotEncodingTransformer: Wanted_values should be a dictionary',
+        ):
+            self.OneHotEncodingTransformer(wanted_values = values)
+
 
 class TestFit(GenericFitTests):
     """Generic tests for transformer.fit()"""

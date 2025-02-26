@@ -1087,8 +1087,8 @@ class OneHotEncodingTransformer(
         Names of columns to transform. If the default of None is supplied all object and category
         columns in X are used.
 
-    values: dict[str, list[str] or None , default = None
-        Optional parameter to select specific column levels to be transformed. If it is None, all levels in the categorical column will be encoded.
+    wanted_values: dict[str, list[str] or None , default = None
+        Optional parameter to select specific column levels to be transformed. If it is None, all levels in the categorical column will be encoded. It will take the format {col1: [level_1, level_2, ...]}.
 
     separator : str
         Used to create dummy column names, the name will take
@@ -1194,6 +1194,7 @@ class OneHotEncodingTransformer(
         self.categories_ = {}
         self.new_feature_names_ = {}
         # Check each field has less than 100 categories/levels
+        missing_levels = {}
         for c in self.columns:
             levels = X.select(nw.col(c).unique())
 
@@ -1223,9 +1224,11 @@ class OneHotEncodingTransformer(
 
             self.categories_[c] = final_categories
             self.new_feature_names_[c] = self._get_feature_names(column=c)
-        missing_levels = {}
-        present_levels = set(X.select(nw.col(c).unique()).get_column(c).to_list())
-        missing_levels = self._warn_missing_levels(present_levels, c, missing_levels)
+
+            present_levels = set(X.select(nw.col(c).unique()).get_column(c).to_list())
+            missing_levels = self._warn_missing_levels(
+                present_levels, c, missing_levels
+            )
 
         return self
 
@@ -1240,7 +1243,7 @@ class OneHotEncodingTransformer(
             set(self.categories_[c]).difference(present_levels),
         )
         if missing_levels:
-            warning_msg = f"{self.classname()}: column {c} includes user-specified values not found in the dataset"
+            warning_msg = f"{self.classname()}: column {c} includes user-specified values {missing_levels[c]} not found in the dataset"
             warnings.warn(warning_msg, UserWarning, stacklevel=2)
 
         return missing_levels
