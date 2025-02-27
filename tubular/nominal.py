@@ -1143,24 +1143,24 @@ class OneHotEncodingTransformer(
 
         if wanted_values is not None:
             if not isinstance(wanted_values, dict):
-                msg = "Wanted_values should be a dictionary"
+                msg = f"{self.classname()}: Wanted_values should be a dictionary"
                 raise TypeError(msg)
 
             for key, val_list in wanted_values.items():
                 # check key is a string
                 if not isinstance(key, str):
-                    msg = "Key in 'wanted_values' should be a string"
+                    msg = f"{self.classname()}:  Key in 'wanted_values' should be a string"
                     raise TypeError(msg)
 
                 # check value is a list
                 if not isinstance(val_list, list):
-                    msg = "Values in the 'wanted_values' dictionary should be a list"
+                    msg = f"{self.classname()}: Values in the 'wanted_values' dictionary should be a list"
                     raise TypeError(msg)
 
                 # check if each value within the list is a string
                 for val in val_list:
                     if not isinstance(val, str):
-                        msg = "Entries in 'wanted_values' list should be a string "
+                        msg = f"{self.classname()}: Entries in 'wanted_values' list should be a string"
                         raise TypeError(msg)
 
         self.wanted_values = wanted_values

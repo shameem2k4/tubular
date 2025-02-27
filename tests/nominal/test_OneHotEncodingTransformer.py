@@ -26,18 +26,82 @@ class TestInit(
     def setup_class(cls):
         cls.transformer_name = "OneHotEncodingTransformer"
 
+   
+    # Tests for wanted_values parameter
+
     @pytest.mark.parametrize(
             "values", 
-            [{'b': ['a', 'b']}, 'a', ['a', 'b'], 123, True],
+            [ "a", ["a", "b"], 123, True],
     )
-    def test_wanted_values_is_dict(self, values):
-        df= d.create_df_1()
+    def test_wanted_values_is_dict(self, values, minimal_attribute_dict):
+        args = minimal_attribute_dict[self.transformer_name]
+        args["wanted_values"]=values
  
         with pytest.raises(
             TypeError,
-            match= 'OneHotEncodingTransformer: Wanted_values should be a dictionary',
+            match= "OneHotEncodingTransformer: Wanted_values should be a dictionary",
         ):
-            self.OneHotEncodingTransformer(wanted_values = values)
+            OneHotEncodingTransformer(**args)
+
+
+    @pytest.mark.parametrize(
+            "values",
+            [
+                {1:["a", "b"]},
+                {True:["a"]},
+                {("a",):["b", "c"]},
+            ]
+    )
+    def test_wanted_values_key_is_str(self, values, minimal_attribute_dict):
+        args = minimal_attribute_dict[self.transformer_name]
+        args["wanted_values"]= values
+ 
+        with pytest.raises(
+            TypeError,
+            match= "OneHotEncodingTransformer:  Key in 'wanted_values' should be a string",
+        ):
+            OneHotEncodingTransformer(**args)
+
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            {"a": "b"},
+            {"a":("a","b")},
+            {"a": True},
+            {"a": 123},
+        ]
+    )
+    def test_wanted_values_value_is_list(self, values, minimal_attribute_dict):
+        args = minimal_attribute_dict[self.transformer_name]
+        args["wanted_values"] = values
+
+        with pytest.raises(
+            TypeError,
+            match="OneHotEncodingTransformer: Values in the 'wanted_values' dictionary should be a list",
+        ):
+            OneHotEncodingTransformer(**args)
+
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            {"a": ["b", 123]},
+            {"a": ["b", True]},
+            {"a": ["b", None]},
+            {"a": ["b", ["a", "b"]]},
+        ]
+    )
+    def test_wanted_values_entries_are_str(self, values, minimal_attribute_dict):
+        args= minimal_attribute_dict[self.transformer_name]
+        args["wanted_values"]= values
+
+        with pytest.raises(
+            TypeError,
+            match= "OneHotEncodingTransformer: Entries in 'wanted_values' list should be a string"
+        ):
+            OneHotEncodingTransformer(**args)
+            
 
 
 class TestFit(GenericFitTests):
