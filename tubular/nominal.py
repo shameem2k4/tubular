@@ -1227,7 +1227,9 @@ class OneHotEncodingTransformer(
 
             present_levels = set(X.select(nw.col(c).unique()).get_column(c).to_list())
             missing_levels = self._warn_missing_levels(
-                present_levels, c, missing_levels
+                present_levels,
+                c,
+                missing_levels,
             )
 
         return self
@@ -1242,7 +1244,7 @@ class OneHotEncodingTransformer(
         missing_levels[c] = list(
             set(self.categories_[c]).difference(present_levels),
         )
-        if missing_levels:
+        if len(missing_levels) > 0:
             warning_msg = f"{self.classname()}: column {c} includes user-specified values {missing_levels[c]} not found in the dataset"
             warnings.warn(warning_msg, UserWarning, stacklevel=2)
 
