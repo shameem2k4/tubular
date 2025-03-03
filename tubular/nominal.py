@@ -1143,7 +1143,7 @@ class OneHotEncodingTransformer(
 
         if wanted_values is not None:
             if not isinstance(wanted_values, dict):
-                msg = f"{self.classname()}: Wanted_values should be a dictionary"
+                msg = f"{self.classname()}: wanted_values should be a dictionary"
                 raise TypeError(msg)
 
             for key, val_list in wanted_values.items():
@@ -1225,7 +1225,7 @@ class OneHotEncodingTransformer(
             self.categories_[c] = final_categories
             self.new_feature_names_[c] = self._get_feature_names(column=c)
 
-            present_levels = set(X.select(nw.col(c).unique()).get_column(c).to_list())
+            present_levels = set(X.get_column(c).unique().to_list())
             missing_levels = self._warn_missing_levels(
                 present_levels,
                 c,
@@ -1239,12 +1239,24 @@ class OneHotEncodingTransformer(
         present_levels: list,
         c: str,
         missing_levels: dict[str, list[str]],
-    ) -> list:
+    ) -> dict[str, list[str]]:
+        """Logs a warning for user-specifed levels that are not found in the dataset and updates "missing_levels[c]" with those missing levels.
+
+        Parameters
+        ----------
+        present_levels: list
+            List of levels observed in the data.
+        c: str
+            The column name being checked for missing user-specified levels.
+        missing_levels: dict[str, list[str]]
+            Dictionary containing missing user-specified levels for each column.
+
+        """
         # print warning for missing levels
         missing_levels[c] = list(
             set(self.categories_[c]).difference(present_levels),
         )
-        if len(missing_levels) > 0:
+        if len(missing_levels[c]) > 0:
             warning_msg = f"{self.classname()}: column {c} includes user-specified values {missing_levels[c]} not found in the dataset"
             warnings.warn(warning_msg, UserWarning, stacklevel=2)
 
@@ -1300,7 +1312,7 @@ class OneHotEncodingTransformer(
                 )
 
             # print warning for unseen levels
-            present_levels = set(X.select(nw.col(c).unique()).get_column(c).to_list())
+            present_levels = set(X.get_column(c).unique().to_list())
             unseen_levels = present_levels.difference(set(self.categories_[c]))
             if len(unseen_levels) > 0:
                 warning_msg = f"{self.classname()}: column {c} has unseen categories: {unseen_levels}"

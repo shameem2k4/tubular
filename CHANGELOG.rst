@@ -38,9 +38,12 @@ Changed
 - narwhalified DropOriginalMixin `#352 <https://github.com/lvgig/tubular/issues/352>_`
 - narwhalified BaseMappingTransformer `#367 <https://github.com/lvgig/tubular/issues/367>_`
 - narwhalified BaseDatetimeTransformer `#375 <https://github.com/azukds/tubular/issues/375>`
+- Optional wanted_levels feature has been integrated into the OneHotEncodingTransformer which allows users to specify which levels in a column they wish to encode. `#384 <https://github.com/azukds/tubular/issues/384>_`
+- Created unit tests to check if the values provided for wanted_values are as expected and if the output is as expected.
 - placeholder
 - placeholder
-- placeholder
+
+
 
 1.4.1 (02/12/2024)
 ------------------
