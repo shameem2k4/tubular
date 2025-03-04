@@ -514,5 +514,6 @@ class TestTransform(
 
         with pytest.warns(None) as warnings:
             transformer.transform(df_test)
-        assert len(warnings) == 0
-        
+        assert (
+            len(warnings) == 0
+        ), "OneHotEncodingTransformer.transform is raising unexpected warnings"
