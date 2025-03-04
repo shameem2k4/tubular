@@ -1297,6 +1297,10 @@ class OneHotEncodingTransformer(
             The column name being checked for missing user-specified levels.
         missing_levels: dict[str, list[str]]
             Dictionary containing missing user-specified levels for each column.
+        Returns
+        -------
+        missing_levels : dict[str, list[str]]
+            Dictionary updated to reflect new missing levels for column c
 
         """
         # print warning for missing levels
