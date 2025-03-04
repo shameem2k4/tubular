@@ -46,6 +46,8 @@ functionality, as this is more complicated when transform is opinionated on type
 - narwhalified GroupRareLevelsTransformer. As part of this, had to make transformer more opinionated
 and refuse columns with nulls (raises an error directing to imputers.) `#372 <https://github.com/lvgig/tubular/issues/372>_`
 - narwhalified BaseDatetimeTransformer `#375 <https://github.com/azukds/tubular/issues/375>`
+- Optional wanted_levels feature has been integrated into the OneHotEncodingTransformer which allows users to specify which levels in a column they wish to encode. `#384 <https://github.com/azukds/tubular/issues/384>_`
+- Created unit tests to check if the values provided for wanted_values are as expected and if the output is as expected.
 - placeholder
 - placeholder
 - placeholder

@@ -26,6 +26,78 @@ class TestInit(
     def setup_class(cls):
         cls.transformer_name = "OneHotEncodingTransformer"
 
+    # Tests for wanted_values parameter
+
+    @pytest.mark.parametrize(
+        "values",
+        ["a", ["a", "b"], 123, True],
+    )
+    def test_wanted_values_is_dict(self, values, minimal_attribute_dict):
+        args = minimal_attribute_dict[self.transformer_name]
+        args["wanted_values"] = values
+
+        with pytest.raises(
+            TypeError,
+            match="OneHotEncodingTransformer: wanted_values should be a dictionary",
+        ):
+            OneHotEncodingTransformer(**args)
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            {1: ["a", "b"]},
+            {True: ["a"]},
+            {("a",): ["b", "c"]},
+        ],
+    )
+    def test_wanted_values_key_is_str(self, values, minimal_attribute_dict):
+        args = minimal_attribute_dict[self.transformer_name]
+        args["wanted_values"] = values
+
+        with pytest.raises(
+            TypeError,
+            match="OneHotEncodingTransformer:  Key in 'wanted_values' should be a string",
+        ):
+            OneHotEncodingTransformer(**args)
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            {"a": "b"},
+            {"a": ("a", "b")},
+            {"a": True},
+            {"a": 123},
+        ],
+    )
+    def test_wanted_values_value_is_list(self, values, minimal_attribute_dict):
+        args = minimal_attribute_dict[self.transformer_name]
+        args["wanted_values"] = values
+
+        with pytest.raises(
+            TypeError,
+            match="OneHotEncodingTransformer: Values in the 'wanted_values' dictionary should be a list",
+        ):
+            OneHotEncodingTransformer(**args)
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            {"a": ["b", 123]},
+            {"a": ["b", True]},
+            {"a": ["b", None]},
+            {"a": ["b", ["a", "b"]]},
+        ],
+    )
+    def test_wanted_values_entries_are_str(self, values, minimal_attribute_dict):
+        args = minimal_attribute_dict[self.transformer_name]
+        args["wanted_values"] = values
+
+        with pytest.raises(
+            TypeError,
+            match="OneHotEncodingTransformer: Entries in 'wanted_values' list should be a string",
+        ):
+            OneHotEncodingTransformer(**args)
+
 
 class TestFit(GenericFitTests):
     """Generic tests for transformer.fit()"""
@@ -54,6 +126,27 @@ class TestFit(GenericFitTests):
         "library",
         ["pandas", "polars"],
     )
+    def test_fit_missing_levels_warning(self, library):
+        """Test OneHotEncodingTransformer.fit triggers a warning for missing levels."""
+        df = d.create_df_1(library=library)
+
+        transformer = OneHotEncodingTransformer(
+            columns=["b"],
+            wanted_values={"b": ["f", "g"]},
+        )
+
+        with pytest.warns(
+            UserWarning,
+            match=(
+                r"OneHotEncodingTransformer: column b includes user-specified values \['g'\] not found in the dataset"
+            ),
+        ):
+            transformer.fit(df)
+
+    @pytest.mark.parametrize(
+        "library",
+        ["pandas", "polars"],
+    )
     def test_fields_with_over_100_levels_error(self, library):
         """Test that OneHotEncodingTransformer.fit on fields with more than 100 levels raises error."""
         df_dict = {"a": [1] * 101, "b": list(range(101))}
@@ -67,6 +160,24 @@ class TestFit(GenericFitTests):
             match="OneHotEncodingTransformer: column b has over 100 unique values - consider another type of encoding",
         ):
             transformer.fit(df)
+
+    @pytest.mark.parametrize(
+        "library",
+        ["pandas", "polars"],
+    )
+    def test_fit_no_warning_if_all_wanted_values_present(self, library, recwarn):
+        """Test that OneHotEncodingTransformer.fit does NOT raise a warning when all levels in wanted_levels are present in the data."""
+        df = d.create_df_1(library=library)
+
+        transformer = OneHotEncodingTransformer(
+            columns=["b"],
+            wanted_values={"b": ["a", "b", "c", "d", "e", "f"]},
+        )
+
+        transformer.fit(df)
+        assert (
+            len(recwarn) == 0
+        ), "OneHotEncodingTransformer.fit is raising unexpected warnings"
 
 
 class TestTransform(
@@ -280,6 +391,28 @@ class TestTransform(
         "library",
         ["pandas", "polars"],
     )
+    def test_transform_missing_levels_warning(self, library):
+        """Test OneHotEncodingTransformer.transform triggers a warning for missing levels."""
+        df_train = d.create_df_7(library=library)
+        df_test = d.create_df_8(library=library)
+
+        transformer = OneHotEncodingTransformer(
+            columns=["b"],
+            wanted_values={"b": ["v", "x", "z"]},
+        )
+
+        transformer.fit(df_train)
+
+        with pytest.warns(
+            UserWarning,
+            match=r"OneHotEncodingTransformer: column b includes user-specified values \['v'\] not found in the dataset",
+        ):
+            transformer.transform(df_test)
+
+    @pytest.mark.parametrize(
+        "library",
+        ["pandas", "polars"],
+    )
     def test_unseen_categories_encoded_as_all_zeroes(self, library):
         """Test OneHotEncodingTransformer.transform encodes unseen categories correctly (all 0s)."""
         # transformer is fit on the whole dataset separately from the input df to work with the decorators
@@ -319,3 +452,68 @@ class TestTransform(
                 df_transformed_row[column_order],
                 df_expected_row,
             )
+
+    @pytest.mark.parametrize(
+        "library",
+        ["pandas", "polars"],
+    )
+    def test_transform_output_with_wanted_values_arg(self, library):
+        """
+        Test to verify OneHotEncodingTransformer.transform zero-filled levels from user-specified "wanted_levels" and encodes only those listed in "wanted_levels".
+
+        """
+        df_train = d.create_df_7(library=library)
+        df_test = d.create_df_8(library=library)
+
+        transformer = OneHotEncodingTransformer(
+            columns=["b"],
+            wanted_values={"b": ["v", "x", "z"]},
+        )
+
+        transformer.fit(df_train)
+        df_transformed = transformer.transform(df_test)
+
+        expected_df_dict = {
+            "a": [1, 5, 2, 3, 3],
+            "b": ["w", "w", "z", "y", "x"],
+            "c": ["a", "a", "c", "b", "a"],
+            "b_v": [0] * 5,
+            "b_x": [0, 0, 0, 0, 1],
+            "b_z": [0, 0, 1, 0, 0],
+        }
+        expected_df = dataframe_init_dispatch(
+            library=library,
+            dataframe_dict=expected_df_dict,
+        )
+        expected_df = nw.from_native(expected_df)
+        # cast the columns
+        boolean_cols = ["b_v", "b_x", "b_z"]
+        for col_name in boolean_cols:
+            expected_df = expected_df.with_columns(
+                nw.col(col_name).cast(nw.Boolean),
+            )
+        expected_df = expected_df.with_columns(
+            nw.col("c").cast(nw.Categorical),
+        )
+
+        assert_frame_equal_dispatch(df_transformed, expected_df.to_native())
+
+    @pytest.mark.parametrize(
+        "library",
+        ["pandas", "polars"],
+    )
+    def test_transform_no_warning_if_all_wanted_values_present(self, library, recwarn):
+        """Test that OneHotEncodingTransformer.transform does NOT raise a warning when all levels in wanted_levels are present in the data."""
+        df_train = d.create_df_8(library=library)
+        df_test = d.create_df_7(library=library)
+
+        transformer = OneHotEncodingTransformer(
+            columns=["b"],
+            wanted_values={"b": ["z", "y", "x"]},
+        )
+        transformer.fit(df_train)
+        transformer.transform(df_test)
+
+        assert (
+            len(recwarn) == 0
+        ), "OneHotEncodingTransformer.transform is raising unexpected warnings"
