@@ -1,10 +1,12 @@
 """This module contains transformers that apply encodings to nominal columns."""
 from __future__ import annotations
 
+import copy
 import warnings
 from typing import TYPE_CHECKING, Literal
 
 import narwhals as nw
+import narwhals.selectors as ncs
 import numpy as np
 import pandas as pd
 
@@ -108,10 +110,6 @@ class NominalToIntegerTransformer(BaseNominalTransformer, BaseMappingTransformMi
         Created in fit. A dict of key (column names) value (mappings between levels and integers for given
         column) pairs.
 
-    inverse_mapping_ : dict
-        Created in inverse_transform. Inverse mapping of mappings. Maps integer value back to categorical
-        levels.
-
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
@@ -128,6 +126,11 @@ class NominalToIntegerTransformer(BaseNominalTransformer, BaseMappingTransformMi
         **kwargs: dict[str, bool],
     ) -> None:
         BaseNominalTransformer.__init__(self, columns=columns, **kwargs)
+
+        # this transformer shouldn't really be used with huge numbers of levels
+        # so setup to use int8 type
+        # if there are more levels than this, will get a type error
+        self.return_dtypes = {c: "Int8" for c in self.columns}
 
         if not isinstance(start_encoding, int):
             msg = f"{self.classname()}: start_encoding should be an integer"
@@ -158,6 +161,13 @@ class NominalToIntegerTransformer(BaseNominalTransformer, BaseMappingTransformMi
                 k: i for i, k in enumerate(col_values, self.start_encoding)
             }
 
+            # if more levels than int8 type can handle, then error
+            if len(self.mappings[c]) > 127:
+                msg = f"{self.classname()}: column {c} has too many levels to encode"
+                raise ValueError(
+                    msg,
+                )
+
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -183,44 +193,6 @@ class NominalToIntegerTransformer(BaseNominalTransformer, BaseMappingTransformMi
         X = super().transform(X)
 
         return BaseMappingTransformMixin.transform(self, X)
-
-    def inverse_transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """Converts integer values back to categorical / nominal values. Does the inverse of the transform method.
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            Data to with integer columns to convert back to catgeorical.
-
-        Returns
-        -------
-        X : pd.DataFrame
-            Transformed input X with integers mapped back to categorical levels.
-
-        """
-        X = BaseTransformer.transform(self, X)
-
-        self.check_is_fitted(["mappings"])
-
-        self.inverse_mapping_ = {}
-
-        for c in self.columns:
-            # calculate the reverse mapping
-            self.inverse_mapping_[c] = {v: k for k, v in self.mappings[c].items()}
-
-            mappable_rows = (
-                X[c].isin([k for k, v in self.inverse_mapping_[c].items()]).sum()
-            )
-
-            X[c] = X[c].replace(self.inverse_mapping_[c])
-
-            if (X.shape[0] - mappable_rows) > 0:
-                raise ValueError(
-                    f"{self.classname()}: nulls introduced from levels not present in mapping for column: "
-                    + c,
-                )
-
-        return X
 
 
 class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
@@ -301,7 +273,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
     """
 
-    polars_compatible = False
+    polars_compatible = True
 
     FITS = True
 
@@ -329,6 +301,10 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         WeightColumnMixin.check_and_set_weight(self, weights_column)
 
+        if not isinstance(rare_level_name, str):
+            msg = f"{self.classname()}: rare_level_name must be a str"
+            raise ValueError(msg)
+
         self.rare_level_name = rare_level_name
 
         if not isinstance(record_rare_levels, bool):
@@ -343,7 +319,71 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         self.unseen_levels_to_rare = unseen_levels_to_rare
 
-    def fit(self, X: pd.DataFrame, y: pd.Series | None = None) -> pd.DataFrame:
+    @nw.narwhalify
+    def _check_str_like_columns(self, X: FrameT) -> None:
+        """check that transformer being called on only str-like columns
+
+        Parameters
+        ----------
+        X : pd/pl.DataFrame
+            Data to transform
+
+        """
+
+        str_like_columns = list(
+            set(self.columns).intersection(
+                set(
+                    X.select(
+                        ncs.string(),
+                        ncs.categorical(),
+                        ncs.by_dtype(nw.Object),
+                    ).columns,
+                ),
+            ),
+        )
+
+        non_str_like_columns = set(self.columns).difference(
+            set(
+                str_like_columns,
+            ),
+        )
+
+        if len(non_str_like_columns) != 0:
+            msg = f"{self.classname()}: transformer must run on str-like columns, but got non str-like {non_str_like_columns}"
+            raise TypeError(msg)
+
+    @nw.narwhalify
+    def _check_for_nulls(self, X: FrameT) -> None:
+        """check that transformer being called on only non-null columns.
+
+        Note, found including nulls to be quite complicated due to:
+        - categorical variables make use of NaN not None
+        - pl/nw categorical variables do not allow categories to be edited,
+        so adjusting requires converting to str as interim step
+        - NaNs are converted to nan, introducing complications
+
+        As this transformer is generally used post imputation, elected to remove null
+        functionality.
+
+        Parameters
+        ----------
+        X : pd/pl.DataFrame
+            Data to transform
+
+        """
+
+        for c in self.columns:
+            nulls_count = 0
+
+            # pick out str_like dtypes that allow nans
+            nulls_count += X.select(nw.col(c).is_null().sum()).item()
+
+            if nulls_count != 0:
+                msg = f"{self.classname()}: transformer can only fit/apply on columns without nulls, column {c} needs to be imputed first"
+                raise ValueError(msg)
+
+    @nw.narwhalify
+    def fit(self, X: FrameT, y: nw.Series | None = None) -> FrameT:
         """Records non-rare levels for categorical variables.
 
         When transform is called, only levels records in non_rare_levels during fit will remain
@@ -354,10 +394,10 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Data to identify non-rare levels from.
 
-        y : None or pd.DataFrame or pd.Series, default = None
+        y : None or or nw.Series, default = None
             Optional argument only required for the transformer to work with sklearn pipelines.
 
         """
@@ -366,141 +406,135 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         if self.weights_column is not None:
             WeightColumnMixin.check_weights_column(self, X, self.weights_column)
 
-        for c in self.columns:
-            if (X[c].dtype.name != "category") and (
-                pd.Series(self.rare_level_name).dtype != X[c].dtypes
-            ):
-                msg = f"{self.classname()}: rare_level_name must be of the same type of the columns"
-                raise ValueError(msg)
+        self._check_str_like_columns(
+            X.with_columns(nw.col(col) for col in self.columns),
+        )
+
+        self._check_for_nulls(X)
 
         self.non_rare_levels = {}
 
         if self.record_rare_levels:
             self.rare_levels_record_ = {}
 
+        native_namespace = nw.get_native_namespace(X)
+
+        weights_column = self.weights_column
         if self.weights_column is None:
-            for c in self.columns:
-                col_percents = X[c].value_counts(dropna=False) / X.shape[0]
+            weights_column = "dummy_weights_column"
+            X = X.with_columns(
+                nw.new_series(
+                    name=weights_column,
+                    values=[1] * len(X),
+                    native_namespace=native_namespace,
+                ),
+            )
 
-                self.non_rare_levels[c] = list(
-                    col_percents.loc[col_percents >= self.cut_off_percent].index.values,
+        for c in self.columns:
+            cols_w_sums = X.group_by(c, drop_null_keys=False).agg(
+                nw.col(weights_column).sum(),
+            )
+
+            total_w = X.select(nw.col(weights_column).sum()).item()
+
+            cols_w_percents = cols_w_sums.select(
+                nw.col(weights_column) / total_w,
+                nw.col(c),
+            )
+
+            self.non_rare_levels[c] = (
+                cols_w_percents.filter(
+                    nw.col(weights_column) >= self.cut_off_percent,
+                )
+                .get_column(c)
+                .to_list()
+            )
+
+            self.non_rare_levels[c] = sorted(self.non_rare_levels[c], key=str)
+
+            if self.record_rare_levels:
+                self.rare_levels_record_[c] = (
+                    cols_w_percents.filter(
+                        nw.col(weights_column) < self.cut_off_percent,
+                    )
+                    .get_column(c)
+                    .to_list()
                 )
 
-                self.non_rare_levels[c] = sorted(self.non_rare_levels[c], key=str)
-
-                if self.record_rare_levels:
-                    self.rare_levels_record_[c] = list(
-                        col_percents.loc[
-                            col_percents < self.cut_off_percent
-                        ].index.values,
-                    )
-
-                    self.rare_levels_record_[c] = sorted(
-                        self.rare_levels_record_[c],
-                        key=str,
-                    )
-
-        else:
-            for c in self.columns:
-                cols_w_percents = X.groupby(c)[self.weights_column].sum()
-
-                # nulls are excluded from pandas groupby; https://github.com/pandas-dev/pandas/issues/3729
-                # so add them back in
-                if cols_w_percents.sum() < X[self.weights_column].sum():
-                    cols_w_percents[np.nan] = X.loc[
-                        X[c].isna(),
-                        self.weights_column,
-                    ].sum()
-
-                cols_w_percents = cols_w_percents / X[self.weights_column].sum()
-
-                self.non_rare_levels[c] = list(
-                    cols_w_percents.loc[
-                        cols_w_percents >= self.cut_off_percent
-                    ].index.values,
+                self.rare_levels_record_[c] = sorted(
+                    self.rare_levels_record_[c],
+                    key=str,
                 )
-
-                self.non_rare_levels[c] = sorted(self.non_rare_levels[c], key=str)
-
-                if self.record_rare_levels:
-                    self.rare_levels_record_[c] = list(
-                        cols_w_percents.loc[
-                            cols_w_percents < self.cut_off_percent
-                        ].index.values,
-                    )
-
-                    self.rare_levels_record_[c] = sorted(
-                        self.rare_levels_record_[c],
-                        key=str,
-                    )
 
         if not self.unseen_levels_to_rare:
             self.training_data_levels = {}
             for c in self.columns:
-                self.training_data_levels[c] = set(X[c])
+                self.training_data_levels[c] = set(X.get_column(c).unique().to_list())
 
         return self
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+    @nw.narwhalify
+    def transform(self, X: FrameT) -> FrameT:
         """Grouped rare levels together into a new 'rare' level.
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Data to with catgeorical variables to apply rare level grouping to.
 
         Returns
         -------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Transformed input X with rare levels grouped for into a new rare level.
 
         """
-        X = BaseTransformer.transform(self, X)
+        X = nw.from_native(BaseTransformer.transform(self, X))
+
+        self._check_str_like_columns(
+            X.with_columns(nw.col(col) for col in self.columns),
+        )
+
+        self._check_for_nulls(X)
 
         self.check_is_fitted(["non_rare_levels"])
 
+        # copy non_rare_levels, as unseen values may be added, and transform should not
+        # change the transformer state
+        non_rare_levels = copy.deepcopy(self.non_rare_levels)
+
         if not self.unseen_levels_to_rare:
             for c in self.columns:
-                unseen_vals = set(X[c]) - set(self.training_data_levels[c])
+                unseen_vals = set(
+                    X.get_column(c).unique().to_list(),
+                ).difference(
+                    set(self.training_data_levels[c]),
+                )
                 for unseen_val in unseen_vals:
-                    self.non_rare_levels[c].append(unseen_val)
+                    non_rare_levels[c].append(unseen_val)
 
         for c in self.columns:
-            # for categorical dtypes have to set new category for the impute values first
-            # and convert back to the categorical type, other it will convert to object
-            if "category" in X[c].dtype.name:
-                categories_before = X[c].dtype.categories
+            categorical = False
+            if str(X.schema[c]) == "Categorical":
+                categorical = True
+                X = X.with_columns(nw.col(c).cast(nw.String))
 
-                if self.rare_level_name not in X[c].cat.categories:
-                    X[c] = X[c].cat.add_categories(self.rare_level_name)
+            non_rare_condition = nw.col(c).is_in(non_rare_levels[c])
 
-                X[c] = pd.Series(
-                    data=np.where(
-                        X[c].isin(self.non_rare_levels[c]),
-                        X[c],
-                        self.rare_level_name,
-                    ),
-                    index=X.index,
+            X = X.with_columns(
+                nw.when(non_rare_condition)
+                .then(
+                    nw.col(c),
                 )
-
-                remaining_categories = [
-                    category
-                    for category in categories_before
-                    if category in self.non_rare_levels[c]
-                ]
-
-                X[c] = pd.Categorical(
-                    X[c],
-                    categories=remaining_categories + [self.rare_level_name],
+                .otherwise(
+                    nw.lit(self.rare_level_name),
                 )
+                .alias(
+                    c,
+                ),
+            )
 
-            else:
-                # using np.where converts np.NaN to str value if only one row of data frame is passed
-                # instead, using pd.where(), if condition true, keep original value, else replace with self.rare_level_name
-                X[c] = X[c].where(
-                    X[c].isin(self.non_rare_levels[c]),
-                    self.rare_level_name,
-                )
+            if categorical:
+                X = X.with_columns(nw.col(c).cast(nw.Categorical))
 
         return X
 
@@ -976,6 +1010,11 @@ class OrdinalEncoderTransformer(
 
         BaseNominalTransformer.__init__(self, columns=columns, **kwargs)
 
+        # this transformer shouldn't really be used with huge numbers of levels
+        # so setup to use int8 type
+        # if there are more levels than this, will get a type error
+        self.return_dtypes = {c: "Int8" for c in self.columns}
+
     def fit(self, X: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
         """Identify mapping of categorical levels to rank-ordered integer values by target-mean in ascending order.
 
@@ -1047,6 +1086,14 @@ class OrdinalEncoderTransformer(
                 }
 
                 self.mappings[c] = ordinal_encoded_dict
+
+        for col in self.columns:
+            # if more levels than int8 type can handle, then error
+            if len(self.mappings[col]) > 127:
+                msg = f"{self.classname()}: column {c} has too many levels to encode"
+                raise ValueError(
+                    msg,
+                )
 
         return self
 

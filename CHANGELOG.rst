@@ -37,13 +37,21 @@ Changed
 - narwhalified BaseNumericTransformer `#358 https://github.com/lvgig/tubular/issues/358`
 - narwhalified DropOriginalMixin `#352 <https://github.com/lvgig/tubular/issues/352>_`
 - narwhalified BaseMappingTransformer `#367 <https://github.com/lvgig/tubular/issues/367>_`
+- narwhalified BaseMappingTransformerMixin. As part of this made mapping transformers more 
+type-conscious, they now rely on an input 'return_dtypes' dict arg.
+`#369 <https://github.com/lvgig/tubular/issues/369>_`
+- As part of #369, updated OrdinalEncoderTransformer to output Int8 type
+- As part of #369, updated NominalToIntegerTransformer to output Int8 type. Removed inverse_mapping
+functionality, as this is more complicated when transform is opinionated on types.
+- narwhalified GroupRareLevelsTransformer. As part of this, had to make transformer more opinionated
+and refuse columns with nulls (raises an error directing to imputers.) `#372 <https://github.com/lvgig/tubular/issues/372>_`
 - narwhalified BaseDatetimeTransformer `#375 <https://github.com/azukds/tubular/issues/375>`
 - Optional wanted_levels feature has been integrated into the OneHotEncodingTransformer which allows users to specify which levels in a column they wish to encode. `#384 <https://github.com/azukds/tubular/issues/384>_`
 - Created unit tests to check if the values provided for wanted_values are as expected and if the output is as expected.
 - placeholder
 - placeholder
-
-
+- placeholder
+- placeholder
 
 1.4.1 (02/12/2024)
 ------------------
