@@ -165,7 +165,7 @@ class TestFit(GenericFitTests):
         "library",
         ["pandas", "polars"],
     )
-    def test_fit_no_warning_if_all_wanted_values_present(self, library):
+    def test_fit_no_warning_if_all_wanted_values_present(self, library, recwarn):
         """Test that OneHotEncodingTransformer.fit does NOT raise a warning when all levels in wanted_levels are present in the data."""
         df = d.create_df_1(library=library)
 
@@ -174,9 +174,10 @@ class TestFit(GenericFitTests):
             wanted_values={"b": ["a", "b", "c", "d", "e", "f"]},
         )
 
-        with pytest.warns(None) as warnings:
-            transformer.fit(df)
-        assert len(warnings) == 0
+        transformer.fit(df)
+        assert (
+            len(recwarn) == 0
+        ), "OneHotEncodingTransformer.fit is raising unexpected warnings"
 
 
 class TestTransform(
@@ -501,7 +502,7 @@ class TestTransform(
         "library",
         ["pandas", "polars"],
     )
-    def test_transform_no_warning_if_all_wanted_values_present(self, library):
+    def test_transform_no_warning_if_all_wanted_values_present(self, library, recwarn):
         """Test that OneHotEncodingTransformer.transform does NOT raise a warning when all levels in wanted_levels are present in the data."""
         df_train = d.create_df_8(library=library)
         df_test = d.create_df_7(library=library)
@@ -511,9 +512,8 @@ class TestTransform(
             wanted_values={"b": ["z", "y", "x"]},
         )
         transformer.fit(df_train)
+        transformer.transform(df_test)
 
-        with pytest.warns(None) as warnings:
-            transformer.transform(df_test)
         assert (
-            len(warnings) == 0
+            len(recwarn) == 0
         ), "OneHotEncodingTransformer.transform is raising unexpected warnings"
