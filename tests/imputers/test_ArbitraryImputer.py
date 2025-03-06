@@ -14,7 +14,7 @@ from tubular.imputers import ArbitraryImputer
 
 
 # Dataframe used exclusively in this testing script
-def create_downcast_df(library):
+def create_downcast_df(library="pandas"):
     """Create a dataframe with mixed dtypes to use in downcasting tests."""
     df = pd.DataFrame(
         {

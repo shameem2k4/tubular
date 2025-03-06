@@ -6,13 +6,11 @@ import warnings
 from typing import TYPE_CHECKING
 
 import narwhals as nw
-import pandas as pd
 
 from tubular.base import BaseTransformer
 from tubular.mixins import WeightColumnMixin
 
 if TYPE_CHECKING:
-    import pandas as pd
     from narwhals.typing import FrameT
 
 
@@ -87,7 +85,7 @@ class ArbitraryImputer(BaseImputer):
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
     """
 
-    polars_compatible = False
+    polars_compatible = True
 
     FITS = False
 
@@ -113,18 +111,19 @@ class ArbitraryImputer(BaseImputer):
         for c in self.columns:
             self.impute_values_[c] = self.impute_value
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+    @nw.narwhalify
+    def transform(self, X: FrameT) -> FrameT:
         """Impute missing values with the supplied impute_value.
         If columns is None all columns in X will be imputed.
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Data containing columns to impute.
 
         Returns
         -------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Transformed input X with nulls imputed with the specified impute_value, for the specified columns.
 
         Additions
@@ -136,11 +135,11 @@ class ArbitraryImputer(BaseImputer):
         self.columns_check(X)
         for c in self.columns:
             if (
-                "category" in X[c].dtype.name
-                and self.impute_value not in X[c].cat.categories
+                "category" in str(X[c].dtype)
+                and self.impute_value not in X[c].unique().to_list()
             ):
-                X[c] = X[c].cat.add_categories(
-                    self.impute_value,
+                X = X.with_columns(
+                    X[c].cast(nw.Categorical).cat.add_categories(self.impute_value),
                 )  # add new category
 
         # Calling the BaseImputer's transform method to impute the values
@@ -149,7 +148,7 @@ class ArbitraryImputer(BaseImputer):
         # casting imputer value as same dtype as original column
         for c in self.columns:
             dtype = X[c].dtype  # get the dtype of original column
-            X_transformed[c] = X_transformed[c].astype(dtype)
+            X_transformed[c] = X_transformed.with_columns(X_transformed[c].cast(dtype))
 
         return X_transformed
 
