@@ -118,37 +118,38 @@ class ArbitraryImputer(BaseImputer):
 
         Parameters
         ----------
-        X : pd/pl.DataFrame
+        X : FrameT
             Data containing columns to impute.
 
         Returns
         -------
-        X : pd/pl.DataFrame
+        X : FrameT
             Transformed input X with nulls imputed with the specified impute_value, for the specified columns.
-
-        Additions
-        ---------
-        * Preserving the datatypes of columns
-        * Finding the target column dtype and cast imputer values as same dtype
         """
+
         self.check_is_fitted(["impute_value"])
         self.columns_check(X)
+
+        X = nw.from_native(X)
+
+        new_col_expressions = []
         for c in self.columns:
+            # Handle categorical column cases explicitly using Polars' syntax with `nw`
             if (
-                "category" in str(X[c].dtype)
-                and self.impute_value not in X[c].unique().to_list()
+                X[c].dtype == nw.Categorical
+                and self.impute_value not in X[c].cat.categories
             ):
-                X = X.with_columns(
-                    X[c].cast(nw.Categorical).cat.add_categories(self.impute_value),
-                )  # add new category
+                X[c] = X[c].cat.add_categories(self.impute_value)  # add new category
 
-        # Calling the BaseImputer's transform method to impute the values
-        X_transformed = super().transform(X)
+            # Apply fill_null() properly within Narwhals
+            new_col_expressions.append(nw.col(c).fill_null(self.impute_values_[c]))
 
-        # casting imputer value as same dtype as original column
+        # Ensure dtype consistency
+        X_transformed = X.with_columns(new_col_expressions)
+
         for c in self.columns:
-            dtype = X[c].dtype  # get the dtype of original column
-            X_transformed[c] = X_transformed.with_columns(X_transformed[c].cast(dtype))
+            dtype = X[c].dtype  # get the dtype of the original column
+            X_transformed[c] = X_transformed[c].astype(dtype)
 
         return X_transformed
 
