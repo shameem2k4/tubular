@@ -86,7 +86,6 @@ class ArbitraryImputer(BaseImputer):
     """
 
     polars_compatible = True
-
     FITS = False
 
     def __init__(
@@ -97,12 +96,11 @@ class ArbitraryImputer(BaseImputer):
     ) -> None:
         super().__init__(columns=columns, **kwargs)
 
-        if (
-            not isinstance(impute_value, int)
-            and not isinstance(impute_value, float)
-            and not isinstance(impute_value, str)
-        ):
-            msg = f"{self.classname()}: impute_value should be a single value (int, float or str)"
+        if not isinstance(impute_value, (int, float, str)):
+            msg = (
+                f"{self.classname()}: impute_value should be a single value "
+                "(int, float or str)"
+            )
             raise ValueError(msg)
 
         self.impute_values_ = {}
@@ -130,26 +128,35 @@ class ArbitraryImputer(BaseImputer):
         self.check_is_fitted(["impute_value"])
         self.columns_check(X)
 
-        X = nw.from_native(X)
+        if len(X) == 0:
+            msg = f"{self.classname()}: X has no rows; {X.shape}"
+            raise ValueError(msg)
 
-        new_col_expressions = []
+        # Save the original dtypes BEFORE we cast anything
+        original_dtypes = {}
         for c in self.columns:
-            # Handle categorical column cases explicitly using Polars' syntax with `nw`
-            if (
-                X[c].dtype == nw.Categorical
-                and self.impute_value not in X[c].cat.categories
-            ):
-                X[c] = X[c].cat.add_categories(self.impute_value)  # add new category
+            original_dtypes[c] = X[c].dtype
 
-            # Apply fill_null() properly within Narwhals
-            new_col_expressions.append(nw.col(c).fill_null(self.impute_values_[c]))
-
-        # Ensure dtype consistency
-        X_transformed = X.with_columns(new_col_expressions)
-
+        # If originally categorical, cast to nw.String so fill won't fail
         for c in self.columns:
-            dtype = X[c].dtype  # get the dtype of the original column
-            X_transformed[c] = X_transformed[c].astype(dtype)
+            if original_dtypes[c] == nw.Categorical:
+                # If the fill is numeric, turn fill into a str
+                X = X.with_columns([nw.col(c).cast(nw.String)])
+
+        # Fill nulls
+        new_col_exprs = [
+            nw.col(c).fill_null(self.impute_values_[c]) for c in self.columns
+        ]
+        X_transformed = X.with_columns(new_col_exprs)
+
+        # Cast back if originally categorical
+        for c in self.columns:
+            if original_dtypes[c] == nw.Categorical:
+                X_transformed = X_transformed.with_columns(
+                    [
+                        nw.col(c).cast(nw.Categorical),
+                    ],
+                )
 
         return X_transformed
 
