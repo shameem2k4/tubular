@@ -219,7 +219,7 @@ class GenericImputerTransformTests:
             pd.DataFrame,
         ):
             expected_df_3["c"] = expected_df_3["c"].cat.add_categories(
-                transformer.impute_value,
+                transformer.impute_values_["c"],
             )
 
         # Convert both DataFrames to a common format using Narwhals
