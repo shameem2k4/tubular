@@ -143,9 +143,9 @@ class ArbitraryImputer(BaseImputer):
         for c in self.columns:
             X_transformed = X_transformed.with_columns(
                 nw.when(nw.col(c).is_null())
-                .then(nw.lit(self.impute_values[c]))
+                .then(nw.lit(self.impute_value))
                 .otherwise(nw.col(c).cast(nw.String))
-                .cast(nw.categorical)
+                .cast(nw.Categorical)
                 .alias(c),
             )
 
