@@ -136,18 +136,17 @@ class ArbitraryImputer(BaseImputer):
         original_dtypes = {}
         for c in self.columns:
             original_dtypes[c] = X[c].dtype
-
-        # If originally categorical, cast to nw.String so fill won't fail
-        X_transformed = X
-
-        for c in self.columns:
-            X_transformed = X_transformed.with_columns(
-                nw.when(nw.col(c).is_null())
-                .then(nw.lit(self.impute_value))
-                .otherwise(nw.col(c).cast(nw.String))
-                .cast(nw.Categorical)
-                .alias(c),
-            )
+            # Cast to string
+            if original_dtypes[c] == "Categorical":
+                X_transformed = X_transformed.with_columns(
+                    nw.when(nw.col(c).is_null())
+                    .then(nw.lit(str(self.impute_value)))
+                    .otherwise(nw.col(c).cast(nw.String))
+                    .cast(nw.Categorical)
+                    .alias(c),
+                )
+            else:
+                X_transformed = super().transform(X)
 
         return X_transformed
 
