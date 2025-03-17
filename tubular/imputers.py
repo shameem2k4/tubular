@@ -6,12 +6,15 @@ import warnings
 from typing import TYPE_CHECKING
 
 import narwhals as nw
+import polars as pl
 
 from tubular.base import BaseTransformer
 from tubular.mixins import WeightColumnMixin
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT
+
+pl.enable_string_cache()
 
 
 class BaseImputer(BaseTransformer):
@@ -134,22 +137,30 @@ class ArbitraryImputer(BaseImputer):
 
         # Save the original dtypes BEFORE we cast anything
         original_dtypes = {}
-        for c in self.columns:
-            original_dtypes[c] = X[c].dtype
-            # Cast to string
-            print(original_dtypes[c])
-            if original_dtypes[c] == "Categorical":
-                X_transformed = X_transformed.with_columns(
-                    nw.when(nw.col(c).is_null())
-                    .then(nw.lit(str(self.impute_value)))
-                    .otherwise(nw.col(c).cast(nw.String))
-                    .cast(nw.Categorical)
-                    .alias(c),
-                )
-            else:
-                X_transformed = super().transform(X)
 
-        return X_transformed
+        # first handle categorical vars
+        for col in self.columns:
+            original_dtypes[col] = X[col].dtype
+
+        # need to explicitly add category for pandas
+        if nw.get_native_namespace(X).__name__ == "pandas":
+            X = nw.to_native(X)
+            for col in self.columns:
+                if str(original_dtypes[col]) == "Categorical" and (
+                    self.impute_value not in X[col].cat.categories
+                ):
+                    X[col] = X[col] = X["c"].cat.add_categories(
+                        self.impute_value,
+                    )
+            X = nw.from_native(X)
+
+        X = nw.from_native(super().transform(X))
+
+        # for col in original_dtypes:
+        #     if not X[col].dtype==original_dtypes[col]:
+        #         X=X.with_columns(nw.col(col).cast(original_dtypes[col]))
+
+        return X
 
 
 class MedianImputer(BaseImputer, WeightColumnMixin):
