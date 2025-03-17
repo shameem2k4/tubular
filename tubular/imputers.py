@@ -137,6 +137,7 @@ class ArbitraryImputer(BaseImputer):
         for c in self.columns:
             original_dtypes[c] = X[c].dtype
             # Cast to string
+            print(original_dtypes[c])
             if original_dtypes[c] == "Categorical":
                 X_transformed = X_transformed.with_columns(
                     nw.when(nw.col(c).is_null())

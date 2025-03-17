@@ -78,6 +78,22 @@ class GenericImputerTransformTests:
 
         return narwhals_df.to_native()
 
+    @pytest.fixture()
+    def expected_df_4(self, request):
+        library = request.param
+        df4_dict = {
+            "a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, None],
+            "b": ["a", "b", "c", "d", "e", "f", "g"],
+            "c": ["a", "b", "c", "d", "e", "f", "z"],
+        }
+
+        df4 = u.dataframe_init_dispatch(dataframe_dict=df4_dict, library=library)
+
+        narwhals_df = nw.from_native(df4)
+        narwhals_df = narwhals_df.with_columns(nw.col("c").cast(nw.dtypes.Categorical))
+
+        return narwhals_df.to_native()
+
     @pytest.mark.parametrize("test_fit_df", ["pandas", "polars"], indirect=True)
     def test_not_fitted_error_raised(self, test_fit_df, initialized_transformers):
         transformer = initialized_transformers[self.transformer_name]
@@ -189,11 +205,16 @@ class GenericImputerTransformTests:
         )
 
     @pytest.mark.parametrize(
-        ("library", "expected_df_3"),
-        [("pandas", "pandas"), ("polars", "polars")],
+        ("library", "expected_df_3", "impute_values_dict"),
+        [
+            ("pandas", "pandas", {"b": "g", "c": "f"}),
+            ("polars", "polars", {"b": "g", "c": "f"}),
+        ],
         indirect=["expected_df_3"],
     )
-    def test_expected_output_3(self, library, expected_df_3, initialized_transformers):
+    def test_expected_output_3(
+        self, library, expected_df_3, initialized_transformers, impute_values_dict
+    ):
         """Test that transform is giving the expected output when applied to object and categorical columns."""
         # Create the DataFrame using the library parameter
         df2 = d.create_df_2(library=library)
@@ -205,7 +226,7 @@ class GenericImputerTransformTests:
         if not transformer.polars_compatible and isinstance(df2, pl.DataFrame):
             return
 
-        transformer.impute_values_ = {"b": "g", "c": "f"}
+        transformer.impute_values_ = impute_values_dict
         transformer.columns = ["b", "c"]
 
         # Transform the DataFrame
@@ -214,9 +235,15 @@ class GenericImputerTransformTests:
 
         # ArbitraryImputer will add a new categorical level to cat columns,
         # make sure expected takes this into account
-        if self.transformer_name == "ArbitraryImputer" and isinstance(
-            expected_df_3,
-            pd.DataFrame,
+        if (
+            self.transformer_name == "ArbitraryImputer"
+            and isinstance(
+                expected_df_3,
+                pd.DataFrame,
+            )
+            and (
+                transformer.impute_values_["c"] not in expected_df_3["c"].cat.categories
+            )
         ):
             expected_df_3["c"] = expected_df_3["c"].cat.add_categories(
                 transformer.impute_values_["c"],
@@ -240,6 +267,71 @@ class GenericImputerTransformTests:
         u.assert_frame_equal_dispatch(
             df_transformed_common.to_native(),
             expected_df_3_common.to_native(),
+        )
+
+    @pytest.mark.parametrize(
+        ("library", "expected_df_4", "impute_values_dict"),
+        [
+            ("pandas", "pandas", {"b": "g", "c": "z"}),
+            ("polars", "polars", {"b": "g", "c": "z"}),
+        ],
+        indirect=["expected_df_4"],
+    )
+    def test_expected_output_4(
+        self, library, expected_df_4, initialized_transformers, impute_values_dict
+    ):
+        """Test that transform is giving the expected output when applied to object and categorical columns(when wer're imputing with a new categorical level)."""
+        # Create the DataFrame using the library parameter
+        df2 = d.create_df_2(library=library)
+
+        # Initialize the transformer
+        transformer = initialized_transformers[self.transformer_name]
+
+        # if transformer is not yet polars compatible, skip this test
+        if not transformer.polars_compatible and isinstance(df2, pl.DataFrame):
+            return
+
+        transformer.impute_values_ = impute_values_dict
+        transformer.columns = ["b", "c"]
+
+        # Transform the DataFrame
+        df_transformed = transformer.transform(df2)
+        df_transformed["c"]
+
+        # ArbitraryImputer will add a new categorical level to cat columns,
+        # make sure expected takes this into account
+        if (
+            self.transformer_name == "ArbitraryImputer"
+            and isinstance(
+                expected_df_4,
+                pd.DataFrame,
+            )
+            and (
+                transformer.impute_values_["c"] not in expected_df_4["c"].cat.categories
+            )
+        ):
+            expected_df_4["c"] = expected_df_4["c"].cat.add_categories(
+                transformer.impute_values_["c"],
+            )
+
+        # Convert both DataFrames to a common format using Narwhals
+        df_transformed_common = nw.from_native(df_transformed)
+        expected_df_4_common = nw.from_native(expected_df_4)
+
+        # Check outcomes for single rows
+        for i in range(len(df_transformed_common)):
+            df_transformed_row = df_transformed_common[[i]].to_native()
+            df_expected_row = expected_df_4_common[[i]].to_native()
+
+            u.assert_frame_equal_dispatch(
+                df_transformed_row,
+                df_expected_row,
+            )
+
+        # Check whole dataframes
+        u.assert_frame_equal_dispatch(
+            df_transformed_common.to_native(),
+            expected_df_4_common.to_native(),
         )
 
 
