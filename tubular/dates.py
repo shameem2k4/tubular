@@ -254,7 +254,7 @@ class BaseDateTwoColumnTransformer(
 
     """
 
-    polars_compatible = False
+    polars_compatible = True
 
     def __init__(
         self,
