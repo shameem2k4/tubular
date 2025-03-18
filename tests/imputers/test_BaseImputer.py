@@ -242,6 +242,46 @@ class GenericImputerTransformTests:
             expected_df_3_common.to_native(),
         )
 
+    @pytest.mark.parametrize(
+        "library",
+        ["pandas", "polars"],
+    )
+    def test_imputation_with_falsey_values(self, library, initialized_transformers):
+        """Test that transform is giving the expected output when applied to object and categorical columns."""
+        # Create the DataFrame using the library parameter
+        df_dict = {
+            "b": [1, 2, None],
+        }
+
+        df = u.dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
+
+        # Initialize the transformer
+        transformer = initialized_transformers[self.transformer_name]
+
+        # if transformer is not yet polars compatible, skip this test
+        if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
+            return
+
+        transformer.impute_values_ = {"b": 0}
+        transformer.columns = ["b"]
+
+        expected_df_dict = {
+            "b": [1.0, 2.0, 0.0],
+        }
+
+        expected_df = u.dataframe_init_dispatch(
+            dataframe_dict=expected_df_dict,
+            library=library,
+        )
+
+        # Transform the DataFrame
+        df_transformed = transformer.transform(df)
+
+        u.assert_frame_equal_dispatch(
+            df_transformed,
+            expected_df,
+        )
+
 
 class GenericImputerTransformTestsWeight:
     @pytest.fixture()
