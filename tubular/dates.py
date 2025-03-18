@@ -411,7 +411,7 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
         age = nw.new_series(
             name="age",
             values=age,
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         )
 
         X = X.with_columns(
