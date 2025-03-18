@@ -399,7 +399,7 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
                 nw.new_series(
                     name=weights_column,
                     values=[1] * len(X),
-                    native_namespace=native_namespace,
+                    backend=native_namespace.__name__,
                 ),
             )
 
