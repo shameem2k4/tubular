@@ -32,25 +32,19 @@ def downcast_df(request):
 class TestInit(ColumnStrListInitTests):
     """Generic tests for transformer.init()."""
 
+    # overload some inherited arg tests that have been replaced by beartype
+    def test_columns_non_string_or_list_error(self):
+        pass
+
+    def test_columns_list_element_error(self):
+        pass
+
+    def test_verbose_non_bool_error(self):
+        pass
+
     @classmethod
     def setup_class(cls):
         cls.transformer_name = "ArbitraryImputer"
-
-    def test_impute_value_type_error(
-        self,
-        uninitialized_transformers,
-        minimal_attribute_dict,
-    ):
-        """Test that an exception is raised if impute_value is not an int, float or str."""
-
-        args = minimal_attribute_dict[self.transformer_name].copy()
-        args["impute_value"] = [1, 2]
-
-        with pytest.raises(
-            ValueError,
-            match="ArbitraryImputer: impute_value should be a single value .*",
-        ):
-            uninitialized_transformers[self.transformer_name](**args)
 
 
 class TestFit(GenericFitTests):
@@ -110,10 +104,6 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
         # Initialize the transformer
         transformer = initialized_transformers[self.transformer_name]
 
-        # if transformer is not yet polars compatible, skip this test
-        if not transformer.polars_compatible and isinstance(df2, pl.DataFrame):
-            return
-
         transformer.impute_values_ = impute_values_dict
         transformer.impute_value = "z"
         transformer.columns = ["b", "c"]
@@ -130,6 +120,8 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
         expected_df_4 = nw.from_native(expected_df_4)
 
         # Check outcomes for single rows
+        # turn off type change errors to avoid having to type the single rows
+        transformer.error_on_type_change = False
         for i in range(len(df2)):
             df_transformed_row = transformer.transform(df2[[i]].to_native())
             df_expected_row = expected_df_4[[i]].to_native()

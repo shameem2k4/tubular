@@ -150,6 +150,8 @@ class GenericImputerTransformTests:
         expected_df_1 = nw.from_native(expected_df_1)
 
         # Check outcomes for single rows
+        # turn off type change errors to avoid having to type the single rows
+        transformer.error_on_type_change = False
         for i in range(len(df2)):
             df_transformed_row = transformer.transform(df2[[i]].to_native())
             df_expected_row = expected_df_1[[i]].to_native()
@@ -191,6 +193,8 @@ class GenericImputerTransformTests:
         expected_df_2 = nw.from_native(expected_df_2)
 
         # Check outcomes for single rows
+        # turn off type change errors to avoid having to type the single rows
+        transformer.error_on_type_change = False
         for i in range(len(df2)):
             df_transformed_row = transformer.transform(df2[[i]].to_native())
             df_expected_row = expected_df_2[[i]].to_native()
@@ -242,6 +246,8 @@ class GenericImputerTransformTests:
         expected_df_3 = nw.from_native(expected_df_3)
 
         # Check outcomes for single rows
+        # turn off type change errors to avoid having to type the single rows
+        transformer.error_on_type_change = False
         for i in range(len(df2)):
             df_transformed_row = transformer.transform(df2[[i]].to_native())
             df_expected_row = expected_df_3[[i]].to_native()

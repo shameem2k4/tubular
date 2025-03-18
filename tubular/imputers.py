@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
 import polars as pl
+from beartype import beartype
 
 from tubular.base import BaseTransformer
 from tubular.mixins import WeightColumnMixin
@@ -91,20 +92,14 @@ class ArbitraryImputer(BaseImputer):
     polars_compatible = True
     FITS = False
 
+    @beartype
     def __init__(
         self,
-        impute_value: float | str,
-        columns: str | list[str],
-        **kwargs: dict[str, bool],
+        impute_value: Union[int, float, str, bool],
+        columns: Union[str, list[str]],
+        **kwargs: Optional[bool],
     ) -> None:
         super().__init__(columns=columns, **kwargs)
-
-        if not isinstance(impute_value, (int, float, str)):
-            msg = (
-                f"{self.classname()}: impute_value should be a single value "
-                "(int, float or str)"
-            )
-            raise ValueError(msg)
 
         self.impute_values_ = {}
         self.impute_value = impute_value
@@ -138,12 +133,13 @@ class ArbitraryImputer(BaseImputer):
         # Save the original dtypes BEFORE we cast anything
         original_dtypes = {}
 
-        # first handle categorical vars
         for col in self.columns:
             original_dtypes[col] = X[col].dtype
 
+        # first handle categorical vars
         # need to explicitly add category for pandas
-        if nw.get_native_namespace(X).__name__ == "pandas":
+        is_pandas = nw.get_native_namespace(X).__name__ == "pandas"
+        if is_pandas:
             X = nw.to_native(X)
             for col in self.columns:
                 if str(original_dtypes[col]) == "Categorical" and (
@@ -154,13 +150,7 @@ class ArbitraryImputer(BaseImputer):
                     )
             X = nw.from_native(X)
 
-        X = nw.from_native(super().transform(X))
-
-        # for col in original_dtypes:
-        #     if not X[col].dtype==original_dtypes[col]:
-        #         X=X.with_columns(nw.col(col).cast(original_dtypes[col]))
-
-        return X
+        return nw.from_native(super().transform(X))
 
 
 class MedianImputer(BaseImputer, WeightColumnMixin):
