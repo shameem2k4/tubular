@@ -136,7 +136,7 @@ class BaseGenericDateTransformer(
         self,
         X: FrameT,
         datetime_only: bool = False,
-    ) -> pd.DataFrame:
+    ) -> FrameT:
         """Base transform method, calls parent transform and validates data.
 
         Parameters
