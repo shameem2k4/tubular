@@ -55,7 +55,7 @@ class BaseImputer(BaseTransformer):
 
         new_col_expressions = [
             nw.col(c).fill_null(self.impute_values_[c])
-            if self.impute_values_[c]
+            if self.impute_values_[c] is not None
             else nw.col(c)
             for c in self.columns
         ]
@@ -399,7 +399,7 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
                 nw.new_series(
                     name=weights_column,
                     values=[1] * len(X),
-                    native_namespace=native_namespace,
+                    backend=native_namespace.__name__,
                 ),
             )
 
