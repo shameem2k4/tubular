@@ -727,6 +727,15 @@ def expected_df_7(library="pandas"):
                 tzinfo=datetime.timezone.utc,
             ),
             np.nan if library == "pandas" else None,
+            datetime.datetime(
+                1985,
+                7,
+                23,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
         ],
         "b": [
             np.nan if library == "pandas" else None,
@@ -739,10 +748,20 @@ def expected_df_7(library="pandas"):
                 58,
                 tzinfo=datetime.timezone.utc,
             ),
+            datetime.datetime(
+                2015,
+                7,
+                23,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
         ],
         "D": [
-            np.nan,
-            np.nan,
+            np.nan if library == "pandas" else None,
+            np.nan if library == "pandas" else None,
+            10957.0,
         ],
     }
 
@@ -750,7 +769,7 @@ def expected_df_7(library="pandas"):
 
 
 def create_datediff_test_nulls_df(library="pandas"):
-    """Create DataFrame with nulls only for DateDifferenceTransformer tests."""
+    """Create DataFrame with nulls for DateDifferenceTransformer tests."""
 
     df_dict = {
         "a": [
@@ -764,6 +783,15 @@ def create_datediff_test_nulls_df(library="pandas"):
                 tzinfo=datetime.timezone.utc,
             ),
             np.nan if library == "pandas" else None,
+            datetime.datetime(
+                1985,
+                7,
+                23,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
         ],
         "b": [
             np.nan if library == "pandas" else None,
@@ -774,6 +802,15 @@ def create_datediff_test_nulls_df(library="pandas"):
                 11,
                 58,
                 58,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2015,
+                7,
+                23,
+                11,
+                59,
+                59,
                 tzinfo=datetime.timezone.utc,
             ),
         ],
