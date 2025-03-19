@@ -855,6 +855,7 @@ def expected_df_8(library="pandas"):
     }
     if library == "polars":
         expected = dataframe_init_dispatch(df_dict, library=library)
+        # change the D column to float as in the transformer it is a calculated field and this is automatically set up as float.
         return expected.cast({"D": pl.Float64})
     return dataframe_init_dispatch(df_dict, library=library)
 
