@@ -279,7 +279,7 @@ class GenericImputerTransformTests:
             return
 
         transformer.impute_values_ = {"a": False, "b": 0}
-        transformer.columns = ["b"]
+        transformer.columns = ["a", "b"]
 
         expected_df_dict = {
             "a": [True, False, False],
