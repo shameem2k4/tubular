@@ -175,7 +175,7 @@ def expected_date_diff_df_2(library="pandas"):
 
     df_dict = {
         "c": [
-            0,
+            None,
             19,
             0,
             0,
