@@ -404,16 +404,44 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
 
         X = X.with_columns(
             (
-                nw.col(self.columns[0]).cast(nw.Date).dt.year().cast(nw.Int64) * 10000
-                + nw.col(self.columns[0]).cast(nw.Date).dt.month().cast(nw.Int64) * 100
-                + nw.col(self.columns[0]).cast(nw.Date).dt.day().cast(nw.Int64)
+                nw.col(self.columns[0])
+                .cast(nw.Date)
+                .dt.year()
+                .cast(nw.String)
+                .cast(nw.Int64)
+                * 10000
+                + nw.col(self.columns[0])
+                .cast(nw.Date)
+                .dt.month()
+                .cast(nw.String)
+                .cast(nw.Int64)
+                * 100
+                + nw.col(self.columns[0])
+                .cast(nw.Date)
+                .dt.day()
+                .cast(nw.String)
+                .cast(nw.Int64)
             ).alias("col0"),
         )
         X = X.with_columns(
             (
-                nw.col(self.columns[1]).cast(nw.Date).dt.year().cast(nw.Int64) * 10000
-                + nw.col(self.columns[1]).cast(nw.Date).dt.month().cast(nw.Int64) * 100
-                + nw.col(self.columns[1]).cast(nw.Date).dt.day().cast(nw.Int64)
+                nw.col(self.columns[1])
+                .cast(nw.Date)
+                .dt.year()
+                .cast(nw.String)
+                .cast(nw.Int64)
+                * 10000
+                + nw.col(self.columns[1])
+                .cast(nw.Date)
+                .dt.month()
+                .cast(nw.String)
+                .cast(nw.Int64)
+                * 100
+                + nw.col(self.columns[1])
+                .cast(nw.Date)
+                .dt.day()
+                .cast(nw.String)
+                .cast(nw.Int64)
             ).alias("col1"),
         )
 
@@ -421,7 +449,7 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
             nw.when(nw.col("col1") < nw.col("col0"))
             .then(((nw.col("col0") - nw.col("col1")) // 10000) * (-1))
             .otherwise((nw.col("col1") - nw.col("col0")) // 10000)
-            .cast(nw.Float64)
+            .cast(nw.Int64)
             .alias(self.new_column_name),
         ).drop(["col0", "col1"])
 
@@ -437,10 +465,11 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
                 .otherwise(
                     nw.col(self.new_column_name),
                 )
-                .cast(nw.Float64)
+                .cast(nw.Int64)
                 .alias(self.new_column_name),
             )
 
+        X = X.to_native()
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(
             self,
