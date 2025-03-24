@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 import tests.test_data as d
+import tests.utils as u
 from tests.base_tests import (
     DropOriginalInitMixinTests,
     DropOriginalTransformMixinTests,
@@ -168,6 +169,29 @@ def expected_df_3(library="pandas"):
     return dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
 
 
+# add the expected to fix float to int with results
+def expected_date_diff_df_2(library="pandas"):
+    """Expected output for test_expected_output_drop_cols_true."""
+
+    df_dict = {
+        "c": [
+            0,
+            19,
+            0,
+            0,
+            0,
+            -2,
+            -3,
+            30,
+        ],
+    }
+
+    if library == "pandas":
+        return pd.DataFrame(df_dict).astype("Int64")
+
+    return u.dataframe_init_dispatch(df_dict, library=library)
+
+
 class TestTransform(
     DropOriginalTransformMixinTests,
     GenericTransformTests,
@@ -183,6 +207,7 @@ class TestTransform(
         ("df", "expected"),
         [
             (d.create_date_test_df(library="pandas"), expected_df_1(library="pandas")),
+            (d.create_date_test_df(library="polars"), expected_df_1(library="polars")),
         ],
     )
     def test_expected_output_drop_original_true(self, df, expected):
@@ -201,19 +226,19 @@ class TestTransform(
 
         assert_frame_equal_dispatch(df_transformed, expected)
 
-
-"""
     @pytest.mark.parametrize(
         ("df", "expected"),
-        [(d.create_date_test_df(library="pandas"), expected_df_2(library="pandas")),
-         ],
+        [
+            (d.create_date_test_df(library="pandas"), expected_df_2(library="pandas")),
+            (d.create_date_test_df(library="polars"), expected_df_2(library="polars")),
+        ],
     )
     def test_expected_output_drop_original_false(self, df, expected):
-        "Test that the output is expected from transform, when drop_original is False.
+        """Test that the output is expected from transform, when drop_original is False.
 
         This tests positive year gaps , negative year gaps, and missing values.
 
-        "
+        """
         x = DateDiffLeapYearTransformer(
             columns=["a", "b"],
             new_column_name="c",
@@ -224,7 +249,7 @@ class TestTransform(
 
         assert_frame_equal_dispatch(df_transformed, expected)
 
-    @pytest.mark.parametrize("library", ["pandas", "polars"])
+    @pytest.mark.parametrize("library", ["pandas"])
     @pytest.mark.parametrize(
         ("columns"),
         [
@@ -240,14 +265,16 @@ class TestTransform(
             drop_original=True,
         )
 
-        expected = d.expected_date_diff_df_2(library=library)
+        expected = expected_date_diff_df_2(library=library)
+        if library == "polars":
+            expected = nw.from_native(expected).with_columns(nw.col("c").cast(nw.Int64))
+            expected = expected.to_native()
 
         df = d.create_date_diff_different_dtypes_and_nans(library=library)
 
         df_transformed = x.transform(df[columns])
 
         assert_frame_equal_dispatch(df_transformed, expected)
-"""
 
 
 class TestOtherBaseBehaviour(OtherBaseBehaviourTests):

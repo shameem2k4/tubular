@@ -407,19 +407,19 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
                 nw.col(self.columns[0])
                 .cast(nw.Date)
                 .dt.year()
-                .cast(nw.String)
+                # .cast(nw.String)
                 .cast(nw.Int64)
                 * 10000
                 + nw.col(self.columns[0])
                 .cast(nw.Date)
                 .dt.month()
-                .cast(nw.String)
+                # .cast(nw.String)
                 .cast(nw.Int64)
                 * 100
                 + nw.col(self.columns[0])
                 .cast(nw.Date)
                 .dt.day()
-                .cast(nw.String)
+                # .cast(nw.String)
                 .cast(nw.Int64)
             ).alias("col0"),
         )
@@ -428,19 +428,19 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
                 nw.col(self.columns[1])
                 .cast(nw.Date)
                 .dt.year()
-                .cast(nw.String)
+                # .cast(nw.String)
                 .cast(nw.Int64)
                 * 10000
                 + nw.col(self.columns[1])
                 .cast(nw.Date)
                 .dt.month()
-                .cast(nw.String)
+                # .cast(nw.String)
                 .cast(nw.Int64)
                 * 100
                 + nw.col(self.columns[1])
                 .cast(nw.Date)
                 .dt.day()
-                .cast(nw.String)
+                # .cast(nw.String)
                 .cast(nw.Int64)
             ).alias("col1"),
         )
@@ -469,11 +469,14 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
                 .alias(self.new_column_name),
             )
 
-        X = X.to_native()
+        """
+        if type(X)==pd.core.frame.DataFrame:
+            X[self.new_column_name] = X[self.new_column_name].astype('Int64')
+        """
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(
             self,
-            X,
+            X.with_columns().to_native(),
             self.drop_original,
             self.columns,
         )
