@@ -401,22 +401,45 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
         """
 
         X = nw.from_native(super().transform(X))
-        age = pd.DataFrame(
-            X.select([nw.col(self.columns)]).rows(),
-            columns=self.columns,
-        ).apply(self.calculate_age, axis=1)
 
-        # Get the native namespace of the input data
-        native_namespace = nw.get_native_namespace(X)
-        age = nw.new_series(
-            name="age",
-            values=age,
-            backend=native_namespace.__name__,
+        X = X.with_columns(
+            (
+                nw.col(self.columns[0]).cast(nw.Date).dt.year().cast(nw.Int64) * 10000
+                + nw.col(self.columns[0]).cast(nw.Date).dt.month().cast(nw.Int64) * 100
+                + nw.col(self.columns[0]).cast(nw.Date).dt.day().cast(nw.Int64)
+            ).alias("col0"),
+        )
+        X = X.with_columns(
+            (
+                nw.col(self.columns[1]).cast(nw.Date).dt.year().cast(nw.Int64) * 10000
+                + nw.col(self.columns[1]).cast(nw.Date).dt.month().cast(nw.Int64) * 100
+                + nw.col(self.columns[1]).cast(nw.Date).dt.day().cast(nw.Int64)
+            ).alias("col1"),
         )
 
         X = X.with_columns(
-            age.alias(self.new_column_name),
-        )
+            nw.when(nw.col("col1") < nw.col("col0"))
+            .then(((nw.col("col0") - nw.col("col1")) // 10000) * (-1))
+            .otherwise((nw.col("col1") - nw.col("col0")) // 10000)
+            .cast(nw.Float64)
+            .alias(self.new_column_name),
+        ).drop(["col0", "col1"])
+
+        if self.missing_replacement is not None:
+            X = X.with_columns(
+                nw.when(
+                    (nw.col(self.columns[0]).is_null())
+                    or (nw.col(self.columns[1]).is_null()),
+                )
+                .then(
+                    self.missing_replacement,
+                )
+                .otherwise(
+                    nw.col(self.new_column_name),
+                )
+                .cast(nw.Float64)
+                .alias(self.new_column_name),
+            )
 
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(
