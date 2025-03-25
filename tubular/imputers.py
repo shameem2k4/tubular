@@ -150,7 +150,7 @@ class ArbitraryImputer(BaseImputer):
                     )
             X = nw.from_native(X)
 
-        return nw.from_native(super().transform(X))
+        return super().transform(X)
 
 
 class MedianImputer(BaseImputer, WeightColumnMixin):
