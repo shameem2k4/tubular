@@ -37,8 +37,7 @@ Changed
 - narwhalified BaseNumericTransformer `#358 https://github.com/lvgig/tubular/issues/358`
 - narwhalified DropOriginalMixin `#352 <https://github.com/lvgig/tubular/issues/352>_`
 - narwhalified BaseMappingTransformer `#367 <https://github.com/lvgig/tubular/issues/367>_`
-- narwhalified BaseMappingTransformerMixin. As part of this made mapping transformers more 
-- narwhalified DateDiffLeapYearTransformer.
+- narwhalified BaseMappingTransformerMixin. As part of this made mapping transformers more
 type-conscious, they now rely on an input 'return_dtypes' dict arg.
 `#369 <https://github.com/lvgig/tubular/issues/369>_`
 - As part of #369, updated OrdinalEncoderTransformer to output Int8 type
@@ -52,7 +51,8 @@ and refuse columns with nulls (raises an error directing to imputers.) `#372 <ht
 - placeholder
 - placeholder
 - placeholder
-- placeholder
+- placeholder 
+- narwhalified DateDiffLeapYearTransformer.
 
 1.4.1 (02/12/2024)
 ------------------
