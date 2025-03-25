@@ -127,11 +127,34 @@ def expected_df_2(library="pandas"):
 
 # add the expected to fix float to int with results
 def expected_date_diff_df_2(library="pandas"):
-    """Expected output for test_expected_output_drop_cols_true."""
+    """Expected output for test_expected_output_nans_in_data."""
 
     df_dict = {
         "c": [
             pd.NA if library == "pandas" else None,
+            19,
+            0,
+            0,
+            0,
+            -2,
+            -3,
+            30,
+        ],
+    }
+
+    if library == "pandas":
+        return pd.DataFrame(df_dict, dtype="Int64")
+
+    return pl.DataFrame(df_dict)
+
+
+# add the expected to fix float to int with results
+def expected_date_diff_df_3(library="pandas"):
+    """Expected output for test_expected_output_nans_in_data with missing replace with 0."""
+
+    df_dict = {
+        "c": [
+            0,
             19,
             0,
             0,
@@ -226,6 +249,24 @@ class TestTransform(
         df = d.create_date_diff_different_dtypes_and_nans(library=library)
 
         df_transformed = x.transform(df[columns])
+
+        assert_frame_equal_dispatch(df_transformed, expected)
+
+    @pytest.mark.parametrize("library", ["pandas", "polars"])
+    def test_expected_output_nans_in_data_with_replace(self, library):
+        "Test that transform works for different date datatype combinations with nans in data and replace nans"
+        x = DateDiffLeapYearTransformer(
+            columns=["date_col_1", "date_col_2"],
+            new_column_name="c",
+            drop_original=True,
+            missing_replacement=0,
+        )
+
+        expected = expected_date_diff_df_3(library=library)
+
+        df = d.create_date_diff_different_dtypes_and_nans(library=library)
+
+        df_transformed = x.transform(df[["date_col_1", "date_col_2"]])
 
         assert_frame_equal_dispatch(df_transformed, expected)
 
