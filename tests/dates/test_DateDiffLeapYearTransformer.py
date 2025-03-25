@@ -3,10 +3,10 @@ import datetime
 import narwhals as nw
 import numpy as np
 import pandas as pd
+import polars as pl
 import pytest
 
 import tests.test_data as d
-import tests.utils as u
 from tests.base_tests import (
     DropOriginalInitMixinTests,
     DropOriginalTransformMixinTests,
@@ -96,6 +96,9 @@ def expected_df_1(library="pandas"):
         ],
     }
 
+    if library == "pandas":
+        return pd.DataFrame(df_dict, dtype="Int64")
+
     return dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
 
 
@@ -148,6 +151,11 @@ def expected_df_2(library="pandas"):
             nw.col(col).cast(nw.Date),
         )
 
+    if library == "pandas":
+        df = nw.to_native(df)
+        df["c"] = df["c"].astype("Int64")
+        return df
+
     return nw.to_native(df)
 
 
@@ -175,7 +183,7 @@ def expected_date_diff_df_2(library="pandas"):
 
     df_dict = {
         "c": [
-            None,
+            pd.NA if library == "pandas" else None,
             19,
             0,
             0,
@@ -187,9 +195,9 @@ def expected_date_diff_df_2(library="pandas"):
     }
 
     if library == "pandas":
-        return pd.DataFrame(df_dict).astype("Int64")
+        return pd.DataFrame(df_dict, dtype="Int64")
 
-    return u.dataframe_init_dispatch(df_dict, library=library)
+    return pl.DataFrame(df_dict)
 
 
 class TestTransform(
@@ -249,7 +257,7 @@ class TestTransform(
 
         assert_frame_equal_dispatch(df_transformed, expected)
 
-    @pytest.mark.parametrize("library", ["pandas"])
+    @pytest.mark.parametrize("library", ["pandas", "polars"])
     @pytest.mark.parametrize(
         ("columns"),
         [
@@ -266,9 +274,6 @@ class TestTransform(
         )
 
         expected = expected_date_diff_df_2(library=library)
-        if library == "polars":
-            expected = nw.from_native(expected).with_columns(nw.col("c").cast(nw.Int64))
-            expected = expected.to_native()
 
         df = d.create_date_diff_different_dtypes_and_nans(library=library)
 

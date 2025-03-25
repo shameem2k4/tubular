@@ -341,46 +341,6 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
         self.column_lower = columns[0]
         self.column_upper = columns[1]
 
-    def calculate_age(self, row: pd.Series) -> int:
-        """Function to calculate age from two date columns in a pd.DataFrame.
-
-        This function, although slower than the np.timedelta64 solution (or something
-        similar), accounts for leap years to accurately calculate age for all values.
-
-        Parameters
-        ----------
-        row : pd.Series
-            Named pandas series, with lower_date_name and upper_date_name as index values.
-
-        Returns
-        -------
-        age : int
-            Year gap between the upper and lower date values passes.
-
-        """
-        if not isinstance(row, pd.Series):
-            msg = f"{self.classname()}: row should be a pd.Series"
-            raise TypeError(msg)
-
-        if (pd.isna(row[self.columns[0]])) or (pd.isna(row[self.columns[1]])):
-            return self.missing_replacement
-
-        age = row[self.columns[1]].year - row[self.columns[0]].year
-
-        if age > 0:
-            if (row[self.columns[1]].month, row[self.columns[1]].day) < (
-                row[self.columns[0]].month,
-                row[self.columns[0]].day,
-            ):
-                age += -1
-        elif age < 0 and (row[self.columns[1]].month, row[self.columns[1]].day) > (
-            row[self.columns[0]].month,
-            row[self.columns[0]].day,
-        ):
-            age += 1
-
-        return age
-
     @nw.narwhalify
     def transform(self, X: FrameT) -> FrameT:
         """Calculate year gap between the two provided columns.
@@ -404,44 +364,16 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
 
         X = X.with_columns(
             (
-                nw.col(self.columns[0])
-                .cast(nw.Date)
-                .dt.year()
-                # .cast(nw.String)
-                .cast(nw.Int64)
-                * 10000
-                + nw.col(self.columns[0])
-                .cast(nw.Date)
-                .dt.month()
-                # .cast(nw.String)
-                .cast(nw.Int64)
-                * 100
-                + nw.col(self.columns[0])
-                .cast(nw.Date)
-                .dt.day()
-                # .cast(nw.String)
-                .cast(nw.Int64)
+                nw.col(self.columns[0]).cast(nw.Date).dt.year().cast(nw.Int64) * 10000
+                + nw.col(self.columns[0]).cast(nw.Date).dt.month().cast(nw.Int64) * 100
+                + nw.col(self.columns[0]).cast(nw.Date).dt.day().cast(nw.Int64)
             ).alias("col0"),
         )
         X = X.with_columns(
             (
-                nw.col(self.columns[1])
-                .cast(nw.Date)
-                .dt.year()
-                # .cast(nw.String)
-                .cast(nw.Int64)
-                * 10000
-                + nw.col(self.columns[1])
-                .cast(nw.Date)
-                .dt.month()
-                # .cast(nw.String)
-                .cast(nw.Int64)
-                * 100
-                + nw.col(self.columns[1])
-                .cast(nw.Date)
-                .dt.day()
-                # .cast(nw.String)
-                .cast(nw.Int64)
+                nw.col(self.columns[1]).cast(nw.Date).dt.year().cast(nw.Int64) * 10000
+                + nw.col(self.columns[1]).cast(nw.Date).dt.month().cast(nw.Int64) * 100
+                + nw.col(self.columns[1]).cast(nw.Date).dt.day().cast(nw.Int64)
             ).alias("col1"),
         )
 
@@ -469,14 +401,14 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
                 .alias(self.new_column_name),
             )
 
-        """
-        if type(X)==pd.core.frame.DataFrame:
-            X[self.new_column_name] = X[self.new_column_name].astype('Int64')
-        """
+        X = X.to_native()
+        if type(X) == pd.DataFrame:
+            X[self.new_column_name] = X[self.new_column_name].astype("Int64")
+
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(
             self,
-            X.with_columns().to_native(),
+            X,
             self.drop_original,
             self.columns,
         )
