@@ -362,6 +362,7 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
 
         X = nw.from_native(super().transform(X))
 
+        # Create a helping column col0 for the first date. This will convert the date into an integer in a format or YYYYMMDD
         X = X.with_columns(
             (
                 nw.col(self.columns[0]).cast(nw.Date).dt.year().cast(nw.Int64) * 10000
@@ -369,6 +370,7 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
                 + nw.col(self.columns[0]).cast(nw.Date).dt.day().cast(nw.Int64)
             ).alias("col0"),
         )
+        # Create a helping column col1 for the second date. This will convert the date into an integer in a format or YYYYMMDD
         X = X.with_columns(
             (
                 nw.col(self.columns[1]).cast(nw.Date).dt.year().cast(nw.Int64) * 10000
@@ -377,6 +379,8 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
             ).alias("col1"),
         )
 
+        # Compute difference between integers and if the difference is negative then adjust.
+        # Finally devide by 10000 to get the years.
         X = X.with_columns(
             nw.when(nw.col("col1") < nw.col("col0"))
             .then(((nw.col("col0") - nw.col("col1")) // 10000) * (-1))
@@ -385,6 +389,7 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
             .alias(self.new_column_name),
         ).drop(["col0", "col1"])
 
+        # When we get a missing then replace with missing_replacement otherwise return the above calculation
         if self.missing_replacement is not None:
             X = X.with_columns(
                 nw.when(
