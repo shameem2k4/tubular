@@ -95,10 +95,6 @@ class GenericImputerTransformTests:
 
     @pytest.mark.parametrize("test_fit_df", ["pandas", "polars"], indirect=True)
     def test_not_fitted_error_raised(self, test_fit_df, initialized_transformers):
-        transformer = initialized_transformers[self.transformer_name]
-        # if transformer is not yet polars compatible, skip this test
-        if not transformer.polars_compatible and isinstance(test_fit_df, pl.DataFrame):
-            return
         if initialized_transformers[self.transformer_name].FITS:
             with pytest.raises(NotFittedError):
                 initialized_transformers[self.transformer_name].transform(test_fit_df)
@@ -108,9 +104,7 @@ class GenericImputerTransformTests:
         """Test that self.impute_value is unchanged after transform."""
         df1 = d.create_df_1(library=library)
         transformer = initialized_transformers[self.transformer_name]
-        # if transformer is not yet polars compatible, skip this test
-        if not transformer.polars_compatible and isinstance(df1, pl.DataFrame):
-            return
+
         transformer.impute_values_ = {"b": 1}
         impute_values = deepcopy(transformer.impute_values_)
 
@@ -132,9 +126,7 @@ class GenericImputerTransformTests:
 
         # Initialize the transformer
         transformer = initialized_transformers[self.transformer_name]
-        # if transformer is not yet polars compatible, skip this test
-        if not transformer.polars_compatible and isinstance(df2, pl.DataFrame):
-            return
+
         transformer.impute_values_ = {"a": 7}
         transformer.columns = ["a"]
 
@@ -173,10 +165,6 @@ class GenericImputerTransformTests:
 
         # Initialize the transformer
         transformer = initialized_transformers[self.transformer_name]
-
-        # if transformer is not yet polars compatible, skip this test
-        if not transformer.polars_compatible and isinstance(df2, pl.DataFrame):
-            return
 
         transformer.impute_values_ = {"b": "g"}
         transformer.columns = ["b"]
@@ -226,10 +214,6 @@ class GenericImputerTransformTests:
         # Initialize the transformer
         transformer = initialized_transformers[self.transformer_name]
 
-        # if transformer is not yet polars compatible, skip this test
-        if not transformer.polars_compatible and isinstance(df2, pl.DataFrame):
-            return
-
         transformer.impute_values_ = impute_values_dict
         transformer.impute_value = "f"
         transformer.columns = ["b", "c"]
@@ -273,10 +257,6 @@ class GenericImputerTransformTests:
 
         # Initialize the transformer
         transformer = initialized_transformers[self.transformer_name]
-
-        # if transformer is not yet polars compatible, skip this test
-        if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
-            return
 
         transformer.impute_values_ = {"a": False, "b": 0}
         transformer.columns = ["a", "b"]
@@ -336,10 +316,6 @@ class GenericImputerTransformTestsWeight:
 
         transformer = uninitialized_transformers[self.transformer_name](**args)
 
-        # if transformer is not yet polars compatible, skip this test
-        if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
-            return
-
         # Set the impute values dict directly rather than fitting x on df so test works with helpers
         transformer.impute_values_ = {"b": 4}
 
@@ -380,10 +356,6 @@ class GenericImputerTransformTestsWeight:
         args["weights_column"] = "c"
 
         transformer1 = uninitialized_transformers[self.transformer_name](**args)
-
-        # if transformer is not yet polars compatible, skip this test
-        if not transformer1.polars_compatible and isinstance(df, pl.DataFrame):
-            return
 
         transformer1.fit(df)
 
