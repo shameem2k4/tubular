@@ -250,10 +250,16 @@ class TestTransform(
 
     @pytest.mark.parametrize(
         ("df", "expected"),
-        ta.pandas.adjusted_dataframe_params(
-            d.create_is_between_dates_df_2(),
-            expected_df_4(),
-        ),
+        [
+            (
+                d.create_is_between_dates_df_2(library="pandas"),
+                expected_df_4(library="pandas"),
+            ),
+            (
+                d.create_is_between_dates_df_2(library="polars"),
+                expected_df_4(library="polars"),
+            ),
+        ],
     )
     def test_output_upper_exclusive(self, df, expected):
         """Test the output of transform is as expected if the upper limits are exclusive only."""
