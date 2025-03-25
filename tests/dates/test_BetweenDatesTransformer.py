@@ -84,7 +84,7 @@ def expected_df_1(library="pandas"):
         nw.new_series(
             name="d",
             values=[True, False],
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         ),
     )
 
@@ -101,7 +101,7 @@ def expected_df_2(library="pandas"):
         nw.new_series(
             name="e",
             values=[False, False, True, True, False, False],
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         ),
     )
 
@@ -118,7 +118,7 @@ def expected_df_3(library="pandas"):
         nw.new_series(
             name="e",
             values=[False, False, True, True, True, False],
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         ),
     )
 
@@ -135,7 +135,7 @@ def expected_df_4(library="pandas"):
         nw.new_series(
             name="e",
             values=[False, True, True, True, False, False],
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         ),
     )
 
@@ -152,7 +152,7 @@ def expected_df_5(library="pandas"):
         nw.new_series(
             name="e",
             values=[False, True, True, True, True, False],
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         ),
     )
 
