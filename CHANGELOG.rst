@@ -38,7 +38,6 @@ Changed
 - narwhalified DropOriginalMixin `#352 <https://github.com/lvgig/tubular/issues/352>_`
 - narwhalified BaseMappingTransformer `#367 <https://github.com/lvgig/tubular/issues/367>_`
 - narwhalified BaseMappingTransformerMixin. As part of this made mapping transformers more 
-- narwhalified DateDifferenceTransformer. `#376 <https://github.com/azukds/tubular/issues/376>_`
 type-conscious, they now rely on an input 'return_dtypes' dict arg.
 `#369 <https://github.com/lvgig/tubular/issues/369>_`
 - As part of #369, updated OrdinalEncoderTransformer to output Int8 type
@@ -53,6 +52,7 @@ and refuse columns with nulls (raises an error directing to imputers.) `#372 <ht
 - placeholder
 - placeholder
 - placeholder
+- narwhalified DateDifferenceTransformer. `#376 <https://github.com/azukds/tubular/issues/376>_`
 
 1.4.1 (02/12/2024)
 ------------------
