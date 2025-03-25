@@ -145,7 +145,7 @@ class ArbitraryImputer(BaseImputer):
                 if str(original_dtypes[col]) == "Categorical" and (
                     self.impute_value not in X[col].cat.categories
                 ):
-                    X[col] = X[col] = X["c"].cat.add_categories(
+                    X[col] = X[col].cat.add_categories(
                         self.impute_value,
                     )
             X = nw.from_native(X)
