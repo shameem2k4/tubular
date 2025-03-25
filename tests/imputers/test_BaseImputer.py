@@ -105,7 +105,12 @@ class GenericImputerTransformTests:
         df1 = d.create_df_1(library=library)
         transformer = initialized_transformers[self.transformer_name]
 
-        transformer.impute_values_ = {"b": 1}
+        impute_value = "g"
+        transformer.impute_values_ = {"b": impute_value}
+
+        if self.transformer_name == "ArbitraryImputer":
+            transformer.impute_value = impute_value
+
         impute_values = deepcopy(transformer.impute_values_)
 
         transformer.transform(df1)
@@ -128,6 +133,10 @@ class GenericImputerTransformTests:
         transformer = initialized_transformers[self.transformer_name]
 
         transformer.impute_values_ = {"a": 7}
+
+        if self.transformer_name == "ArbitraryImputer":
+            transformer.impute_value = 7
+
         transformer.columns = ["a"]
 
         # Transform the DataFrame
@@ -166,7 +175,12 @@ class GenericImputerTransformTests:
         # Initialize the transformer
         transformer = initialized_transformers[self.transformer_name]
 
-        transformer.impute_values_ = {"b": "g"}
+        impute_value = "g"
+        transformer.impute_values_ = {"b": impute_value}
+
+        if self.transformer_name == "ArbitraryImputer":
+            transformer.impute_value = impute_value
+
         transformer.columns = ["b"]
 
         # Transform the DataFrame
@@ -215,7 +229,10 @@ class GenericImputerTransformTests:
         transformer = initialized_transformers[self.transformer_name]
 
         transformer.impute_values_ = impute_values_dict
-        transformer.impute_value = "f"
+
+        if self.transformer_name == "ArbitraryImputer":
+            transformer.impute_value = "f"
+
         transformer.columns = ["b", "c"]
 
         # Transform the DataFrame
@@ -245,7 +262,21 @@ class GenericImputerTransformTests:
         "library",
         ["pandas", "polars"],
     )
-    def test_imputation_with_falsey_values(self, library, initialized_transformers):
+    @pytest.mark.parametrize(
+        ("column", "impute_value", "expected"),
+        [
+            ("a", False, [True, False, False]),
+            ("b", 0, [1, 2, 0]),
+        ],
+    )
+    def test_imputation_with_falsey_values(
+        self,
+        library,
+        initialized_transformers,
+        column,
+        impute_value,
+        expected,
+    ):
         """Test that transform is giving the expected output when applied to object and categorical columns."""
         # Create the DataFrame using the library parameter
         df_dict = {
@@ -255,15 +286,24 @@ class GenericImputerTransformTests:
 
         df = u.dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
 
+        df = nw.from_native(df)
+
+        # pandas bool+null cols default to Object, cast to bool
+        df = df.with_columns(nw.col("a").cast(nw.Boolean))
+        df = nw.to_native(df)
+
         # Initialize the transformer
         transformer = initialized_transformers[self.transformer_name]
 
-        transformer.impute_values_ = {"a": False, "b": 0}
-        transformer.columns = ["a", "b"]
+        transformer.impute_values_ = {column: impute_value}
+
+        if self.transformer_name == "ArbitraryImputer":
+            transformer.impute_value = impute_value
+
+        transformer.columns = [column]
 
         expected_df_dict = {
-            "a": [True, False, False],
-            "b": [1.0, 2.0, 0.0],
+            column: expected,
         }
 
         expected_df = u.dataframe_init_dispatch(
@@ -271,12 +311,18 @@ class GenericImputerTransformTests:
             library=library,
         )
 
+        # make sure types align with original
+        expected_df = nw.from_native(expected_df)
+        expected_df = expected_df.with_columns(
+            nw.col(column).cast(nw.from_native(df)[column].dtype),
+        )
+
         # Transform the DataFrame
         df_transformed = transformer.transform(df)
 
         u.assert_frame_equal_dispatch(
-            df_transformed,
-            expected_df,
+            df_transformed[[column]],
+            expected_df.to_native()[[column]],
         )
 
 
@@ -317,7 +363,11 @@ class GenericImputerTransformTestsWeight:
         transformer = uninitialized_transformers[self.transformer_name](**args)
 
         # Set the impute values dict directly rather than fitting x on df so test works with helpers
-        transformer.impute_values_ = {"b": 4}
+        impute_value = 4
+        transformer.impute_values_ = {"b": impute_value}
+
+        if self.transformer_name == "ArbitraryImputer":
+            self.impute_value = impute_value
 
         df_transformed = transformer.transform(df)
 

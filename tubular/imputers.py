@@ -6,6 +6,7 @@ import warnings
 from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
+import narwhals.selectors as ncs
 import polars as pl
 from beartype import beartype
 
@@ -107,6 +108,58 @@ class ArbitraryImputer(BaseImputer):
         for c in self.columns:
             self.impute_values_[c] = self.impute_value
 
+    def _check_impute_value_type_works_with_columns(self, X: FrameT) -> None:
+        """raises TypeError if there is a type clash between impute_value and columns in X for imputation
+
+        Parameters
+        ----------
+        X: FrameT
+            DataFrame being imputed
+
+        """
+
+        cat_columns = set(self.columns).intersection(
+            X.select(ncs.categorical()).columns,
+        )
+        num_columns = set(self.columns).intersection(X.select(ncs.numeric()).columns)
+        bool_columns = set(self.columns).intersection(X.select(ncs.boolean()).columns)
+        str_columns = set(self.columns).intersection(X.select(ncs.string()).columns)
+
+        if (not isinstance(self.impute_value, str)) and (
+            len(cat_columns) > 0 or len(str_columns) > 0
+        ):
+            msg = f"""
+                {self.classname()}: Attempting to impute non-str value {self.impute_value} into
+                Categorical or String type columns, this is not type safe,
+                please use str impute_value for these columns
+                (this may require separate ArbitraryImputer instances for different column types)
+                """
+            raise TypeError(
+                msg,
+            )
+
+        if (not isinstance(self.impute_value, (float, int))) and len(num_columns) > 0:
+            msg = f"""
+                {self.classname()}: Attempting to impute non-numeric value {self.impute_value} into
+                Numeric type columns, this is not type safe,
+                please use numeric impute_value for these columns
+                (this may require separate ArbitraryImputer instances for different column types)
+                """
+            raise TypeError(
+                msg,
+            )
+
+        if (not isinstance(self.impute_value, bool)) and len(bool_columns) > 0:
+            msg = f"""
+                {self.classname()}: Attempting to impute non-bool value {self.impute_value} into
+                Boolean type columns, this is not type safe,
+                please use bool impute_value for these columns
+                (this may require separate ArbitraryImputer instances for different column types)
+                """
+            raise TypeError(
+                msg,
+            )
+
     @nw.narwhalify
     def transform(self, X: FrameT) -> FrameT:
         """Impute missing values with the supplied impute_value.
@@ -136,6 +189,8 @@ class ArbitraryImputer(BaseImputer):
         for col in self.columns:
             original_dtypes[col] = X[col].dtype
 
+        self._check_impute_value_type_works_with_columns(X)
+
         # first handle categorical vars
         # need to explicitly add category for pandas
         is_pandas = nw.get_native_namespace(X).__name__ == "pandas"
@@ -150,7 +205,14 @@ class ArbitraryImputer(BaseImputer):
                     )
             X = nw.from_native(X)
 
-        return super().transform(X)
+        X = nw.from_native(super().transform(X))
+
+        # restore types that may have changed from e.g. fully imputing a float
+        # column may convert to int
+        for col in self.columns:
+            X = X.with_columns(nw.col(col).cast(original_dtypes[col]))
+
+        return X
 
 
 class MedianImputer(BaseImputer, WeightColumnMixin):
