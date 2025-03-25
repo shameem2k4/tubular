@@ -1,7 +1,6 @@
 import datetime
 
 import narwhals as nw
-import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
@@ -20,39 +19,6 @@ from tests.dates.test_BaseGenericDateTransformer import (
 )
 from tests.utils import assert_frame_equal_dispatch, dataframe_init_dispatch
 from tubular.dates import DateDiffLeapYearTransformer
-
-
-class TestCalculateAge:
-    """Tests for the calculate_age function in dates.py."""
-
-    def test_row_type_error(self):
-        """Test that an exception is raised if row is not a pd.Series."""
-        row = "dummy_row"
-        date_transformer = DateDiffLeapYearTransformer(
-            columns=["a", "b"],
-            new_column_name="c",
-            drop_original=True,
-        )
-
-        with pytest.raises(
-            TypeError,
-            match="DateDiffLeapYearTransformer: row should be a pd.Series",
-        ):
-            date_transformer.calculate_age(row=row)
-
-    def test_null_replacement(self):
-        """Test correct value is replaced using null_replacement."""
-        row = pd.Series({"a": np.nan, "b": np.nan})
-        date_transformer = DateDiffLeapYearTransformer(
-            columns=["a", "b"],
-            new_column_name="c",
-            drop_original=True,
-            missing_replacement="missing_replacement",
-        )
-
-        val = date_transformer.calculate_age(row=row)
-
-        assert val == "missing_replacement"
 
 
 class TestInit(
@@ -157,24 +123,6 @@ def expected_df_2(library="pandas"):
         return df
 
     return nw.to_native(df)
-
-
-def expected_df_3(library="pandas"):
-    """Expected output for test_expected_output_nulls."""
-
-    df_dict = {
-        "a": [
-            np.nan if library == "pandas" else None,
-        ],
-        "b": [
-            np.nan if library == "pandas" else None,
-        ],
-        "c": [
-            np.nan if library == "pandas" else None,
-        ],
-    }
-
-    return dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
 
 
 # add the expected to fix float to int with results
