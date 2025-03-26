@@ -26,6 +26,9 @@ def expected_df_1(library, value):
         df["c"] = df["c"].astype("category")
     elif library == "polars":
         df = df.with_columns(df["c"].cast(pl.Categorical))
+        # polars automatically downcasts to int32 in transformer
+        if isinstance(value, int):
+            df = df.with_columns(df[["a", "b"]].cast(pl.Int32))
     return df
 
 
