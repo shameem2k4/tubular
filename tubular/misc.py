@@ -37,6 +37,8 @@ class SetValueTransformer(BaseTransformer):
 
     polars_compatible = True
 
+    FITS = False
+
     def __init__(
         self,
         columns: str | list[str],
