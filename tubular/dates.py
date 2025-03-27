@@ -406,10 +406,6 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
                 .alias(self.new_column_name),
             )
 
-        X = X.to_native()
-        if type(X) == pd.DataFrame:
-            X[self.new_column_name] = X[self.new_column_name].astype("Int64")
-
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(
             self,
