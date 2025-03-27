@@ -52,6 +52,7 @@ and refuse columns with nulls (raises an error directing to imputers.) `#372 <ht
 - placeholder
 - placeholder
 - placeholder
+- narwhalified DateDifferenceTransformer. `#376 <https://github.com/azukds/tubular/issues/376>_`
 
 1.4.1 (02/12/2024)
 ------------------
