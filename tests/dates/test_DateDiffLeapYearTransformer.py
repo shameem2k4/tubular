@@ -63,7 +63,7 @@ def expected_df_1(library="pandas"):
     }
 
     if library == "pandas":
-        return pd.DataFrame(df_dict, dtype="Int64")
+        return pd.DataFrame(df_dict, dtype="int64[pyarrow]")
 
     return dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
 
@@ -119,7 +119,7 @@ def expected_df_2(library="pandas"):
 
     if library == "pandas":
         df = nw.to_native(df)
-        df["c"] = df["c"].astype("Int64")
+        df["c"] = df["c"].astype("int64[pyarrow]")
         return df
 
     return nw.to_native(df)
@@ -143,7 +143,7 @@ def expected_date_diff_df_2(library="pandas"):
     }
 
     if library == "pandas":
-        return pd.DataFrame(df_dict, dtype="Int64")
+        return pd.DataFrame(df_dict, dtype="int64[pyarrow]")
 
     return pl.DataFrame(df_dict)
 
@@ -166,7 +166,7 @@ def expected_date_diff_df_3(library="pandas"):
     }
 
     if library == "pandas":
-        return pd.DataFrame(df_dict, dtype="Int64")
+        return pd.DataFrame(df_dict, dtype="int64[pyarrow]")
 
     return pl.DataFrame(df_dict)
 
