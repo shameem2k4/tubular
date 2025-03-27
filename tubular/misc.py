@@ -54,12 +54,12 @@ class SetValueTransformer(BaseTransformer):
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : FrameT
             Data to apply mappings to.
 
         Returns
         -------
-        X : pd.DataFrame
+        X : FrameT
             Transformed input X with columns set to value.
 
         """
