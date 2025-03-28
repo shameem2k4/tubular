@@ -73,7 +73,7 @@ class ArbitraryImputer(BaseImputer):
 
     Parameters
     ----------
-    impute_value : int or float or str
+    impute_value : int or float or str or bool
         Value to impute nulls with.
     columns : None or str or list, default = None
         Columns to impute, if the default of None is supplied all columns in X are used
@@ -83,7 +83,7 @@ class ArbitraryImputer(BaseImputer):
 
     Attributes
     ----------
-    impute_value : int or float or str
+    impute_value : int or float or str or bool
         Value to impute nulls with.
 
     polars_compatible : bool
