@@ -10,6 +10,7 @@ from tests.base_tests import (
     OtherBaseBehaviourTests,
 )
 from tests.imputers.test_BaseImputer import GenericImputerTransformTests
+from tests.utils import assert_frame_equal_dispatch
 from tubular.imputers import ArbitraryImputer
 
 
@@ -118,12 +119,12 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
 
     @pytest.mark.parametrize("library", ["pandas", "polars"])
     @pytest.mark.parametrize(
-        ("column", "col_type", "impute_value"),
+        ("column", "col_type", "impute_value", "expected_values"),
         [
-            ("a", "String", "z"),
-            ("a", "Categorical", "z"),
-            ("b", "Float32", 1),
-            ("c", "Boolean", True),
+            ("a", "String", "z", ["a", "b", "c", "d", "z"]),
+            ("a", "Categorical", "z", ["a", "b", "c", "d", "z"]),
+            ("b", "Float32", 1, [1.0, 2.0, 3.0, 4.0, 1.0]),
+            ("c", "Boolean", True, [True, False, False, True, True]),
         ],
     )
     def test_impute_value_preserve_dtype(
@@ -131,6 +132,7 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
         column,
         col_type,
         impute_value,
+        expected_values,
         library,
     ):
         """Test that dtypes are preserved after imputation."""
@@ -140,8 +142,11 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
         df_nw = nw.from_native(df)
 
         df_nw = df_nw.with_columns(
-            nw.col(column).cast(getattr(nw, col_type)),
+            nw.when(~nw.col(column).is_null())
+            .then(nw.col(column).cast(getattr(nw, col_type)))
+            .otherwise(nw.col(column)),
         )
+        print(df_nw.schema)
 
         transformer = ArbitraryImputer(impute_value=impute_value, columns=[column])
         df_transformed_native = transformer.transform(df_nw.to_native())
@@ -153,6 +158,16 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
         assert (
             actual_dtype == expected_dtype
         ), f"{self.transformer_name}: dtype changed unexpectedly in transform, expected {expected_dtype} but got {actual_dtype}"
+
+        # also verify whole df as expected
+        expected = df_nw.clone()
+        expected = expected.with_columns(
+            nw.new_series(name=column, values=expected_values, backend=library).cast(
+                getattr(nw, col_type),
+            ),
+        )
+
+        assert_frame_equal_dispatch(expected.to_native(), df_transformed_native)
 
     @pytest.mark.parametrize(
         ("library", "expected_df_4", "impute_values_dict"),
