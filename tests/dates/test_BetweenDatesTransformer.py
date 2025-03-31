@@ -319,7 +319,7 @@ class TestTransform(
                 .otherwise("c"),
             )
             .drop("i")
-        )
+        ).to_native()
 
         with pytest.warns(Warning, match="not all c are greater than or equal to a"):
             x.transform(df)
