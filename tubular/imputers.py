@@ -10,6 +10,7 @@ import narwhals.selectors as ncs
 import polars as pl
 from beartype import beartype
 
+from tubular._utils import _assess_pandas_object_column
 from tubular.base import BaseTransformer
 from tubular.mixins import WeightColumnMixin
 
@@ -108,7 +109,10 @@ class ArbitraryImputer(BaseImputer):
         for c in self.columns:
             self.impute_values_[c] = self.impute_value
 
-    def _check_impute_value_type_works_with_columns(self, X: FrameT) -> None:
+    def _check_impute_value_type_works_with_columns(
+        self,
+        X: FrameT,
+    ) -> tuple[dict[str, str], list[StopIteration]]:
         """raises TypeError if there is a type clash between impute_value and columns in X for imputation
 
         Parameters
@@ -116,14 +120,43 @@ class ArbitraryImputer(BaseImputer):
         X: FrameT
             DataFrame being imputed
 
-        """
+        Returns
+        ---------
+        pandas_object_cols_to_polars_types: dict[str, str]
+            dictionary of type conversions for tricky pandas object types
 
+        null_columns: list[str]
+            list of Unknown type columns, singled out for different type handling
+
+        """
+        object_columns = set(self.columns).intersection(
+            [col for col, dtype in X.schema.items() if dtype == nw.Object],
+        )
         cat_columns = set(self.columns).intersection(
             X.select(ncs.categorical()).columns,
         )
         num_columns = set(self.columns).intersection(X.select(ncs.numeric()).columns)
         bool_columns = set(self.columns).intersection(X.select(ncs.boolean()).columns)
         str_columns = set(self.columns).intersection(X.select(ncs.string()).columns)
+        null_columns = set(self.columns).intersection(
+            [col for col, dtype in X.schema.items() if (dtype == nw.Unknown)],
+        )
+
+        # start with object columns, which can be a massive nuisance from pandas
+        pandas_object_cols_to_polars_types = {}
+        if len(object_columns) > 0 and nw.get_native_namespace(X).__name__ == "pandas":
+            # pull out boolean columns from generic object columns
+            for col in object_columns:
+                _, polars_type = _assess_pandas_object_column(
+                    pandas_df=X.to_native(),
+                    col=col,
+                )
+                pandas_object_cols_to_polars_types[col] = getattr(nw, polars_type)
+
+                if polars_type == "Boolean":
+                    bool_columns = bool_columns.union({col})
+
+                # other types will be captured in error at end of this method
 
         if (not isinstance(self.impute_value, str)) and (
             len(cat_columns) > 0 or len(str_columns) > 0
@@ -160,6 +193,29 @@ class ArbitraryImputer(BaseImputer):
                 msg,
             )
 
+        if len(null_columns) > 0:
+            warnings.warn(
+                f"{self.classname()}: X contains all null columns {null_columns}, types for these columns will be inferred as {type(self.impute_value)}",
+                stacklevel=2,
+            )
+
+        bad_type_cols = set(self.columns).difference(
+            num_columns.union(bool_columns)
+            .union(str_columns)
+            .union(cat_columns)
+            .union(null_columns),
+        )
+        if len(bad_type_cols) != 0:
+            msg = f"""
+                {self.classname()}: transformer can only handle Float/Int/Boolean/String/Categorical/Unknown type columns
+                but got columns with types {X.select(list(bad_type_cols)).schema}
+                """
+            raise TypeError(
+                msg,
+            )
+
+        return pandas_object_cols_to_polars_types, null_columns
+
     @nw.narwhalify
     def transform(self, X: FrameT) -> FrameT:
         """Impute missing values with the supplied impute_value.
@@ -183,13 +239,20 @@ class ArbitraryImputer(BaseImputer):
             msg = f"{self.classname()}: X has no rows; {X.shape}"
             raise ValueError(msg)
 
+        (
+            pandas_object_cols_to_polars_types,
+            null_columns,
+        ) = self._check_impute_value_type_works_with_columns(X)
+
         # Save the original dtypes BEFORE we cast anything
         original_dtypes = {}
-
         for col in self.columns:
-            original_dtypes[col] = X[col].dtype
-
-        self._check_impute_value_type_works_with_columns(X)
+            original_dtypes[col] = (
+                # overwrite type if necessary, e.g. object->boolean
+                pandas_object_cols_to_polars_types[col]
+                if col in pandas_object_cols_to_polars_types
+                else X[col].dtype
+            )
 
         # first handle categorical vars
         # need to explicitly add category for pandas
@@ -209,7 +272,8 @@ class ArbitraryImputer(BaseImputer):
 
         # restore types that may have changed from e.g. fully imputing a float
         # column may convert to int
-        for col in self.columns:
+        # skip for Unknown type columns, which will warn and then convert to impute_value type
+        for col in set(self.columns).difference(null_columns):
             X = X.with_columns(nw.col(col).cast(original_dtypes[col]))
 
         return X

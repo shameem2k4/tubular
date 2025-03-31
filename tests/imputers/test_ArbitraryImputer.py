@@ -1,4 +1,8 @@
+import re
+
 import narwhals as nw
+import pandas as pd
+import polars as pl
 import pytest
 
 import tests.test_data as d
@@ -10,7 +14,6 @@ from tests.base_tests import (
     OtherBaseBehaviourTests,
 )
 from tests.imputers.test_BaseImputer import GenericImputerTransformTests
-from tests.utils import assert_frame_equal_dispatch
 from tubular.imputers import ArbitraryImputer
 
 
@@ -124,7 +127,6 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
             ("a", "String", "z", ["a", "b", "c", "d", "z"]),
             ("a", "Categorical", "z", ["a", "b", "c", "d", "z"]),
             ("b", "Float32", 1, [1.0, 2.0, 3.0, 4.0, 1.0]),
-            ("c", "Boolean", True, [True, False, False, True, True]),
         ],
     )
     def test_impute_value_preserve_dtype(
@@ -141,12 +143,19 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
 
         df_nw = nw.from_native(df)
 
-        df_nw = df_nw.with_columns(
-            nw.when(~nw.col(column).is_null())
-            .then(nw.col(column).cast(getattr(nw, col_type)))
-            .otherwise(nw.col(column)),
-        )
-        print(df_nw.schema)
+        # cast to wanted type if fiddly dtype (e.g. for bool casting sends None->False)
+        if col_type in ["Boolean"]:
+            df_nw = df_nw.with_columns(
+                nw.when(nw.col(column).is_null())
+                .then(nw.col(column))
+                .otherwise(nw.col(column).cast(getattr(nw, col_type))),
+            )
+
+        # or just downcast easier types (String comes in correct type so leave)
+        elif col_type in ["Float32", "Categorical"]:
+            df_nw = df_nw.with_columns(
+                nw.col(column).cast(getattr(nw, col_type)),
+            )
 
         transformer = ArbitraryImputer(impute_value=impute_value, columns=[column])
         df_transformed_native = transformer.transform(df_nw.to_native())
@@ -159,7 +168,7 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
             actual_dtype == expected_dtype
         ), f"{self.transformer_name}: dtype changed unexpectedly in transform, expected {expected_dtype} but got {actual_dtype}"
 
-        # also verify whole df as expected
+        # also check full df against expectation
         expected = df_nw.clone()
         expected = expected.with_columns(
             nw.new_series(name=column, values=expected_values, backend=library).cast(
@@ -167,7 +176,110 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
             ),
         )
 
-        assert_frame_equal_dispatch(expected.to_native(), df_transformed_native)
+        u.assert_frame_equal_dispatch(expected.to_native(), df_transformed_native)
+
+    @pytest.mark.parametrize("library", ["pandas", "polars"])
+    @pytest.mark.parametrize(
+        ("input_col", "expected_dtype", "impute_value", "expected_values"),
+        [
+            ([None, None], "String", "a", ["a", "a"]),
+            ([True, False, None], "Boolean", True, [True, False, True]),
+        ],
+    )
+    def test_edge_cases(
+        self,
+        input_col,
+        expected_dtype,
+        impute_value,
+        expected_values,
+        library,
+    ):
+        """Test handling for some edge cases:
+        - pandas object type
+        - all null column
+        """
+
+        column = "a"
+        df_dict = {"a": input_col}
+
+        df = u.dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
+
+        df_nw = nw.from_native(df)
+
+        transformer = ArbitraryImputer(impute_value=impute_value, columns=[column])
+
+        # for pandas, the all null column is inferred as string type
+        # for polars, it is Unknown type, which triggers a warning
+        if library == "polars" and input_col == [None, None]:
+            with pytest.warns(
+                UserWarning,
+                match=f"{self.transformer_name}: X contains all null columns {str({column})}, types for these columns will be inferred as {type(transformer.impute_value)}",
+            ):
+                df_transformed_native = transformer.transform(df_nw.to_native())
+
+        else:
+            df_transformed_native = transformer.transform(df_nw.to_native())
+
+        df_transformed_nw = nw.from_native(df_transformed_native)
+
+        actual_dtype = str(df_transformed_nw[column].dtype)
+
+        assert (
+            actual_dtype == expected_dtype
+        ), f"{self.transformer_name}: dtype changed unexpectedly in transform, expected {expected_dtype} but got {actual_dtype}"
+
+        # also check full df against expectation
+        expected = df_nw.clone()
+        expected = expected.with_columns(
+            nw.new_series(name=column, values=expected_values, backend=library).cast(
+                getattr(nw, expected_dtype),
+            ),
+        )
+
+        u.assert_frame_equal_dispatch(expected.to_native(), df_transformed_native)
+
+    @pytest.mark.parametrize(
+        ("impute_value", "impute_val_type"),
+        [
+            (1, "Int32"),
+            ("a", "String"),
+            (True, "Boolean"),
+        ],
+    )
+    def test_polars_unknown_type_output(self, impute_value, impute_val_type):
+        """Test handling of polars Unknown type column (output type should be inferred from impute_value)"""
+
+        column = "a"
+        values = [None, None]
+        df_dict = {"a": values}
+
+        df = pl.DataFrame(df_dict)
+
+        df_nw = nw.from_native(df)
+
+        transformer = ArbitraryImputer(impute_value=impute_value, columns=[column])
+
+        df_transformed_native = transformer.transform(df_nw.to_native())
+
+        df_transformed_nw = nw.from_native(df_transformed_native)
+
+        actual_dtype = str(df_transformed_nw[column].dtype)
+
+        assert (
+            actual_dtype == impute_val_type
+        ), f"{self.transformer_name}: dtype changed unexpectedly in transform, expected {impute_val_type} but got {actual_dtype}"
+
+        # also check full df against expectation
+        expected = df_nw.clone()
+        expected = expected.with_columns(
+            nw.new_series(
+                name=column,
+                values=[impute_value, impute_value],
+                backend="polars",
+            ).cast(getattr(nw, impute_val_type)),
+        )
+
+        u.assert_frame_equal_dispatch(expected.to_native(), df_transformed_native)
 
     @pytest.mark.parametrize(
         ("library", "expected_df_4", "impute_values_dict"),
@@ -219,6 +331,42 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
                 df_transformed_row,
                 df_expected_row,
             )
+
+    @pytest.mark.parametrize("library", ["pandas", "polars"])
+    @pytest.mark.parametrize(
+        "input_values",
+        [
+            [["a", "b"], ["c", "d"]],
+            [{"a": 1}, {"b": 4}],
+        ],
+    )
+    def test_weird_dtype_errors(
+        self,
+        input_values,
+        library,
+    ):
+        """Test that unexpected dtypes will hit error"""
+
+        column = "a"
+        df_dict = {column: input_values}
+
+        # because of weird types, initialise manually
+        df = pd.DataFrame(df_dict) if library == "pandas" else pl.DataFrame(df_dict)
+
+        transformer = ArbitraryImputer(impute_value=1, columns=[column])
+
+        msg = re.escape(
+            f"""
+                {self.transformer_name}: transformer can only handle Float/Int/Boolean/String/Categorical/Unknown type columns
+                but got columns with types {nw.from_native(df).select(nw.col(column)).schema}
+                """,
+        )
+
+        with pytest.raises(
+            TypeError,
+            match=msg,
+        ):
+            transformer.transform(df)
 
 
 class TestOtherBaseBehaviour(OtherBaseBehaviourTests):
