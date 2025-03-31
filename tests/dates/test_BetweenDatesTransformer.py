@@ -379,12 +379,17 @@ class TestTransform(
             (["datetime_col_1", "date_col_2", "datetime_col_2"], 0, 1),
         ],
     )
+    @pytest.mark.parametrize(
+        ("library"),
+        ["pandas", "polars"],
+    )
     def test_mismatched_datetypes_error(
         self,
         columns,
         datetime_col,
         date_col,
         uninitialized_transformers,
+        library,
     ):
         "Test that transform raises an error if one column is a date and one is datetime"
 
@@ -393,7 +398,7 @@ class TestTransform(
             new_column_name="c",
         )
 
-        df = create_date_diff_different_dtypes()
+        df = create_date_diff_different_dtypes(library=library)
 
         present_types = (
             {"datetime64", "date32[pyarrow]"}
