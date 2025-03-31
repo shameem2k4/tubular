@@ -689,9 +689,6 @@ class MeanResponseTransformer(
         else:
             self.cast_method = np.float32
 
-        # initialise value set during fit
-        self.return_dtypes = None
-
         BaseNominalTransformer.__init__(self, columns=columns, **kwargs)
 
     @nw.narwhalify
