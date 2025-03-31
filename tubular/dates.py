@@ -912,7 +912,7 @@ class BetweenDatesTransformer(BaseGenericDateTransformer):
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(
             self,
-            X.to_native(),
+            X,
             self.drop_original,
             self.columns,
         )
