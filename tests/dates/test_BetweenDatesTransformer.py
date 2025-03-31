@@ -2,6 +2,8 @@ import datetime
 import re
 
 import narwhals as nw
+import pandas as pd
+import polars as pl
 import pytest
 
 import tests.test_data as d
@@ -335,7 +337,11 @@ class TestTransform(
             ["a_datetime", "b_datetime", "c_date"],
         ],
     )
-    def test_output_different_date_dtypes(self, columns):
+    @pytest.mark.parametrize(
+        ("library"),
+        ["pandas", "polars"],
+    )
+    def test_output_different_date_dtypes(self, columns, library):
         """Test the output of transform is as expected if both limits are exclusive."""
         x = BetweenDatesTransformer(
             columns=columns,
@@ -344,10 +350,22 @@ class TestTransform(
             upper_inclusive=False,
         )
 
-        df = d.create_is_between_dates_df_3()
+        df = d.create_is_between_dates_df_3(library=library)
         output = [False, False, True, True, False, False]
-        expected = df.copy()
-        expected["e"] = output
+        df = nw.from_native(df)
+        expected = df.clone()
+        if library == "pandas":
+            expected = expected.with_columns(
+                [
+                    nw.from_native(pd.Series(output), series_only=True).alias("e"),
+                ],
+            ).to_native()
+        if library == "polars":
+            expected = expected.with_columns(
+                [
+                    nw.from_native(pl.Series(output), series_only=True).alias("e"),
+                ],
+            ).to_native()
 
         df_transformed = x.transform(df)
 
