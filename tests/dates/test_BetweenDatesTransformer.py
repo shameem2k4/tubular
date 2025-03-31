@@ -309,8 +309,17 @@ class TestTransform(
         )
 
         df = d.create_is_between_dates_df_2()
+        df = nw.from_native(df)
 
-        df.loc[0, "c"] = datetime.datetime(1989, 3, 1, tzinfo=datetime.timezone.utc)
+        df = (
+            df.with_row_index("i")
+            .with_columns(
+                c=nw.when(nw.col("i") == 0)
+                .then(datetime.datetime(1989, 3, 1, tzinfo=datetime.timezone.utc))
+                .otherwise("c"),
+            )
+            .drop("i")
+        )
 
         with pytest.warns(Warning, match="not all c are greater than or equal to a"):
             x.transform(df)
