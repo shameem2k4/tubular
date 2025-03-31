@@ -214,9 +214,9 @@ class TestPriorRegularisation:
 
         x.fit(X=df, y=y)
 
-        expected1 = (1 * 1 + 3 * 2.5) / (1 + 3)
+        expected1 = (1 + 3 * 2.5) / (1 + 3)
 
-        expected2 = (2 * 2 + 3 * 2.5) / (2 + 3)
+        expected2 = (2 + 3 * 2.5) / (2 + 3)
 
         expected = {"a": expected1, "b": expected2}
 
@@ -261,9 +261,9 @@ class TestPriorRegularisation:
 
         x.fit(X=df, y=y)
 
-        expected1 = (1 * 1) / (1)
+        expected1 = (1) / (1)
 
-        expected2 = (2 * 2) / (2)
+        expected2 = (2) / (2)
 
         expected = {"a": expected1, "b": expected2}
 
@@ -306,9 +306,9 @@ class TestPriorRegularisation:
 
         x.fit(X=df, y=y)
 
-        expected1 = (1 * 1) / (1)
+        expected1 = (1) / (1)
 
-        expected2 = (2 * 2) / (2)
+        expected2 = (2) / (2)
 
         expected = {"a": expected1, "b": expected2}
 

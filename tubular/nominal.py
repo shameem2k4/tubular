@@ -727,10 +727,7 @@ class MeanResponseTransformer(
         prior_df = group_means_and_weights.select(
             nw.col(column),
             (
-                (
-                    (nw.col(response_column) * nw.col(weights_column))
-                    + self.global_mean * self.prior
-                )
+                ((nw.col(response_column)) + self.global_mean * self.prior)
                 / (nw.col(weights_column) + self.prior)
             ).alias(prior_col),
         )
@@ -791,7 +788,7 @@ class MeanResponseTransformer(
             )
 
             group_means_and_weights = groupby_sum.select(
-                nw.col(response_column) / nw.col(weights_column),
+                nw.col(response_column),
                 nw.col(weights_column),
                 nw.col(c),
             )
