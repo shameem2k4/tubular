@@ -144,7 +144,7 @@ def minimal_attribute_dict():
             "columns": ["a"],
         },
         "BetweenDatesTransformer": {
-            "new_column_name": "c",
+            "new_column_name": "e",
             "columns": ["a", "c", "b"],
         },
         "CappingTransformer": {
