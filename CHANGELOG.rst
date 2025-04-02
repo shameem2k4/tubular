@@ -45,6 +45,7 @@ Changed
 - Created unit tests to check if the values provided for wanted_values are as expected and if the output is as expected.
 - fix: issue with falsey values not imputing for ArbitraryImputer `#391 <https://github.com/azukds/tubular/issues/391>_`
 - narwhalified BetweenDatesTransformer `#377 <https://github.com/azukds/tubular/issues/377>_`
+- feat: narwhalified MeanResponseTransformer `373 <https://github.com/azukds/tubular/issues/373>_`
 - narhwalify SetValueTransformer `#398 <https://github.com/azukds/tubular/issues/398>_`
 - placeholder
 - placeholder
