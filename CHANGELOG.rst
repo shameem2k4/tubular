@@ -38,7 +38,6 @@ Changed
 - narwhalified DropOriginalMixin `#352 <https://github.com/lvgig/tubular/issues/352>_`
 - narwhalified BaseMappingTransformer `#367 <https://github.com/lvgig/tubular/issues/367>_`
 - narwhalified BaseMappingTransformerMixin. As part of this made mapping transformers more type-conscious, they now rely on an input 'return_dtypes' dict arg.`#369 <https://github.com/lvgig/tubular/issues/369>_`
-- As part of #369, updated OrdinalEncoderTransformer to output Int8 type
 - As part of #369, updated NominalToIntegerTransformer to output Int8 type. Removed inverse_mapping functionality, as this is more complicated when transform is opinionated on types.
 - narwhalified GroupRareLevelsTransformer. As part of this, had to make transformer more opinionated and refuse columns with nulls (raises an error directing to imputers.) `#372 <https://github.com/lvgig/tubular/issues/372>_`
 - narwhalified BaseDatetimeTransformer `#375 <https://github.com/azukds/tubular/issues/375>`
@@ -46,9 +45,12 @@ Changed
 - Created unit tests to check if the values provided for wanted_values are as expected and if the output is as expected.
 - fix: issue with falsey values not imputing for ArbitraryImputer `#391 <https://github.com/azukds/tubular/issues/391>_`
 - narwhalified BetweenDatesTransformer `#377 <https://github.com/azukds/tubular/issues/377>_`
+- narhwalify SetValueTransformer `#398 <https://github.com/azukds/tubular/issues/398>_`
 - placeholder
 - placeholder
-- placeholder
+- placeholder 
+- narwhalified DateDifferenceTransformer. `#376 <https://github.com/azukds/tubular/issues/376>_`
+- narwhalified DateDiffLeapYearTransformer.
 
 1.4.1 (02/12/2024)
 ------------------
