@@ -143,16 +143,8 @@ class TestTransform(GenericImputerTransformTests, GenericTransformTests):
 
         df_nw = nw.from_native(df)
 
-        # cast to wanted type if fiddly dtype (e.g. for bool casting sends None->False)
-        if col_type in ["Boolean"]:
-            df_nw = df_nw.with_columns(
-                nw.when(nw.col(column).is_null())
-                .then(nw.col(column))
-                .otherwise(nw.col(column).cast(getattr(nw, col_type))),
-            )
-
         # or just downcast easier types (String comes in correct type so leave)
-        elif col_type in ["Float32", "Categorical"]:
+        if col_type in ["Float32", "Categorical"]:
             df_nw = df_nw.with_columns(
                 nw.col(column).cast(getattr(nw, col_type)),
             )
