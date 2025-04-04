@@ -430,6 +430,7 @@ def create_is_between_dates_df_1(library="pandas"):
         "a": pd.date_range(start="1/1/2016", end="27/02/2017", periods=2),
         "b": pd.date_range(start="1/2/2016", end="27/09/2017", periods=2),
         "c": pd.date_range(start="1/3/2016", end="27/04/2017", periods=2),
+        "d": pd.date_range(start="1/3/2015", end="27/04/2018", periods=2),
     }
 
     return u.dataframe_init_dispatch(df_dict, library=library)
