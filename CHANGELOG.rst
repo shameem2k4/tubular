@@ -50,11 +50,9 @@ and refuse columns with nulls (raises an error directing to imputers.) `#372 <ht
 - Created unit tests to check if the values provided for wanted_values are as expected and if the output is as expected.
 - fix: issue with falsey values not imputing for ArbitraryImputer `#391 <https://github.com/azukds/tubular/issues/391>_`
 - narhwalify SetValueTransformer `#398 <https://github.com/azukds/tubular/issues/398>_`
-- placeholder
-- placeholder
-- placeholder 
 - narwhalified DateDifferenceTransformer. `#376 <https://github.com/azukds/tubular/issues/376>_`
 - narwhalified DateDiffLeapYearTransformer.
+- narwhalified MappingTransformer `#374 <https://github.com/azukds/tubular/issues/374>_`
 
 1.4.1 (02/12/2024)
 ------------------
