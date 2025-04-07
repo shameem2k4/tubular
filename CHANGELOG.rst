@@ -16,7 +16,22 @@ Subsections for each version can be one of the following;
 
 Each individual change should have a link to the pull request after the description of the change.
 
-1.4.2 (unreleased)
+1.4.3 (unreleased)
+------------------
+
+Changed
+^^^^^^^
+- narwhalified ArbitraryImputer `#315 <https://github.com/azukds/tubular/issues/315>_`
+- narwhalified BetweenDatesTransformer `#377 <https://github.com/azukds/tubular/issues/377>_`
+- feat: narwhalified MeanResponseTransformer `373 <https://github.com/azukds/tubular/issues/373>_`
+- narhwalify SetValueTransformer `#398 <https://github.com/azukds/tubular/issues/398>_`
+- narwhalified DateDifferenceTransformer. `#376 <https://github.com/azukds/tubular/issues/376>_`
+- narwhalified DateDiffLeapYearTransformer.
+- placeholder
+- placeholder 
+- placeholder
+
+1.4.2 (18/03/2025)
 ------------------
 
 Changed
@@ -44,16 +59,7 @@ Changed
 - narwhalified BaseDatetimeTransformer `#375 <https://github.com/azukds/tubular/issues/375>`
 - Optional wanted_levels feature has been integrated into the OneHotEncodingTransformer which allows users to specify which levels in a column they wish to encode. `#384 <https://github.com/azukds/tubular/issues/384>_`
 - Created unit tests to check if the values provided for wanted_values are as expected and if the output is as expected.
-- narwhalified ArbitraryImputer `#315 <https://github.com/azukds/tubular/issues/315>_`
 - fix: issue with falsey values not imputing for ArbitraryImputer `#391 <https://github.com/azukds/tubular/issues/391>_`
-- narwhalified BetweenDatesTransformer `#377 <https://github.com/azukds/tubular/issues/377>_`
-- feat: narwhalified MeanResponseTransformer `373 <https://github.com/azukds/tubular/issues/373>_`
-- narhwalify SetValueTransformer `#398 <https://github.com/azukds/tubular/issues/398>_`
-- placeholder
-- placeholder
-- placeholder 
-- narwhalified DateDifferenceTransformer. `#376 <https://github.com/azukds/tubular/issues/376>_`
-- narwhalified DateDiffLeapYearTransformer.
 
 1.4.1 (02/12/2024)
 ------------------
