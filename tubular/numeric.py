@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 import numpy as np
 import pandas as pd
+import polars as pl
+from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import (
     MaxAbsScaler,
@@ -24,7 +26,10 @@ from tubular.mixins import (
 )
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from narwhals.typing import (
+        FrameT,
+        IntoSeriesT,
+    )
 
 
 class BaseNumericTransformer(BaseTransformer, CheckNumericMixin):
@@ -945,3 +950,47 @@ class OneDKmeansTransformer(BaseNumericTransformer):
     polars_compatible = True
 
     FITS = True
+
+    def __init__(
+        self,
+        column: str,
+        new_column_name: str,
+        n_clusters: int,
+        **kwargs: dict[str, bool],
+    ) -> None:
+        if not isinstance(new_column_name, str):
+            msg = f"{self.classname()}: new_column_name should be a str but got type {type(new_column_name)}"
+            raise TypeError(msg)
+
+        if not isinstance(n_clusters, int):
+            msg = f"{self.classname()}: n_clusters should be a str but got type {type(n_clusters)}"
+            raise TypeError(msg)
+
+        self.n_clusters = n_clusters
+        self.new_column_name = new_column_name
+
+        super().__init__(columns=column, **kwargs)
+
+    def fit(self, X: FrameT, y: IntoSeriesT | None = None) -> OneDKmeansTransformer:
+        """Fir transformer to input data.
+
+        Parameters
+        ----------
+        X : pd/pl.DataFrame
+            Dataframe with columns to learn scaling values from.
+
+        y : None
+            Required for pipeline.
+
+        """
+
+        super().fit(X, y)
+        kmeans = KMeans(
+            n_clusters=self.n_clusters,
+        )
+        if isinstance(X, pl.DataFrame):
+            kmeans.set_output(transform="polars")
+
+        kmeans.fit_transform(X[self.columns])
+
+        return self
