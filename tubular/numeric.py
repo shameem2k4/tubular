@@ -911,3 +911,37 @@ class PCATransformer(BaseNumericTransformer):
         X[self.feature_names_out] = self.pca.transform(X[self.columns])
 
         return X
+
+
+class OneDKmeansTransformer(BaseNumericTransformer):
+    """Transformer that generates a new column based on kmeans algorithm.
+    Transformer runs the kmean algorithm based on given number of clusters and then identifies the bins' cuts based on the results.
+    Finally it passes them into the a cut function.
+
+    Parameters
+    ----------
+    column : str
+        Name of the column to discretise.
+
+    new_column_name : str
+        Name given to the new discrete column.
+
+    n_clusters : int, default = 8
+        The number of clusters to form as well as the number of centroids to generate.
+
+    **kwargs
+        Arbitrary keyword arguments passed onto BaseTransformer.init().
+
+    Attributes
+    ----------
+
+    polars_compatible : bool
+        class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
+
+    """
+
+    polars_compatible = True
+
+    FITS = True
