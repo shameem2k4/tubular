@@ -97,6 +97,13 @@ class BaseNumericTransformerFitTests(GenericFitTests):
         # add in 'target column' for fit
         df = nw.from_native(df)
         native_namespace = nw.get_native_namespace(df)
+
+        # Add this as OneDKmeansTransformer does not accept missing values:
+        if self.transformer_name == "OneDKmeansTransformer":
+            df = df.with_columns(nw.col(cols[0]).fill_null(strategy="forward"))
+            # Add this as samples are less than the 8 default clusters
+            x.n_clusters = 2
+
         df = df.with_columns(
             nw.new_series(
                 name="c",

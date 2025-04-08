@@ -972,11 +972,11 @@ class OneDKmeansTransformer(BaseNumericTransformer):
             raise TypeError(msg)
 
         if not isinstance(column, str):
-            msg = f"{self.classname()}: column arg (name of column) should be a single str giving the column to group."
+            msg = f"{self.classname()}: column arg should be a single str giving the column to group."
             raise TypeError(msg)
 
         if not isinstance(n_clusters, int):
-            msg = f"{self.classname()}: n_clusters should be a str but got type {type(n_clusters)}"
+            msg = f"{self.classname()}: n_clusters should be a int but got type {type(n_clusters)}"
             raise TypeError(msg)
 
         if not (n_init == "auto" or isinstance(n_init, int)):
@@ -1023,6 +1023,11 @@ class OneDKmeansTransformer(BaseNumericTransformer):
         super().fit(X, y)
 
         X = nw.from_native(X)
+
+        # Check that X does not contain Nans and return ValueError.
+        if X.select(nw.col(self.column[0]).is_null().any()).to_numpy().ravel()[0]:
+            msg = f"{self.classname()}: X should not contain missing values"
+            raise TypeError(msg)
 
         kmeans = KMeans(
             n_clusters=self.n_clusters,
