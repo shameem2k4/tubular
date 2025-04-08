@@ -7,8 +7,6 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 import numpy as np
 import pandas as pd
-import polars as pl
-from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import (
     MaxAbsScaler,
@@ -28,7 +26,6 @@ from tubular.mixins import (
 if TYPE_CHECKING:
     from narwhals.typing import (
         FrameT,
-        IntoSeriesT,
     )
 
 
@@ -916,116 +913,3 @@ class PCATransformer(BaseNumericTransformer):
         X[self.feature_names_out] = self.pca.transform(X[self.columns])
 
         return X
-
-
-class OneDKmeansTransformer(BaseNumericTransformer):
-    """Transformer that generates a new column based on kmeans algorithm.
-    Transformer runs the kmean algorithm based on given number of clusters and then identifies the bins' cuts based on the results.
-    Finally it passes them into the a cut function.
-
-    Parameters
-    ----------
-    column : str
-        Name of the column to discretise.
-
-    new_column_name : str
-        Name given to the new discrete column.
-
-    n_clusters : int, default = 8
-        The number of clusters to form as well as the number of centroids to generate.
-
-    n_init "auto" or int, default="auto"
-        Number of times the k-means algorithm is run with different centroid seeds.
-        The final results is the best output of n_init consecutive runs in terms of inertia.
-        Several runs are recommended for sparse high-dimensional problems (see `Clustering sparse data with k-means <https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html#kmeans-sparse-high-dim>`__).
-
-        When n_init='auto', the number of runs depends on the value of init: 10 if using init='random' or init is a callable;
-        1 if using init='k-means++' or init is an array-like.
-
-    **kwargs
-        Arbitrary keyword arguments passed onto BaseTransformer.init().
-
-    Attributes
-    ----------
-
-    polars_compatible : bool
-        class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
-    FITS: bool
-        class attribute, indicates whether transform requires fit to be run first
-
-    """
-
-    polars_compatible = True
-
-    FITS = True
-
-    def __init__(
-        self,
-        column: str,
-        new_column_name: str,
-        n_init: str | int = "auto",
-        n_clusters: int = 8,
-        **kwargs: dict[str, bool],
-    ) -> None:
-        if not isinstance(new_column_name, str):
-            msg = f"{self.classname()}: new_column_name should be a str but got type {type(new_column_name)}"
-            raise TypeError(msg)
-
-        if not isinstance(n_clusters, int):
-            msg = f"{self.classname()}: n_clusters should be a str but got type {type(n_clusters)}"
-            raise TypeError(msg)
-
-        if not (n_init == "auto" or isinstance(n_init, int)):
-            msg = f"{self.classname()}: n_init should be 'auto' or int but got type {type(n_init)}"
-            raise TypeError(msg)
-
-        self.n_clusters = n_clusters
-        self.new_column_name = new_column_name
-        self.n_init = n_init
-
-        super().__init__(columns=column, **kwargs)
-
-    def fit(self, X: FrameT, y: IntoSeriesT | None = None) -> OneDKmeansTransformer:
-        """Fir transformer to input data.
-
-        Parameters
-        ----------
-        X : pd/pl.DataFrame
-            Dataframe with columns to learn scaling values from.
-
-        y : None
-            Required for pipeline.
-
-        """
-
-        super().fit(X, y)
-
-        X = nw.from_native(X)
-
-        kmeans = KMeans(
-            n_clusters=self.n_clusters,
-            n_init=self.n_init,
-        )
-
-        groups = kmeans.fit_predict(X.select(self.columns))
-        if nw.get_native_namespace(X).__name__ == "pandas":
-            groups = nw.from_native(pd.DataFrame(groups)).rename({0: "groups"})
-        if nw.get_native_namespace(X).__name__ == "polars":
-            groups = nw.from_native(pl.DataFrame(groups)).rename({"column_0": "groups"})
-        groups = groups.with_row_index()
-
-        results = X.with_row_index().join(groups, on="index")
-
-        return (
-            results.group_by("groups")
-            .agg(
-                nw.col("a").max(),
-            )
-            .sort("a")
-            .select("a")
-            .to_numpy()
-            .ravel()
-        )
-
-    def transform(self, X: FrameT) -> FrameT:
-        X = super().transform(X)
