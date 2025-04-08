@@ -934,6 +934,14 @@ class OneDKmeansTransformer(BaseNumericTransformer):
     n_clusters : int, default = 8
         The number of clusters to form as well as the number of centroids to generate.
 
+    n_init "auto" or int, default="auto"
+        Number of times the k-means algorithm is run with different centroid seeds.
+        The final results is the best output of n_init consecutive runs in terms of inertia.
+        Several runs are recommended for sparse high-dimensional problems (see `Clustering sparse data with k-means <https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html#kmeans-sparse-high-dim>`__).
+
+        When n_init='auto', the number of runs depends on the value of init: 10 if using init='random' or init is a callable;
+        1 if using init='k-means++' or init is an array-like.
+
     **kwargs
         Arbitrary keyword arguments passed onto BaseTransformer.init().
 
@@ -955,7 +963,8 @@ class OneDKmeansTransformer(BaseNumericTransformer):
         self,
         column: str,
         new_column_name: str,
-        n_clusters: int,
+        n_init: str | int = "auto",
+        n_clusters: int = 8,
         **kwargs: dict[str, bool],
     ) -> None:
         if not isinstance(new_column_name, str):
@@ -966,8 +975,13 @@ class OneDKmeansTransformer(BaseNumericTransformer):
             msg = f"{self.classname()}: n_clusters should be a str but got type {type(n_clusters)}"
             raise TypeError(msg)
 
+        if not (n_init == "auto" or isinstance(n_init, int)):
+            msg = f"{self.classname()}: n_init should be 'auto' or int but got type {type(n_init)}"
+            raise TypeError(msg)
+
         self.n_clusters = n_clusters
         self.new_column_name = new_column_name
+        self.n_init = n_init
 
         super().__init__(columns=column, **kwargs)
 
@@ -985,12 +999,33 @@ class OneDKmeansTransformer(BaseNumericTransformer):
         """
 
         super().fit(X, y)
+
+        X = nw.from_native(X)
+
         kmeans = KMeans(
             n_clusters=self.n_clusters,
+            n_init=self.n_init,
         )
-        if isinstance(X, pl.DataFrame):
-            kmeans.set_output(transform="polars")
 
-        kmeans.fit_transform(X[self.columns])
+        groups = kmeans.fit_predict(X.select(self.columns))
+        if nw.get_native_namespace(X).__name__ == "pandas":
+            groups = nw.from_native(pd.DataFrame(groups)).rename({0: "groups"})
+        if nw.get_native_namespace(X).__name__ == "polars":
+            groups = nw.from_native(pl.DataFrame(groups)).rename({"column_0": "groups"})
+        groups = groups.with_row_index()
 
-        return self
+        results = X.with_row_index().join(groups, on="index")
+
+        return (
+            results.group_by("groups")
+            .agg(
+                nw.col("a").max(),
+            )
+            .sort("a")
+            .select("a")
+            .to_numpy()
+            .ravel()
+        )
+
+    def transform(self, X: FrameT) -> FrameT:
+        X = super().transform(X)
