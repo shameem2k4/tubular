@@ -1025,9 +1025,12 @@ class OneDKmeansTransformer(BaseNumericTransformer):
         X = nw.from_native(X)
 
         # Check that X does not contain Nans and return ValueError.
-        if X.select(nw.col(self.columns[0]).is_null().any()).to_numpy().ravel()[0]:
-            msg = f"{self.classname()}: X should not contain missing values"
-            raise TypeError(msg)
+        if (
+            X.select(nw.col(self.columns[0]).is_null().any()).to_numpy().ravel()[0]
+            or X.select(nw.col(self.columns[0]).is_nan().any()).to_numpy().ravel()[0]
+        ):
+            msg = f"{self.classname()}: X should not contain missing values."
+            raise ValueError(msg)
 
         kmeans = KMeans(
             n_clusters=self.n_clusters,

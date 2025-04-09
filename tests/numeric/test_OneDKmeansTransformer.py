@@ -1,5 +1,6 @@
 import pytest
 
+import tests.test_data as d
 from tests.numeric.test_BaseNumericTransformer import (
     BaseNumericTransformerFitTests,
     BaseNumericTransformerInitTests,
@@ -73,3 +74,28 @@ class TestFit(BaseNumericTransformerFitTests):
     @classmethod
     def setup_class(cls):
         cls.transformer_name = "OneDKmeansTransformer"
+
+    @pytest.mark.parametrize("library", ["pandas", "polars"])
+    @pytest.mark.parametrize(
+        ("df_generator"),
+        [
+            (d.create_df_9),  # int with None
+            (d.create_bool_and_float_df),  # float with np.nan
+            (d.create_df_with_none_and_nan_cols),  # all np.nan
+        ],
+    )
+    def test_x_nans_value_type_error(
+        self,
+        library,
+        df_generator,
+    ):
+        """Test that an exception is raised if kmeans_kwargs has keys which are not str."""
+        with pytest.raises(
+            ValueError,
+            match=r"OneDKmeansTransformer: X should not contain missing values.",
+        ):
+            df = df_generator(library=library)
+            OneDKmeansTransformer(
+                new_column_name="b",
+                column="a",
+            ).fit(X=df)
