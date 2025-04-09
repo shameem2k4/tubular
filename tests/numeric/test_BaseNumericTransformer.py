@@ -114,7 +114,6 @@ class BaseNumericTransformerFitTests(GenericFitTests):
                     .alias(cols[0]),
                 )
             df = df.with_columns(nw.col(cols[0]).fill_null(0))
-            print(df)
             # Add this as samples are less than the 8 default clusters
             x.n_clusters = 2
 
@@ -167,6 +166,12 @@ class BaseNumericTransformerTransformTests(
         # add in 'target column' for and additional numeric column fit
         df = nw.from_native(df)
         native_namespace = nw.get_native_namespace(df).__name__
+
+        # Add this as samples dont have enough volumn for 8 default clusters
+        if self.transformer_name == "OneDKmeansTransformer":
+            # Add this as samples are less than the 8 default clusters
+            x.n_clusters = 2
+
         df = df.with_columns(
             nw.new_series(
                 name="c",
@@ -216,6 +221,26 @@ class BaseNumericTransformerTransformTests(
         # add in 'target column' for and additional numeric column fit
         df = nw.from_native(df)
         native_namespace = nw.get_native_namespace(df).__name__
+
+        # Add this as OneDKmeansTransformer does not accept missing values:
+        if self.transformer_name == "OneDKmeansTransformer":
+            if native_namespace == "polars":
+                df = df.with_columns(
+                    nw.when(
+                        nw.col("a").is_nan(),
+                    )
+                    .then(
+                        0,
+                    )
+                    .otherwise(
+                        nw.col("a"),
+                    )
+                    .alias("a"),
+                )
+            df = df.with_columns(nw.col("a").fill_null(0))
+            # Add this as samples are less than the 8 default clusters
+            x.n_clusters = 2
+
         df = df.with_columns(
             nw.new_series(
                 name="c",

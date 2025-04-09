@@ -238,7 +238,7 @@ def minimal_attribute_dict():
         },
         "OneDKmeansTransformer": {
             "column": "a",
-            "new_column_name": "b",
+            "new_column_name": "new",
         },
         "OneHotEncodingTransformer": {
             "columns": ["a", "b"],

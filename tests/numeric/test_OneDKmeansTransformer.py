@@ -1,12 +1,11 @@
 import pytest
 
 import tests.test_data as d
-from tests.base_tests import (
-    DropOriginalInitMixinTests,
-)
+from tests.base_tests import DropOriginalInitMixinTests, DropOriginalTransformMixinTests
 from tests.numeric.test_BaseNumericTransformer import (
     BaseNumericTransformerFitTests,
     BaseNumericTransformerInitTests,
+    BaseNumericTransformerTransformTests,
 )
 from tubular.numeric import OneDKmeansTransformer
 
@@ -105,3 +104,14 @@ class TestFit(BaseNumericTransformerFitTests):
                 new_column_name="b",
                 column="a",
             ).fit(X=df)
+
+
+class TestTransform(
+    BaseNumericTransformerTransformTests,
+    DropOriginalTransformMixinTests,
+):
+    """Tests for OneDKmeansTransformer.transform()"""
+
+    @classmethod
+    def setup_class(cls):
+        cls.transformer_name = "OneDKmeansTransformer"

@@ -1045,7 +1045,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
         )
 
         native_namespace = nw.get_native_namespace(X).__name__
-        groups = kmeans.fit_predict(X.select(self.columns[0]))
+        groups = kmeans.fit_predict(X.select(self.columns[0]).to_native())
 
         X = X.with_columns(
             nw.new_series(
