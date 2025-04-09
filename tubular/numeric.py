@@ -1025,7 +1025,7 @@ class OneDKmeansTransformer(BaseNumericTransformer):
         X = nw.from_native(X)
 
         # Check that X does not contain Nans and return ValueError.
-        if X.select(nw.col(self.column[0]).is_null().any()).to_numpy().ravel()[0]:
+        if X.select(nw.col(self.columns[0]).is_null().any()).to_numpy().ravel()[0]:
             msg = f"{self.classname()}: X should not contain missing values"
             raise TypeError(msg)
 
