@@ -89,7 +89,7 @@ class TestFit(BaseNumericTransformerFitTests):
         library,
         df_generator,
     ):
-        """Test that an exception is raised if kmeans_kwargs has keys which are not str."""
+        """Test that an exception is raised if X contains Nan or None."""
         with pytest.raises(
             ValueError,
             match=r"OneDKmeansTransformer: X should not contain missing values.",
