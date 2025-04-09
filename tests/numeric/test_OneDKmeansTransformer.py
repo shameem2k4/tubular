@@ -1,6 +1,7 @@
 import pytest
 
 import tests.test_data as d
+import tests.utils as u
 from tests.base_tests import DropOriginalInitMixinTests, DropOriginalTransformMixinTests
 from tests.numeric.test_BaseNumericTransformer import (
     BaseNumericTransformerFitTests,
@@ -106,6 +107,30 @@ class TestFit(BaseNumericTransformerFitTests):
             ).fit(X=df)
 
 
+# Create test data
+def create_numeric_df_1(library="pandas"):
+    """Example with numeric dataframe."""
+
+    df_dict = {
+        "a": [4, 5, 4, 5, 2, 1, 3, 2, 1, 5],
+        "b": [43, 77, 61, 29, 84, 29, 24, 40, 84, 96],
+    }
+
+    return u.dataframe_init_dispatch(df_dict, library)
+
+
+def expected_numeric_df_1(library="pandas"):
+    """Example with numeric dataframe."""
+
+    df_dict = {
+        "a": [4, 5, 4, 5, 2, 1, 3, 2, 1, 5],
+        "b": [43, 77, 61, 29, 84, 29, 24, 40, 84, 96],
+        "new": [0, 1, 0, 0, 1, 0, 0, 0, 1, 1],
+    }
+
+    return u.dataframe_init_dispatch(df_dict, library)
+
+
 class TestTransform(
     BaseNumericTransformerTransformTests,
     DropOriginalTransformMixinTests,
@@ -115,3 +140,34 @@ class TestTransform(
     @classmethod
     def setup_class(cls):
         cls.transformer_name = "OneDKmeansTransformer"
+
+    @pytest.mark.parametrize(
+        ("df", "expected"),
+        [
+            (
+                create_numeric_df_1(library="pandas"),
+                expected_numeric_df_1(library="pandas"),
+            ),
+            (
+                create_numeric_df_1(library="polars"),
+                expected_numeric_df_1(library="polars"),
+            ),
+        ],
+    )
+    def test_expected_output_units_D(self, df, expected):
+        """Test that the output is expected from transform, when units is D.
+
+        This tests positive month gaps, negative month gaps, and missing values.
+
+        """
+        x = OneDKmeansTransformer(
+            column="b",
+            n_clusters=2,
+            new_column_name="new",
+            drop_original=False,
+            kmeans_kwargs={"random_state": 42},
+        ).fit(df)
+
+        df_transformed = x.transform(df)
+
+        u.assert_frame_equal_dispatch(expected, df_transformed)
