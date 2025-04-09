@@ -1099,4 +1099,4 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
                 backend=native_namespace,
             ),
         )
-        return self.drop_original_column(X, self.drop_original, self.columns)
+        return self.drop_original_column(X, self.drop_original, self.columns[0])

@@ -142,6 +142,91 @@ def expected_numeric_df_1_drop(library="pandas"):
     return u.dataframe_init_dispatch(df_dict, library)
 
 
+def create_numeric_df_2(library="pandas"):
+    """Example with numeric dataframe."""
+
+    df_dict = {
+        "a": [4, 5, 4, 5, 2, 1, 3, 2, 1, 5, 10, 12, 4, 16, 17],
+        "b": [43, -77, -61, 29, 84, 29, -24, 40, 84, -96, 10, -4, 15, -12, 15],
+        "c": [
+            "a",
+            "b",
+            "a",
+            "b",
+            "a",
+            "b",
+            "b",
+            "a",
+            "c",
+            "b",
+            "a",
+            "c",
+            "a",
+            "c",
+            "a",
+        ],
+    }
+
+    return u.dataframe_init_dispatch(df_dict, library)
+
+
+def expected_numeric_df_2(library="pandas"):
+    """Example with numeric dataframe."""
+
+    df_dict = {
+        "a": [4, 5, 4, 5, 2, 1, 3, 2, 1, 5, 10, 12, 4, 16, 17],
+        "b": [43, -77, -61, 29, 84, 29, -24, 40, 84, -96, 10, -4, 15, -12, 15],
+        "c": [
+            "a",
+            "b",
+            "a",
+            "b",
+            "a",
+            "b",
+            "b",
+            "a",
+            "c",
+            "b",
+            "a",
+            "c",
+            "a",
+            "c",
+            "a",
+        ],
+        "new": [3, 0, 0, 3, 4, 3, 1, 3, 4, 0, 2, 1, 2, 1, 2],
+    }
+
+    return u.dataframe_init_dispatch(df_dict, library)
+
+
+def expected_numeric_df_2_drop(library="pandas"):
+    """Example with numeric dataframe."""
+
+    df_dict = {
+        "a": [4, 5, 4, 5, 2, 1, 3, 2, 1, 5, 10, 12, 4, 16, 17],
+        "c": [
+            "a",
+            "b",
+            "a",
+            "b",
+            "a",
+            "b",
+            "b",
+            "a",
+            "c",
+            "b",
+            "a",
+            "c",
+            "a",
+            "c",
+            "a",
+        ],
+        "new": [3, 0, 0, 3, 4, 3, 1, 3, 4, 0, 2, 1, 2, 1, 2],
+    }
+
+    return u.dataframe_init_dispatch(df_dict, library)
+
+
 class TestTransform(
     BaseNumericTransformerTransformTests,
     DropOriginalTransformMixinTests,
@@ -166,11 +251,7 @@ class TestTransform(
         ],
     )
     def test_expected_output_without_drop(self, df, expected):
-        """Test that the output is expected from transform, when units is D.
-
-        This tests positive month gaps, negative month gaps, and missing values.
-
-        """
+        """Test that the output is expected from transform, when there are no negative numbers and dont drop original"""
         x = OneDKmeansTransformer(
             column="b",
             n_clusters=2,
@@ -197,14 +278,64 @@ class TestTransform(
         ],
     )
     def test_expected_output_with_drop(self, df, expected):
-        """Test that the output is expected from transform, when units is D.
-
-        This tests positive month gaps, negative month gaps, and missing values.
-
-        """
+        """Test that the output is expected from transform, when there are no negative numbers and drop original"""
         x = OneDKmeansTransformer(
             column="b",
             n_clusters=2,
+            new_column_name="new",
+            drop_original=True,
+            kmeans_kwargs={"random_state": 42},
+        ).fit(df)
+
+        df_transformed = x.transform(df)
+
+        u.assert_frame_equal_dispatch(expected, df_transformed)
+
+    @pytest.mark.parametrize(
+        ("df", "expected"),
+        [
+            (
+                create_numeric_df_2(library="pandas"),
+                expected_numeric_df_2(library="pandas"),
+            ),
+            (
+                create_numeric_df_2(library="polars"),
+                expected_numeric_df_2(library="polars"),
+            ),
+        ],
+    )
+    def test_expected_output_without_drop_negatives(self, df, expected):
+        """Test that the output is expected from transform, when there are negative numbers and dont drop original"""
+        x = OneDKmeansTransformer(
+            column="b",
+            n_clusters=5,
+            new_column_name="new",
+            drop_original=False,
+            kmeans_kwargs={"random_state": 42},
+        ).fit(df)
+
+        df_transformed = x.transform(df)
+
+        u.assert_frame_equal_dispatch(expected, df_transformed)
+
+    @pytest.mark.parametrize(
+        ("df", "expected"),
+        [
+            (
+                create_numeric_df_2(library="pandas"),
+                expected_numeric_df_2_drop(library="pandas"),
+            ),
+            (
+                create_numeric_df_2(library="polars"),
+                expected_numeric_df_2_drop(library="polars"),
+            ),
+        ],
+    )
+    def test_expected_output_with_drop_negatives(self, df, expected):
+        """Test that the output is expected from transform, when there are negative numbers and drop original"""
+        x = OneDKmeansTransformer(
+            column="b",
+            n_clusters=5,
             new_column_name="new",
             drop_original=True,
             kmeans_kwargs={"random_state": 42},
