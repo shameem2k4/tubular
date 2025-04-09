@@ -51,12 +51,12 @@ class BaseNumericTransformerFitTests(GenericFitTests):
 
         # add in 'target column' for fit
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_namespace = nw.get_native_namespace(df).__name__
         df = df.with_columns(
             nw.new_series(
                 name="c",
                 values=[1] * len(df),
-                native_namespace=native_namespace,
+                backend=native_namespace,
             ),
         ).to_native()
 
@@ -166,12 +166,12 @@ class BaseNumericTransformerTransformTests(
 
         # add in 'target column' for and additional numeric column fit
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_namespace = nw.get_native_namespace(df).__name__
         df = df.with_columns(
             nw.new_series(
                 name="c",
                 values=[1] * len(df),
-                native_namespace=native_namespace,
+                backend=native_namespace,
             ),
         ).to_native()
 
@@ -215,17 +215,17 @@ class BaseNumericTransformerTransformTests(
 
         # add in 'target column' for and additional numeric column fit
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_namespace = nw.get_native_namespace(df).__name__
         df = df.with_columns(
             nw.new_series(
                 name="c",
                 values=[1] * len(df),
-                native_namespace=native_namespace,
+                backend=native_namespace,
             ),
             nw.new_series(
                 name="b",
                 values=[1] * len(df),
-                native_namespace=native_namespace,
+                backend=native_namespace,
             ),
         ).to_native()
 
