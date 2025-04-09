@@ -914,7 +914,7 @@ class PCATransformer(BaseNumericTransformer):
         return X
 
 
-class OneDKmeansTransformer(BaseNumericTransformer):
+class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
     """Transformer that generates a new column based on kmeans algorithm.
     Transformer runs the kmean algorithm based on given number of clusters and then identifies the bins' cuts based on the results.
     Finally it passes them into the a cut function.
@@ -937,6 +937,10 @@ class OneDKmeansTransformer(BaseNumericTransformer):
 
         When n_init='auto', the number of runs depends on the value of init: 10 if using init='random' or init is a callable;
         1 if using init='k-means++' or init is an array-like.
+
+    drop_original : bool, default=False
+        Should the original columns to be transformed be dropped after applying the
+        OneDKmeanstransformer?
 
     kmeans_kwargs : dict, default = {}
         A dictionary of keyword arguments to be passed to the sklearn KMeans method when it is called in fit.
@@ -964,6 +968,7 @@ class OneDKmeansTransformer(BaseNumericTransformer):
         new_column_name: str,
         n_init: str | int = "auto",
         n_clusters: int = 8,
+        drop_original: bool = False,
         kmeans_kwargs: dict[str, object] | None = None,
         **kwargs: dict[str, bool],
     ) -> None:
@@ -1005,6 +1010,7 @@ class OneDKmeansTransformer(BaseNumericTransformer):
         self.column = column
 
         super().__init__(columns=[column], **kwargs)
+        self.set_drop_original_column(drop_original)
 
     @nw.narwhalify
     def fit(self, X: FrameT, y: IntoSeriesT | None = None) -> OneDKmeansTransformer:
@@ -1086,10 +1092,11 @@ class OneDKmeansTransformer(BaseNumericTransformer):
             right=True,
         )
 
-        return X.with_columns(
+        X = X.with_columns(
             nw.new_series(
                 name=self.new_column_name,
                 values=groups,
                 backend=native_namespace,
             ),
         )
+        return self.drop_original_column(X, self.drop_original, self.columns)

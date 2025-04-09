@@ -1,6 +1,9 @@
 import pytest
 
 import tests.test_data as d
+from tests.base_tests import (
+    DropOriginalInitMixinTests,
+)
 from tests.numeric.test_BaseNumericTransformer import (
     BaseNumericTransformerFitTests,
     BaseNumericTransformerInitTests,
@@ -8,7 +11,10 @@ from tests.numeric.test_BaseNumericTransformer import (
 from tubular.numeric import OneDKmeansTransformer
 
 
-class TestInit(BaseNumericTransformerInitTests):
+class TestInit(
+    BaseNumericTransformerInitTests,
+    DropOriginalInitMixinTests,
+):
     """Tests for OneDKmeansTransformer.init()"""
 
     @classmethod
