@@ -19,6 +19,8 @@ def expected_df_1(library="pandas"):
 
     df = dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
 
+    df = nw.from_native(df)
+
     df = df.with_columns(nw.col("b").cast(nw.Int8))
 
     return df.to_native()
@@ -30,6 +32,8 @@ def expected_df_2(library="pandas"):
     df_dict = {"a": [5, 6, 7, 4, 5, 6], "b": ["z", "y", "x", "d", "e", "f"]}
 
     df = dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
+
+    df = nw.from_native(df)
 
     df = df.with_columns(nw.col("a").cast(nw.Int8))
 
@@ -79,6 +83,9 @@ class TestTransform(BaseMappingTransformerTransformTests):
 
         assert_frame_equal_dispatch(df_transformed, expected)
 
+        df = nw.from_native(df)
+        expected = nw.from_native(expected)
+
         # also check single rows
         for i in range(len(df)):
             df_transformed_row = x.transform(df[[i]].to_native())
@@ -106,6 +113,9 @@ class TestTransform(BaseMappingTransformerTransformTests):
 
         assert_frame_equal_dispatch(df_transformed, expected)
 
+        df = nw.from_native(df)
+        expected = nw.from_native(expected)
+
         # also check single rows
         for i in range(len(df)):
             df_transformed_row = x.transform(df[[i]].to_native())
@@ -121,7 +131,10 @@ class TestTransform(BaseMappingTransformerTransformTests):
         ("mapping", "return_dtypes"),
         [
             ({"a": {1: 1.1, 6: 6.6}}, {"a": "Float64"}),
-            ({"a": {1: "one", 6: "six"}}, {"a": "String"}),
+            (
+                {"a": {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six"}},
+                {"a": "String"},
+            ),
             (
                 {"a": {1: True, 2: True, 3: True, 4: False, 5: False, 6: False}},
                 {"a": "Boolean"},
@@ -147,7 +160,7 @@ class TestTransform(BaseMappingTransformerTransformTests):
         df = x.transform(df)
 
         column = list(mapping.keys())[0]
-        actual_dtype = str(nw.from_native(df).get_column(nw.col(column)).dtype)
+        actual_dtype = str(nw.from_native(df).get_column(column).dtype)
         assert (
             actual_dtype == return_dtypes[column]
         ), f"dtype converted unexpectedly, expected {return_dtypes[column]} but got {actual_dtype}"
