@@ -831,7 +831,7 @@ class BetweenDatesTransformer(BaseGenericDateTransformer):
 
     """
 
-    polars_compatible = False
+    polars_compatible = True
 
     def __init__(
         self,
@@ -870,7 +870,8 @@ class BetweenDatesTransformer(BaseGenericDateTransformer):
         self.column_upper = columns[2]
         self.column_between = columns[2]
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+    @nw.narwhalify
+    def transform(self, X: FrameT) -> FrameT:
         """Transform - creates column indicating if middle date is between the other two.
 
         If not all column_lower values are less than or equal to column_upper when transform is run
@@ -878,37 +879,41 @@ class BetweenDatesTransformer(BaseGenericDateTransformer):
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Data to transform.
 
         Returns
         -------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Input X with additional column (self.new_column_name) added. This column is
             boolean and indicates if the middle column is between the other 2.
 
         """
-        X = super().transform(X)
+        X = nw.from_native(super().transform(X))
 
-        if not (X[self.columns[0]] <= X[self.columns[2]]).all():
+        if not (
+            X.select((nw.col(self.columns[0]) <= nw.col(self.columns[2])).all()).item()
+        ):
             warnings.warn(
                 f"{self.classname()}: not all {self.columns[2]} are greater than or equal to {self.columns[0]}",
                 stacklevel=2,
             )
 
-        if self.lower_inclusive:
-            lower_comparison = X[self.columns[0]] <= X[self.columns[1]]
+        lower_comparison = (
+            nw.col(self.columns[0]) <= nw.col(self.columns[1])
+            if self.lower_inclusive
+            else nw.col(self.columns[0]) < nw.col(self.columns[1])
+        )
 
-        else:
-            lower_comparison = X[self.columns[0]] < X[self.columns[1]]
+        upper_comparison = (
+            nw.col(self.columns[1]) <= nw.col(self.columns[2])
+            if self.upper_inclusive
+            else nw.col(self.columns[1]) < nw.col(self.columns[2])
+        )
 
-        if self.upper_inclusive:
-            upper_comparison = X[self.columns[1]] <= X[self.columns[2]]
-
-        else:
-            upper_comparison = X[self.columns[1]] < X[self.columns[2]]
-
-        X[self.new_column_name] = lower_comparison & upper_comparison
+        X = X.with_columns(
+            (lower_comparison & upper_comparison).alias(self.new_column_name),
+        )
 
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(

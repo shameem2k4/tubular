@@ -2,8 +2,9 @@ import datetime
 import re
 
 import narwhals as nw
+import pandas as pd
+import polars as pl
 import pytest
-import test_aide as ta
 
 import tests.test_data as d
 from tests.base_tests import (
@@ -84,7 +85,7 @@ def expected_df_1(library="pandas"):
         nw.new_series(
             name="d",
             values=[True, False],
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         ),
     )
 
@@ -101,7 +102,7 @@ def expected_df_2(library="pandas"):
         nw.new_series(
             name="e",
             values=[False, False, True, True, False, False],
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         ),
     )
 
@@ -118,7 +119,7 @@ def expected_df_3(library="pandas"):
         nw.new_series(
             name="e",
             values=[False, False, True, True, True, False],
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         ),
     )
 
@@ -135,7 +136,7 @@ def expected_df_4(library="pandas"):
         nw.new_series(
             name="e",
             values=[False, True, True, True, False, False],
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         ),
     )
 
@@ -152,7 +153,7 @@ def expected_df_5(library="pandas"):
         nw.new_series(
             name="e",
             values=[False, True, True, True, True, False],
-            native_namespace=native_namespace,
+            backend=native_namespace.__name__,
         ),
     )
 
@@ -172,10 +173,16 @@ class TestTransform(
 
     @pytest.mark.parametrize(
         ("df", "expected"),
-        ta.pandas.adjusted_dataframe_params(
-            d.create_is_between_dates_df_1(),
-            expected_df_1(),
-        ),
+        [
+            (
+                d.create_is_between_dates_df_1(library="pandas"),
+                expected_df_1(library="pandas"),
+            ),
+            (
+                d.create_is_between_dates_df_1(library="polars"),
+                expected_df_1(library="polars"),
+            ),
+        ],
     )
     def test_output(self, df, expected):
         """Test the output of transform is as expected."""
@@ -192,10 +199,16 @@ class TestTransform(
 
     @pytest.mark.parametrize(
         ("df", "expected"),
-        ta.pandas.adjusted_dataframe_params(
-            d.create_is_between_dates_df_2(),
-            expected_df_2(),
-        ),
+        [
+            (
+                d.create_is_between_dates_df_2(library="pandas"),
+                expected_df_2(library="pandas"),
+            ),
+            (
+                d.create_is_between_dates_df_2(library="polars"),
+                expected_df_2(library="polars"),
+            ),
+        ],
     )
     def test_output_both_exclusive(self, df, expected):
         """Test the output of transform is as expected if both limits are exclusive."""
@@ -212,10 +225,16 @@ class TestTransform(
 
     @pytest.mark.parametrize(
         ("df", "expected"),
-        ta.pandas.adjusted_dataframe_params(
-            d.create_is_between_dates_df_2(),
-            expected_df_3(),
-        ),
+        [
+            (
+                d.create_is_between_dates_df_2(library="pandas"),
+                expected_df_3(library="pandas"),
+            ),
+            (
+                d.create_is_between_dates_df_2(library="polars"),
+                expected_df_3(library="polars"),
+            ),
+        ],
     )
     def test_output_lower_exclusive(self, df, expected):
         """Test the output of transform is as expected if the lower limits are exclusive only."""
@@ -232,10 +251,16 @@ class TestTransform(
 
     @pytest.mark.parametrize(
         ("df", "expected"),
-        ta.pandas.adjusted_dataframe_params(
-            d.create_is_between_dates_df_2(),
-            expected_df_4(),
-        ),
+        [
+            (
+                d.create_is_between_dates_df_2(library="pandas"),
+                expected_df_4(library="pandas"),
+            ),
+            (
+                d.create_is_between_dates_df_2(library="polars"),
+                expected_df_4(library="polars"),
+            ),
+        ],
     )
     def test_output_upper_exclusive(self, df, expected):
         """Test the output of transform is as expected if the upper limits are exclusive only."""
@@ -252,10 +277,16 @@ class TestTransform(
 
     @pytest.mark.parametrize(
         ("df", "expected"),
-        ta.pandas.adjusted_dataframe_params(
-            d.create_is_between_dates_df_2(),
-            expected_df_5(),
-        ),
+        [
+            (
+                d.create_is_between_dates_df_2(library="pandas"),
+                expected_df_5(library="pandas"),
+            ),
+            (
+                d.create_is_between_dates_df_2(library="polars"),
+                expected_df_5(library="polars"),
+            ),
+        ],
     )
     def test_output_both_inclusive(self, df, expected):
         """Test the output of transform is as expected if the both limits are inclusive."""
@@ -280,8 +311,17 @@ class TestTransform(
         )
 
         df = d.create_is_between_dates_df_2()
+        df = nw.from_native(df)
 
-        df.loc[0, "c"] = datetime.datetime(1989, 3, 1, tzinfo=datetime.timezone.utc)
+        df = (
+            df.with_row_index("i")
+            .with_columns(
+                c=nw.when(nw.col("i") == 0)
+                .then(datetime.datetime(1989, 3, 1, tzinfo=datetime.timezone.utc))
+                .otherwise("c"),
+            )
+            .drop("i")
+        ).to_native()
 
         with pytest.warns(Warning, match="not all c are greater than or equal to a"):
             x.transform(df)
@@ -297,7 +337,11 @@ class TestTransform(
             ["a_datetime", "b_datetime", "c_date"],
         ],
     )
-    def test_output_different_date_dtypes(self, columns):
+    @pytest.mark.parametrize(
+        ("library"),
+        ["pandas", "polars"],
+    )
+    def test_output_different_date_dtypes(self, columns, library):
         """Test the output of transform is as expected if both limits are exclusive."""
         x = BetweenDatesTransformer(
             columns=columns,
@@ -306,10 +350,22 @@ class TestTransform(
             upper_inclusive=False,
         )
 
-        df = d.create_is_between_dates_df_3()
+        df = d.create_is_between_dates_df_3(library=library)
         output = [False, False, True, True, False, False]
-        expected = df.copy()
-        expected["e"] = output
+        df = nw.from_native(df)
+        expected = df.clone()
+        if library == "pandas":
+            expected = expected.with_columns(
+                [
+                    nw.from_native(pd.Series(output), series_only=True).alias("e"),
+                ],
+            ).to_native()
+        if library == "polars":
+            expected = expected.with_columns(
+                [
+                    nw.from_native(pl.Series(output), series_only=True).alias("e"),
+                ],
+            ).to_native()
 
         df_transformed = x.transform(df)
 
@@ -323,12 +379,17 @@ class TestTransform(
             (["datetime_col_1", "date_col_2", "datetime_col_2"], 0, 1),
         ],
     )
+    @pytest.mark.parametrize(
+        ("library"),
+        ["pandas", "polars"],
+    )
     def test_mismatched_datetypes_error(
         self,
         columns,
         datetime_col,
         date_col,
         uninitialized_transformers,
+        library,
     ):
         "Test that transform raises an error if one column is a date and one is datetime"
 
@@ -337,7 +398,7 @@ class TestTransform(
             new_column_name="c",
         )
 
-        df = create_date_diff_different_dtypes()
+        df = create_date_diff_different_dtypes(library=library)
 
         present_types = (
             {"datetime64", "date32[pyarrow]"}
