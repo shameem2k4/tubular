@@ -916,7 +916,7 @@ class PCATransformer(BaseNumericTransformer):
 
 class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
     """Transformer that generates a new column based on kmeans algorithm.
-    Transformer runs the kmean algorithm based on given number of clusters and then identifies the bins' cuts based on the results.
+    Transformer runs the kmeans algorithm based on given number of clusters and then identifies the bins' cuts based on the results.
     Finally it passes them into the a cut function.
 
     Parameters
@@ -1014,7 +1014,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
 
     @nw.narwhalify
     def fit(self, X: FrameT, y: IntoSeriesT | None = None) -> OneDKmeansTransformer:
-        """Fir transformer to input data.
+        """Fit transformer to input data.
 
         Parameters
         ----------
