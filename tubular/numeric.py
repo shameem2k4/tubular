@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import narwhals as nw
 import numpy as np
@@ -964,7 +964,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
 
     def __init__(
         self,
-        column: str,
+        columns: Union[str, list[str]],
         new_column_name: str,
         n_init: str | int = "auto",
         n_clusters: int = 8,
@@ -976,7 +976,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
             msg = f"{self.classname()}: new_column_name should be a str but got type {type(new_column_name)}"
             raise TypeError(msg)
 
-        if not isinstance(column, str):
+        if not isinstance(columns, str):
             msg = f"{self.classname()}: column arg should be a single str giving the column to group."
             raise TypeError(msg)
 
@@ -1007,9 +1007,9 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
 
         # This attribute is not for use in any method, use 'columns' instead.
         # Here only as a fix to allow string representation of transformer.
-        self.column = column
+        self.columns = columns[0]
 
-        super().__init__(columns=[column], **kwargs)
+        super().__init__(columns=[columns[0]], **kwargs)
         self.set_drop_original_column(drop_original)
 
     @nw.narwhalify
