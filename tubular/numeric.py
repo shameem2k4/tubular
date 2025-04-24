@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
 import numpy as np
@@ -937,7 +937,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
         Several runs are recommended for sparse high-dimensional problems (see `Clustering sparse data with k-means <https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html#kmeans-sparse-high-dim>`__).
 
         When n_init='auto', the number of runs depends on the value of init: 10 if using init='random' or init is a callable;
-        1 if using init='k-means++' or init is an array-like.
+        1 if using init='k-means++' or init is an array-like.(Init is an arg in kmeans_kwargs. If init is not set then it defaults to k-means++ so n_init defaults to 1)
 
     drop_original : bool, default=False
         Should the original columns to be transformed be dropped after applying the
@@ -968,50 +968,30 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
         self,
         columns: Union[str, list[str]],
         new_column_name: str,
-        n_init: str | int = "auto",
+        n_init: Union[str, int] = "auto",
         n_clusters: int = 8,
         drop_original: bool = False,
-        kmeans_kwargs: dict[str, object] | None = None,
+        kmeans_kwargs: Optional[dict[str, object]] = None,
         **kwargs: dict[str, bool],
     ) -> None:
-        if not isinstance(new_column_name, str):
-            msg = f"{self.classname()}: new_column_name should be a str but got type {type(new_column_name)}"
-            raise TypeError(msg)
-
-        if (not isinstance(columns, str)) or (len(columns) > 1):
-            msg = f"{self.classname()}: column arg should be a single str giving the column to group."
-            raise TypeError(msg)
-
-        if not isinstance(n_clusters, int):
-            msg = f"{self.classname()}: n_clusters should be a int but got type {type(n_clusters)}"
-            raise TypeError(msg)
-
-        if not (n_init == "auto" or isinstance(n_init, int)):
-            msg = f"{self.classname()}: n_init should be 'auto' or int but got type {type(n_init)}"
+        if (isinstance(columns, list)) and (len(columns) > 1):
+            msg = f"{self.classname()}: columns arg should be a single str or a list length 1 giving the column to group."
             raise TypeError(msg)
 
         if kmeans_kwargs is None:
             kmeans_kwargs = {}
-        else:
-            if type(kmeans_kwargs) is not dict:
-                msg = f"{self.classname()}: kmeans_kwargs should be a dict but got type {type(kmeans_kwargs)}"
-                raise TypeError(msg)
-
-        for i, k in enumerate(kmeans_kwargs.keys()):
-            if type(k) is not str:
-                msg = f"{self.classname()}: unexpected type ({type(k)}) for kmeans_kwargs key in position {i}, must be str"
-                raise TypeError(msg)
 
         self.n_clusters = n_clusters
         self.new_column_name = new_column_name
         self.n_init = n_init
         self.kmeans_kwargs = kmeans_kwargs
 
-        # This attribute is not for use in any method, use 'columns' instead.
-        # Here only as a fix to allow string representation of transformer.
-        self.columns = columns[0]
+        if isinstance(columns, str):
+            self.columns = [columns]
+        else:
+            self.columns = columns
 
-        super().__init__(columns=[columns[0]], **kwargs)
+        super().__init__(columns=[columns], **kwargs)
         self.set_drop_original_column(drop_original)
 
     @nw.narwhalify
@@ -1047,12 +1027,12 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
         )
 
         native_namespace = nw.get_native_namespace(X).__name__
-        groups = kmeans.fit_predict(X.select(self.columns[0]).to_native())
+        groups = kmeans.fit_predict(X.select(self.columns[0]).to_numpy())
 
         X = X.with_columns(
             nw.new_series(
                 name="groups",
-                values=groups,
+                values=np.copy(groups),
                 backend=native_namespace,
             ),
         )
@@ -1089,7 +1069,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
         native_namespace = nw.get_native_namespace(X).__name__
 
         groups = np.digitize(
-            X.select(self.column[0]).to_numpy().ravel(),
+            X.select(self.columns[0]).to_numpy().ravel(),
             bins=self.bins,
             right=True,
         )
