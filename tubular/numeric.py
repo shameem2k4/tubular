@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Union
 import narwhals as nw
 import numpy as np
 import pandas as pd
+from beartype import beartype
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import (
@@ -962,6 +963,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
 
     FITS = True
 
+    @beartype
     def __init__(
         self,
         columns: Union[str, list[str]],
@@ -976,7 +978,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
             msg = f"{self.classname()}: new_column_name should be a str but got type {type(new_column_name)}"
             raise TypeError(msg)
 
-        if not isinstance(columns, str):
+        if (not isinstance(columns, str)) or (len(columns) > 1):
             msg = f"{self.classname()}: column arg should be a single str giving the column to group."
             raise TypeError(msg)
 
