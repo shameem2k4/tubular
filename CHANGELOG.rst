@@ -28,6 +28,7 @@ Changed
 - narwhalified DateDifferenceTransformer. `#376 <https://github.com/azukds/tubular/issues/376>_`
 - narwhalified DateDiffLeapYearTransformer.
 - narwhalified MappingTransformer `#374 <https://github.com/azukds/tubular/issues/374>_`
+- added OneDKmeansTransformer. `#406 <https://github.com/azukds/tubular/issues/406>_`
 - placeholder 
 - placeholder
 - placeholder
