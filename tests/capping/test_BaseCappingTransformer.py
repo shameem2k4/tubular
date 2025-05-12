@@ -530,12 +530,12 @@ class GenericCappingTransformTests(GenericTransformTests):
 
         # convert column to non-numeric
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_backend = nw.get_native_namespace(df)
         df = df.with_columns(
             nw.new_series(
                 name="a",
                 values=["a"] * len(df),
-                native_namespace=native_namespace,
+                backend=native_backend,
             ),
         )
 

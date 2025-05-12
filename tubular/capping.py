@@ -190,7 +190,7 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
 
         self.quantile_capping_values = {}
 
-        native_namespace = nw.get_native_namespace(X)
+        native_backend = nw.get_native_namespace(X)
 
         if self.quantiles is not None:
             for col in self.columns:
@@ -200,7 +200,7 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
                         nw.new_series(
                             name="dummy_weights_column",
                             values=[1] * len(X),
-                            native_namespace=native_namespace,
+                            backend=native_backend,
                         ),
                     )
 

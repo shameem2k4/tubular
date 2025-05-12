@@ -419,7 +419,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         if self.record_rare_levels:
             self.rare_levels_record_ = {}
 
-        native_namespace = nw.get_native_namespace(X)
+        native_backend = nw.get_native_namespace(X)
 
         weights_column = self.weights_column
         if self.weights_column is None:
@@ -428,7 +428,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
                 nw.new_series(
                     name=weights_column,
                     values=[1] * len(X),
-                    native_namespace=native_namespace,
+                    backend=native_backend,
                 ),
             )
 
@@ -834,14 +834,14 @@ class MeanResponseTransformer(
             WeightColumnMixin.check_weights_column(self, X, self.weights_column)
 
         else:
-            native_namespace = nw.get_native_namespace(X)
+            native_backend = nw.get_native_namespace(X)
 
             weights_column = "dummy_weights_column"
             X = X.with_columns(
                 nw.new_series(
                     name=weights_column,
                     values=[1] * len(X),
-                    backend=native_namespace.__name__,
+                    backend=native_backend.__name__,
                 ),
             )
 

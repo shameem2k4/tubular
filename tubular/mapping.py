@@ -151,7 +151,7 @@ class BaseMappingTransformMixin(BaseTransformer):
         self.check_is_fitted(["mappings", "return_dtypes"])
 
         X = nw.from_native(super().transform(X))
-        native_namespace = nw.get_native_namespace(X)
+        native_backend = nw.get_native_namespace(X)
 
         # will do a join further down, which does not preserve index
         # polars does not care about this, but pandas does,
@@ -181,7 +181,7 @@ class BaseMappingTransformMixin(BaseTransformer):
                     col: X.get_column(col).dtype,
                     new_col_values: getattr(nw, self.return_dtypes[col]),
                 },
-                native_namespace=native_namespace,
+                backend=native_backend,
             )
 
             X = (

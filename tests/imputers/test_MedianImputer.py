@@ -40,14 +40,14 @@ class TestFit(WeightColumnFitMixinTests, GenericFitTests):
         df = d.create_df_3(library=library)
 
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_backend = nw.get_native_namespace(df)
 
         # replace 'a' with all null values to trigger warning
         df = df.with_columns(
             nw.new_series(
                 name="d",
                 values=[None] * len(df),
-                native_namespace=native_namespace,
+                backend=native_backend,
             ),
         )
 
@@ -70,14 +70,14 @@ class TestFit(WeightColumnFitMixinTests, GenericFitTests):
         df = d.create_df_9(library=library)
 
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_backend = nw.get_native_namespace(df)
 
         # replace 'a' with all null values to trigger warning
         df = df.with_columns(
             nw.new_series(
                 name="d",
                 values=[None] * len(df),
-                native_namespace=native_namespace,
+                backend=native_backend,
             ),
         )
 

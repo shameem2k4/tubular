@@ -51,12 +51,12 @@ class BaseNumericTransformerFitTests(GenericFitTests):
 
         # add in 'target column' for fit
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df).__name__
+        native_backend = nw.get_native_namespace(df).__name__
         df = df.with_columns(
             nw.new_series(
                 name="c",
                 values=[1] * len(df),
-                backend=native_namespace,
+                backend=native_backend,
             ),
         ).to_native()
 
@@ -96,11 +96,11 @@ class BaseNumericTransformerFitTests(GenericFitTests):
 
         # add in 'target column' for fit
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df).__name__
+        native_backend = nw.get_native_namespace(df).__name__
 
         # Add this as OneDKmeansTransformer does not accept missing values:
         if self.transformer_name == "OneDKmeansTransformer":
-            if native_namespace == "polars":
+            if native_backend == "polars":
                 df = df.with_columns(
                     nw.when(
                         nw.col(cols[0]).is_nan(),
@@ -121,7 +121,7 @@ class BaseNumericTransformerFitTests(GenericFitTests):
             nw.new_series(
                 name="c",
                 values=[1] * len(df),
-                backend=native_namespace,
+                backend=native_backend,
             ),
         ).to_native()
 
@@ -165,7 +165,7 @@ class BaseNumericTransformerTransformTests(
 
         # add in 'target column' for and additional numeric column fit
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df).__name__
+        native_backend = nw.get_native_namespace(df).__name__
 
         # Add this as samples dont have enough volumn for 8 default clusters
         if self.transformer_name == "OneDKmeansTransformer":
@@ -176,7 +176,7 @@ class BaseNumericTransformerTransformTests(
             nw.new_series(
                 name="c",
                 values=[1] * len(df),
-                backend=native_namespace,
+                backend=native_backend,
             ),
         ).to_native()
 
@@ -220,11 +220,11 @@ class BaseNumericTransformerTransformTests(
 
         # add in 'target column' for and additional numeric column fit
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df).__name__
+        native_backend = nw.get_native_namespace(df).__name__
 
         # Add this as OneDKmeansTransformer does not accept missing values:
         if self.transformer_name == "OneDKmeansTransformer":
-            if native_namespace == "polars":
+            if native_backend == "polars":
                 df = df.with_columns(
                     nw.when(
                         nw.col("a").is_nan(),
@@ -245,12 +245,12 @@ class BaseNumericTransformerTransformTests(
             nw.new_series(
                 name="c",
                 values=[1] * len(df),
-                backend=native_namespace,
+                backend=native_backend,
             ),
             nw.new_series(
                 name="b",
                 values=[1] * len(df),
-                backend=native_namespace,
+                backend=native_backend,
             ),
         ).to_native()
 
