@@ -725,12 +725,12 @@ class TestFitBinaryResponse(GenericFitTests, WeightColumnFitMixinTests):
 
         df = nw.from_native(df)
         weights_column = "weights_column"
-        native_namespace = nw.get_native_namespace(df)
+        native_backend = nw.get_native_namespace(df)
         df = df.with_columns(
             nw.new_series(
                 name=weights_column,
                 values=[1, 1, 1, 2, 2, 2],
-                backend=native_namespace.__name__,
+                backend=native_backend.__name__,
             ),
         )
 
@@ -796,7 +796,7 @@ class TestFitBinaryResponse(GenericFitTests, WeightColumnFitMixinTests):
 
         df = nw.from_native(df)
         weights_column = "weights_column"
-        native_namespace = nw.get_native_namespace(df)
+        native_backend = nw.get_native_namespace(df)
 
         # column f looks like [False, False, False, True, True, True]
         df = df.with_columns(
@@ -810,7 +810,7 @@ class TestFitBinaryResponse(GenericFitTests, WeightColumnFitMixinTests):
                     high_weight,
                     high_weight,
                 ],
-                backend=native_namespace.__name__,
+                backend=native_backend.__name__,
             ),
         )
 

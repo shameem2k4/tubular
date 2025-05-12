@@ -53,7 +53,7 @@ class TestCheckWeightsColumn:
         obj = WeightColumnMixin()
 
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_backend = nw.get_native_namespace(df)
 
         weight_column = "weight_column"
 
@@ -61,7 +61,7 @@ class TestCheckWeightsColumn:
             nw.new_series(
                 weight_column,
                 [*[bad_weight_value], *np.arange(2, len(df) + 1)],
-                native_namespace=native_namespace,
+                backend=native_backend,
             ),
         )
 

@@ -1026,14 +1026,14 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
             **self.kmeans_kwargs,
         )
 
-        native_namespace = nw.get_native_namespace(X).__name__
+        native_backend = nw.get_native_namespace(X).__name__
         groups = kmeans.fit_predict(X.select(self.columns[0]).to_numpy())
 
         X = X.with_columns(
             nw.new_series(
                 name="groups",
                 values=np.copy(groups),
-                backend=native_namespace,
+                backend=native_backend,
             ),
         )
 
@@ -1066,7 +1066,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
         X = super().transform(X)
 
         X = nw.from_native(X)
-        native_namespace = nw.get_native_namespace(X).__name__
+        native_backend = nw.get_native_namespace(X).__name__
 
         groups = np.digitize(
             X.select(self.columns[0]).to_numpy().ravel(),
@@ -1078,7 +1078,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
             nw.new_series(
                 name=self.new_column_name,
                 values=groups,
-                backend=native_namespace,
+                backend=native_backend,
             ),
         )
         return self.drop_original_column(X, self.drop_original, self.columns[0])

@@ -504,7 +504,7 @@ class WeightColumnFitMixinTests:
             return
 
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_backend = nw.get_native_namespace(df)
 
         args = minimal_attribute_dict[self.transformer_name].copy()
         # insert weight column
@@ -514,7 +514,7 @@ class WeightColumnFitMixinTests:
             nw.new_series(
                 weight_column,
                 np.arange(1, len(df) + 1),
-                native_namespace=native_namespace,
+                backend=native_backend,
             ),
         )
 
@@ -551,14 +551,14 @@ class WeightColumnFitMixinTests:
             return
 
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_backend = nw.get_native_namespace(df)
         # insert weight column
         weight_column = "weight_column"
         df = df.with_columns(
             nw.new_series(
                 weight_column,
                 np.arange(1, len(df) + 1),
-                native_namespace=native_namespace,
+                backend=native_backend,
             ),
         )
 
@@ -612,7 +612,7 @@ class WeightColumnFitMixinTests:
             return
 
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_backend = nw.get_native_namespace(df)
 
         args = minimal_attribute_dict[self.transformer_name].copy()
         weight_column = "weight_column"
@@ -622,7 +622,7 @@ class WeightColumnFitMixinTests:
             nw.new_series(
                 weight_column,
                 [*[bad_weight_value], *np.arange(2, len(df) + 1)],
-                native_namespace=native_namespace,
+                backend=native_backend,
             ),
         )
 

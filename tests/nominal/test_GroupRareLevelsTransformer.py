@@ -333,13 +333,13 @@ class TestTransform(GenericNominalTransformTests):
         x.fit(df)
 
         df = nw.from_native(df)
-        native_namespace = nw.get_native_namespace(df)
+        native_backend = nw.get_native_namespace(df)
 
         df = df.with_columns(
             nw.new_series(
                 name="b",
                 values=["w", "w", "z", "y", "unseen_level"],
-                native_namespace=native_namespace,
+                backend=native_backend,
             ),
         ).to_native()
 

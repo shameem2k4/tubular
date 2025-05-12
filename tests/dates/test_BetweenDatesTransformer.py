@@ -80,12 +80,12 @@ def expected_df_1(library="pandas"):
     df = d.create_is_between_dates_df_1(library=library)
 
     df = nw.from_native(df)
-    native_namespace = nw.get_native_namespace(df)
+    native_backend = nw.get_native_namespace(df)
     df = df.with_columns(
         nw.new_series(
             name="d",
             values=[True, False],
-            backend=native_namespace.__name__,
+            backend=native_backend.__name__,
         ),
     )
 
@@ -97,12 +97,12 @@ def expected_df_2(library="pandas"):
     df = d.create_is_between_dates_df_2(library=library)
 
     df = nw.from_native(df)
-    native_namespace = nw.get_native_namespace(df)
+    native_backend = nw.get_native_namespace(df)
     df = df.with_columns(
         nw.new_series(
             name="e",
             values=[False, False, True, True, False, False],
-            backend=native_namespace.__name__,
+            backend=native_backend.__name__,
         ),
     )
 
@@ -114,12 +114,12 @@ def expected_df_3(library="pandas"):
     df = d.create_is_between_dates_df_2(library=library)
 
     df = nw.from_native(df)
-    native_namespace = nw.get_native_namespace(df)
+    native_backend = nw.get_native_namespace(df)
     df = df.with_columns(
         nw.new_series(
             name="e",
             values=[False, False, True, True, True, False],
-            backend=native_namespace.__name__,
+            backend=native_backend.__name__,
         ),
     )
 
@@ -131,12 +131,12 @@ def expected_df_4(library="pandas"):
     df = d.create_is_between_dates_df_2(library=library)
 
     df = nw.from_native(df)
-    native_namespace = nw.get_native_namespace(df)
+    native_backend = nw.get_native_namespace(df)
     df = df.with_columns(
         nw.new_series(
             name="e",
             values=[False, True, True, True, False, False],
-            backend=native_namespace.__name__,
+            backend=native_backend.__name__,
         ),
     )
 
@@ -148,12 +148,12 @@ def expected_df_5(library="pandas"):
     df = d.create_is_between_dates_df_2(library=library)
 
     df = nw.from_native(df)
-    native_namespace = nw.get_native_namespace(df)
+    native_backend = nw.get_native_namespace(df)
     df = df.with_columns(
         nw.new_series(
             name="e",
             values=[False, True, True, True, True, False],
-            backend=native_namespace.__name__,
+            backend=native_backend.__name__,
         ),
     )
 

@@ -519,12 +519,12 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
 
         else:
             weights_column = "dummy_unit_weights"
-            native_namespace = nw.get_native_namespace(X)
+            native_backend = nw.get_native_namespace(X)
             X = X.with_columns(
                 nw.new_series(
                     name=weights_column,
                     values=[1] * len(X),
-                    backend=native_namespace.__name__,
+                    backend=native_backend.__name__,
                 ),
             )
 
