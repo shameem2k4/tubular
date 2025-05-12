@@ -642,7 +642,7 @@ class MeanResponseTransformer(
 
     """
 
-    polars_compatible = False
+    polars_compatible = True
 
     FITS = True
 
