@@ -68,9 +68,6 @@ class BaseMappingTransformerInitTests(GenericInitTests):
             actual == expected
         ), f"return_dtypes attr not inferred as expected, expected {expected} but got {actual}"
 
-    def test_verbose_non_bool_error(self):
-        "overload this test, as transformer has been converted to beartype"
-
 
 class BaseMappingTransformerTransformTests(GenericTransformTests):
     """
