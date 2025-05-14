@@ -5,10 +5,11 @@ from. These transformers contain key checks to be applied in all cases.
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import narwhals as nw
 import pandas as pd
+from beartype import beartype
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
@@ -61,16 +62,13 @@ class BaseTransformer(TransformerMixin, BaseEstimator):
         """Method that returns the name of the current class when called."""
         return type(self).__name__
 
+    @beartype
     def __init__(
         self,
-        columns: list[str] | str,
-        copy: bool | None = None,
+        columns: Union[list[str], str],
+        copy: Union[bool, None] = None,
         verbose: bool = False,
     ) -> None:
-        if not isinstance(verbose, bool):
-            msg = f"{self.classname()}: verbose must be a bool"
-            raise TypeError(msg)
-
         if copy is not None:
             warnings.warn(
                 "copy argument no longer used and will be deprecated in a future release",
@@ -92,16 +90,7 @@ class BaseTransformer(TransformerMixin, BaseEstimator):
                 msg = f"{self.classname()}: columns has no values"
                 raise ValueError(msg)
 
-            for c in columns:
-                if not isinstance(c, str):
-                    msg = f"{self.classname()}: each element of columns should be a single (string) column name"
-                    raise TypeError(msg)
-
             self.columns = columns
-
-        else:
-            msg = f"{self.classname()}: columns must be a string or list with the columns to be pre-processed (if specified)"
-            raise TypeError(msg)
 
         self.copy = copy
 
