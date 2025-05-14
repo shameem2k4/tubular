@@ -9,6 +9,7 @@ import pandas as pd
 import polars as pl
 import pytest
 import sklearn.base as b
+from beartype.roar import BeartypeCallHintParamViolation
 
 from tests.utils import assert_frame_equal_dispatch
 
@@ -48,8 +49,7 @@ class GenericInitTests:
         """Test an error is raised if verbose is not specified as a bool."""
 
         with pytest.raises(
-            TypeError,
-            match=f"{self.transformer_name}: verbose must be a bool",
+            BeartypeCallHintParamViolation,
         ):
             uninitialized_transformers[self.transformer_name](
                 verbose=non_bool,
@@ -92,16 +92,20 @@ class ColumnStrListInitTests(GenericInitTests):
         args["columns"] = [non_string, non_string]
 
         with pytest.raises(
-            TypeError,
-            match=re.escape(
-                f"{self.transformer_name}: each element of columns should be a single (string) column name",
-            ),
+            BeartypeCallHintParamViolation,
         ):
             uninitialized_transformers[self.transformer_name](**args)
 
     @pytest.mark.parametrize(
         "non_string_or_list",
-        [1, True, {"a": 1}, None, np.inf, np.nan],
+        [
+            1,
+            True,
+            {"a": 1},
+            None,
+            np.inf,
+            np.nan,
+        ],
     )
     def test_columns_non_string_or_list_error(
         self,
@@ -115,10 +119,7 @@ class ColumnStrListInitTests(GenericInitTests):
         args["columns"] = non_string_or_list
 
         with pytest.raises(
-            TypeError,
-            match=re.escape(
-                f"{self.transformer_name}: columns must be a string or list with the columns to be pre-processed (if specified)",
-            ),
+            BeartypeCallHintParamViolation,
         ):
             uninitialized_transformers[self.transformer_name](**args)
 

@@ -25,9 +25,6 @@ class TestInit(
     def test_drop_column_arg_errors(self):
         pass
 
-    def test_verbose_non_bool_error(self):
-        pass
-
     def test_clone(self):
         pass
 

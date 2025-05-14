@@ -182,14 +182,6 @@ class TestInit(ColumnStrListInitTests, WeightColumnInitMixinTests):
         cls.transformer_name = "MeanResponseTransformer"
 
     # overload inherited arg tests that have been replaced by beartype
-    def test_columns_non_string_or_list_error(self):
-        pass
-
-    def test_columns_list_element_error(self):
-        pass
-
-    def test_verbose_non_bool_error(self):
-        pass
 
     def test_weight_arg_errors(self):
         pass

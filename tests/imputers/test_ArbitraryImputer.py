@@ -34,16 +34,6 @@ def impute_df_with_several_types(library="pandas"):
 class TestInit(ColumnStrListInitTests):
     """Generic tests for transformer.init()."""
 
-    # overload some inherited arg tests that have been replaced by beartype
-    def test_columns_non_string_or_list_error(self):
-        pass
-
-    def test_columns_list_element_error(self):
-        pass
-
-    def test_verbose_non_bool_error(self):
-        pass
-
     @classmethod
     def setup_class(cls):
         cls.transformer_name = "ArbitraryImputer"

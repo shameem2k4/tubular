@@ -3,6 +3,7 @@ import re
 import numpy as np
 import pytest
 import test_aide as ta
+from beartype.roar import BeartypeCallHintParamViolation
 
 import tests.test_data as d
 from tests.base_tests import (
@@ -38,10 +39,7 @@ class TestInit(ColumnStrListInitTests, NewColumnNameInitMixintests):
         args["columns"] = [non_string]
 
         with pytest.raises(
-            TypeError,
-            match=re.escape(
-                f"{self.transformer_name}: each element of columns should be a single (string) column name",
-            ),
+            BeartypeCallHintParamViolation,
         ):
             uninitialized_transformers[self.transformer_name](**args)
 
