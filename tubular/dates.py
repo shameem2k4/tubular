@@ -5,12 +5,13 @@ from __future__ import annotations
 import datetime
 import warnings
 import zoneinfo
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
 import narwhals.selectors as ncs
 import numpy as np
 import pandas as pd
+from beartype import beartype
 
 from tubular.base import BaseTransformer
 from tubular.mixins import DropOriginalMixin, NewColumnNameMixin, TwoColumnMixin
@@ -1004,7 +1005,7 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
 
     """
 
-    polars_compatible = False
+    polars_compatible = True
 
     TIME_OF_DAY = "timeofday"
     TIME_OF_MONTH = "timeofmonth"
@@ -1056,27 +1057,20 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         DAY_OF_WEEK: "weekday",
     }
 
+    @beartype
     def __init__(
         self,
-        columns: str | list[str],
-        include: str | list[str] | None = None,
-        datetime_mappings: dict[str,] | None = None,
+        columns: Union[str, list[str]],
+        include: Optional[Union[str, list[str]]] = None,
+        datetime_mappings: Optional[dict[str, list[int]]] = None,
         drop_original: bool = False,
         **kwargs: dict[str, bool],
     ) -> None:
         if include is None:
             include = self.INCLUDE_OPTIONS
-        else:
-            if type(include) is not list:
-                msg = f"{self.classname()}: include should be List"
-                raise TypeError(msg)
 
         if datetime_mappings is None:
             datetime_mappings = {}
-        else:
-            if type(datetime_mappings) is not dict:
-                msg = f"{self.classname()}: datetime_mappings should be Dict"
-                raise TypeError(msg)
 
         super().__init__(
             columns=columns,
@@ -1091,10 +1085,7 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
                 raise ValueError(msg)
 
         if datetime_mappings != {}:
-            for key, mapping in datetime_mappings.items():
-                if type(mapping) is not dict:
-                    msg = f"{self.classname()}: values in datetime_mappings should be dict"
-                    raise TypeError(msg)
+            for key, _ in datetime_mappings.items():
                 if key not in include:
                     msg = f"{self.classname()}: keys in datetime_mappings should be in include"
                     raise ValueError(msg)
@@ -1170,30 +1161,46 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         msg = f"{self.classname()}: value for {include_option} mapping in self._map_values should be an integer value in {min(self.RANGE_TO_MAP[include_option])}-{max(self.RANGE_TO_MAP[include_option])}"
         raise ValueError(msg)
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+    @nw.narwhalify
+    def transform(self, X: FrameT) -> FrameT:
         """Transform - Extracts new features from datetime variables.
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Data with columns to extract info from.
 
         Returns
         -------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Transformed input X with added columns of extracted information.
         """
-        X = super().transform(X)
+        X = nw.from_native(super().transform(X))
+        backend = nw.get_native_namespace(X)
 
         for col in self.columns:
             for include_option in self.include:
-                X[col + "_" + include_option] = getattr(
-                    X[col].dt,
-                    self.DATETIME_ATTR[include_option],
-                ).apply(
-                    self._map_values,
-                    include_option=include_option,
+                X = X.with_columns(
+                    getattr(
+                        nw.col(col).dt,
+                        self.DATETIME_ATTR[include_option],
+                    )().map_batches(
+                        lambda s: nw.new_series(
+                            name=col,
+                            values=[self._map_values(v, include_option) for v in s],
+                            backend=backend,
+                        ).alias(
+                            col + "_" + include_option,
+                        ),
+                    ),
                 )
+                # X[col + "_" + include_option] = getattr(
+                #     X[col].dt,
+                #     self.DATETIME_ATTR[include_option],
+                # ).apply(
+                #     self._map_values,
+                #     include_option=include_option,
+                # )
 
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(
