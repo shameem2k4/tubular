@@ -26,6 +26,8 @@ DATETIME_VARIANTS = [
     nw.Datetime(time_unit=time_unit, time_zone=time_zone)
     for time_unit in TIME_UNITS
     for time_zone in TIME_ZONES
+    # exclude problem/generic timezones
+    if time_zone not in ["Factory", "localtime"]
 ]
 
 
@@ -542,7 +544,7 @@ class ToDatetimeTransformer(BaseGenericDateTransformer):
         time_format: str,
         **kwargs: dict[str, bool],
     ) -> None:
-        self.format = time_format
+        self.time_format = time_format
 
         super().__init__(
             columns=columns,
@@ -566,7 +568,7 @@ class ToDatetimeTransformer(BaseGenericDateTransformer):
         X = nw.from_native(BaseTransformer.transform(self, X))
 
         return X.with_columns(
-            nw.col(col).str.to_datetime(format=self.format) for col in self.columns
+            nw.col(col).str.to_datetime(format=self.time_format) for col in self.columns
         )
 
 
