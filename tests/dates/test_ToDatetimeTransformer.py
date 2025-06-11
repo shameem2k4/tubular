@@ -32,6 +32,15 @@ class TestInit(
         ):
             ToDatetimeTransformer(column="a", time_format=1)
 
+    def test_warning_for_none_time_format(self):
+        "test appropriate warning raised when time_format not provided"
+
+        with pytest.warns(
+            UserWarning,
+            match="time_format arg has not been provided, so datetime format will be inferred",
+        ):
+            ToDatetimeTransformer(columns=["a"])
+
 
 class TestTransform(GenericTransformTests):
     """Tests for BaseDatetimeTransformer.transform."""
@@ -78,6 +87,14 @@ class TestTransform(GenericTransformTests):
                 None,
                 datetime.datetime(1997, 9, 5),  # noqa: DTZ001
             ],
+            "e": [
+                datetime.datetime(2020, 1, 1, 0, 0, 0),  # noqa: DTZ001
+                datetime.datetime(2021, 2, 2, 1, 1, 1),  # noqa: DTZ001
+                datetime.datetime(2022, 3, 3, 2, 2, 2),  # noqa: DTZ001
+                datetime.datetime(2023, 4, 4, 3, 3, 3),  # noqa: DTZ001
+                datetime.datetime(2024, 5, 5, 4, 4, 4),  # noqa: DTZ001
+                None,
+            ],
         }
 
         return dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
@@ -90,6 +107,14 @@ class TestTransform(GenericTransformTests):
             "b": ["2001", None, "2002", "2004", None, "2010"],
             "c": ["01/02/2025", "03/04/1996", "03/12/2023", "20/08/1980", None, None],
             "d": ["03/05/2020", "02/10/1990", "05/11/2004", None, None, "05/09/1997"],
+            "e": [
+                "01/01/2020 00:00:00",
+                "02/02/2021 01:01:01",
+                "03/03/2022 02:02:02",
+                "04/04/2023 03:03:03",
+                "05/05/2024 04:04:04",
+                None,
+            ],
         }
 
         return dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
@@ -103,6 +128,7 @@ class TestTransform(GenericTransformTests):
         [
             (["a", "b"], "%Y"),
             (["c", "d"], "%d/%m/%Y"),
+            (["e"], None),
         ],
     )
     def test_expected_output_year_parsing(self, library, columns, time_format):

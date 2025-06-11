@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import warnings
 import zoneinfo
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
 import narwhals.selectors as ncs
@@ -541,9 +541,15 @@ class ToDatetimeTransformer(BaseGenericDateTransformer):
     def __init__(
         self,
         columns: Union[str, list[str]],
-        time_format: str,
+        time_format: Optional[str] = None,
         **kwargs: dict[str, bool],
     ) -> None:
+        if not time_format:
+            warnings.warn(
+                "time_format arg has not been provided, so datetime format will be inferred",
+                stacklevel=2,
+            )
+
         self.time_format = time_format
 
         super().__init__(
