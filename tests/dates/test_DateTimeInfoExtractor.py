@@ -1,8 +1,10 @@
 import joblib
+import narwhals as nw
 import numpy as np
 import pandas as pd
 import pytest
 import test_aide as ta
+from beartype.roar import BeartypeCallHintParamViolation
 
 import tests.test_data as d
 from tests.base_tests import (
@@ -52,16 +54,14 @@ class TestInit(
     def test_error_when_include_not_list(self, incorrect_type_include):
         """Test that an exception is raised when value include variable is not a list."""
         with pytest.raises(
-            TypeError,
-            match="include should be List",
+            BeartypeCallHintParamViolation,
         ):
             DatetimeInfoExtractor(columns=["a"], include=incorrect_type_include)
 
     def test_error_when_invalid_include_option(self):
         """Test that an exception is raised when include contains incorrect values."""
         with pytest.raises(
-            ValueError,
-            match=r"DatetimeInfoExtractor: elements in include should be in \['timeofday', 'timeofmonth', 'timeofyear', 'dayofweek'\]",
+            BeartypeCallHintParamViolation,
         ):
             DatetimeInfoExtractor(
                 columns=["a"],
@@ -78,8 +78,7 @@ class TestInit(
     ):
         """Test that an exception is raised when datetime_mappings is not a dict."""
         with pytest.raises(
-            TypeError,
-            match="datetime_mappings should be Dict",
+            BeartypeCallHintParamViolation,
         ):
             DatetimeInfoExtractor(
                 columns=["a"],
@@ -96,8 +95,7 @@ class TestInit(
     ):
         """Test that an exception is raised when values in datetime_mappings are not dict."""
         with pytest.raises(
-            TypeError,
-            match="values in datetime_mappings should be dict",
+            BeartypeCallHintParamViolation,
         ):
             DatetimeInfoExtractor(
                 columns=["a"],
@@ -122,8 +120,7 @@ class TestInit(
     ):
         """Test that an exception is raised when keys in datetime_mappings are not in include."""
         with pytest.raises(
-            ValueError,
-            match="keys in datetime_mappings should be in include",
+            BeartypeCallHintParamViolation,
         ):
             DatetimeInfoExtractor(
                 columns=["a"],
@@ -301,10 +298,15 @@ class TestTransform(
     def setup_class(cls):
         cls.transformer_name = "DatetimeInfoExtractor"
 
-    def test_correct_col_returned(self):
+    @pytest.mark.parametrize(
+        "library",
+        ["pandas", "polars"],
+    )
+    def test_correct_col_returned(self, library):
         """Test that the added column is correct."""
-        df = d.create_date_test_df()
-        df = df.astype("datetime64[ns]")
+        df = d.create_date_test_df(library=library)
+        df = nw.from_native(df)
+        df = df.with_columns(nw.cast(nw.Datetime))
 
         x = DatetimeInfoExtractor(columns=["b"], include=["timeofyear"])
         transformed = x.transform(df)
