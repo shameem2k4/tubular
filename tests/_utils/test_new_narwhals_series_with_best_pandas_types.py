@@ -11,7 +11,7 @@ from tubular._utils import (
 )
 
 
-class TestNewNarwhalsSeriesWithBestPandasTypes:
+class TestNewNarwhalsSeriesWithOptimalPandasTypes:
     @pytest.mark.parametrize(
         ("values", "dtype"),
         [
@@ -48,6 +48,8 @@ class TestNewNarwhalsSeriesWithBestPandasTypes:
             ([1, 0, None], "Float64", "Float64"),
             ([True, False, True], "Boolean", "boolean"),
             ([True, False, None], "Boolean", "boolean"),
+            (["a", None, "c"], "String", "string"),
+            (["a", "b", "c"], "Categorical", "category"),
         ],
     )
     def test_pandas_output(self, values, polars_dtype, expected_pandas_dtype):
@@ -60,54 +62,19 @@ class TestNewNarwhalsSeriesWithBestPandasTypes:
             dtype=getattr(nw, polars_dtype),
         )
 
+        if expected_pandas_dtype == "category":
+            expected_pandas_dtype = CategoricalDtype(
+                pd.Series(data=values, dtype="string"),
+                ordered=False,
+            )
+
         expected = pd.Series(
             name=name,
             data=values,
             dtype=expected_pandas_dtype,
         )
 
-        assert_series_equal_pandas(expected, output.to_native())
-
-    def test_pandas_output_category(self):
-        """test that polars Series are initialised as usual
-        for category type which requires special handling"""
-        name = "a"
-        categories = ["a", "b", "c"]
-        cat_type = CategoricalDtype(
-            pd.Series(data=categories, dtype="string"),
-            ordered=False,
-        )
-        output = new_narwhals_series_with_optimal_pandas_types(
-            name=name,
-            values=categories,
-            backend="pandas",
-            dtype=nw.Categorical,
-        )
-
-        expected = pd.Series(
-            name=name,
-            data=categories,
-            dtype=cat_type,
-        )
-
-        assert_series_equal_pandas(expected, output.to_native())
-
-    def test_pandas_output_string(self):
-        """test that polars Series are initialised as usual
-        for string type which requires special handling"""
-        name = "a"
-        values = ["a", None, "c"]
-        output = new_narwhals_series_with_optimal_pandas_types(
-            name=name,
-            values=values,
-            backend="pandas",
-            dtype=nw.String,
-        )
-
-        expected = pd.Series(
-            name=name,
-            data=values,
-            dtype="string",
-        ).fillna(pd.NA)
+        if expected_pandas_dtype == "string":
+            expected = expected.fillna(pd.NA)
 
         assert_series_equal_pandas(expected, output.to_native())
