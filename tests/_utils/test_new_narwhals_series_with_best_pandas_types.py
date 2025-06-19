@@ -7,7 +7,7 @@ from pandas.testing import assert_series_equal as assert_series_equal_pandas
 from polars.testing import assert_series_equal as assert_series_equal_polars
 
 from tubular._utils import (
-    new_narwhals_series_with_best_pandas_types,  # noqa: PLC2701, importing from private module to test
+    new_narwhals_series_with_optimal_pandas_types,  # noqa: PLC2701, importing from private module to test
 )
 
 
@@ -26,7 +26,7 @@ class TestNewNarwhalsSeriesWithBestPandasTypes:
     def test_polars_unaffected(self, values, dtype):
         "test that polars Series are initialised as usual"
         name = "a"
-        output = new_narwhals_series_with_best_pandas_types(
+        output = new_narwhals_series_with_optimal_pandas_types(
             name=name,
             values=values,
             backend="polars",
@@ -53,7 +53,7 @@ class TestNewNarwhalsSeriesWithBestPandasTypes:
     def test_pandas_output(self, values, polars_dtype, expected_pandas_dtype):
         "test that polars Series are initialised as usual"
         name = "a"
-        output = new_narwhals_series_with_best_pandas_types(
+        output = new_narwhals_series_with_optimal_pandas_types(
             name=name,
             values=values,
             backend="pandas",
@@ -77,7 +77,7 @@ class TestNewNarwhalsSeriesWithBestPandasTypes:
             pd.Series(data=categories, dtype="string"),
             ordered=False,
         )
-        output = new_narwhals_series_with_best_pandas_types(
+        output = new_narwhals_series_with_optimal_pandas_types(
             name=name,
             values=categories,
             backend="pandas",
@@ -97,7 +97,7 @@ class TestNewNarwhalsSeriesWithBestPandasTypes:
         for string type which requires special handling"""
         name = "a"
         values = ["a", None, "c"]
-        output = new_narwhals_series_with_best_pandas_types(
+        output = new_narwhals_series_with_optimal_pandas_types(
             name=name,
             values=values,
             backend="pandas",

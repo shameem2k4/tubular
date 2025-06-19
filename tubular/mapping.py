@@ -12,7 +12,7 @@ import pandas as pd
 import polars as pl
 from beartype import beartype
 
-from tubular._utils import new_narwhals_series_with_best_pandas_types
+from tubular._utils import new_narwhals_series_with_optimal_pandas_types
 from tubular.base import BaseTransformer
 
 if TYPE_CHECKING:
@@ -208,14 +208,14 @@ class BaseMappingTransformMixin(BaseTransformer):
                 if dtypes[dtype_key] == nw.Categorical:
                     temp_dtypes[dtype_key] = nw.String
 
-            mappings_keys = new_narwhals_series_with_best_pandas_types(
+            mappings_keys = new_narwhals_series_with_optimal_pandas_types(
                 name=col,
                 values=list(mappings.keys()),
                 backend=native_backend.__name__,
                 dtype=temp_dtypes["keys"],
             )
 
-            mappings_values = new_narwhals_series_with_best_pandas_types(
+            mappings_values = new_narwhals_series_with_optimal_pandas_types(
                 name=new_col_values,
                 values=list(mappings.values()),
                 backend=native_backend.__name__,

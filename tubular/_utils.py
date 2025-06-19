@@ -53,7 +53,7 @@ def _assess_pandas_object_column(pandas_df: pd.DataFrame, col: str) -> tuple[str
     return pandas_col_type, polars_col_type
 
 
-def new_narwhals_series_with_best_pandas_types(
+def new_narwhals_series_with_optimal_pandas_types(
     name: str,
     values: ArrayLike,
     backend: Literal["pandas", "polars"],
