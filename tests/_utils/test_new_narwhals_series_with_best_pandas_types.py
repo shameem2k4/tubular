@@ -110,6 +110,4 @@ class TestNewNarwhalsSeriesWithBestPandasTypes:
             dtype="string",
         ).fillna(pd.NA)
 
-        print(expected)
-        print(output.to_native())
         assert_series_equal_pandas(expected, output.to_native())
