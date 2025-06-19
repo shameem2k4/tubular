@@ -84,10 +84,11 @@ def new_narwhals_series_with_optimal_pandas_types(
     if backend == "pandas":
         series = pd.Series(name=name, data=values)
         series = nw.maybe_convert_dtypes(nw.from_native(series, allow_series=True))
-        # maybe_convert_dtype already handles object->string, casting
-        # again would convert back, so avoid
-        # also avoid directly casting back to object..
-        if dtype != nw.String and dtype != nw.Object and dtype != nw.Boolean:
+        # for int/float values, we may still want to cast to better type
+        # (e.g. int8)
+        # but for bool/str values, maybe_convert_types has already
+        # cast to improved typing, so avoid further casting for these
+        if dtype not in [nw.String, nw.Object, nw.Boolean]:
             series = series.cast(dtype)
 
     else:
