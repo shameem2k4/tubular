@@ -78,17 +78,17 @@ class BaseMappingTransformer(BaseTransformer):
 
         null_mappings = {col: None for col in mappings}
         for col in mappings:
-            null_count = 0
-            for key in mappings[col]:
-                if pd.isna(key):
-                    null_count += 1
-                    null_mappings[col] = mappings[col][key]
+            null_keys = [key for key in mappings[col] if pd.isna(key)]
 
-            if null_count > 1:
+            if len(null_keys) > 1:
                 multi_null_map_msg = f"Multiple mappings have been provided for null values in column {col}, transformer is set up to handle nan/None/NA as one"
                 raise ValueError(
                     multi_null_map_msg,
                 )
+
+            # Assign the mapping to the single null key if it exists
+            if len(null_keys) != 0:
+                null_mappings[col] = mappings[col][null_keys[0]]
 
         self.mappings = mappings
         self.null_mappings = null_mappings
