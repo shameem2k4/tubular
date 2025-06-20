@@ -1,7 +1,6 @@
 import joblib
 import narwhals as nw
 import numpy as np
-import pandas as pd
 import pytest
 import test_aide as ta
 from beartype.roar import BeartypeCallHintParamViolation
@@ -17,6 +16,7 @@ from tests.base_tests import (
 from tests.dates.test_BaseDatetimeTransformer import (
     DatetimeMixinTransformTests,
 )
+from tests.utils import assert_frame_equal_dispatch
 from tubular.dates import DatetimeInfoExtractor
 
 
@@ -304,49 +304,41 @@ class TestTransform(
     )
     def test_correct_col_returned(self, library):
         """Test that the added column is correct."""
+
+        column = "b"
         df = d.create_date_test_df(library=library)
         df = nw.from_native(df)
-        df = df.with_columns(nw.cast(nw.Datetime))
-
-        x = DatetimeInfoExtractor(columns=["b"], include=["timeofyear"])
-        transformed = x.transform(df)
-
-        expected_output = pd.Series(
-            [
-                "spring",
-                "winter",
-                "autumn",
-                "autumn",
-                "autumn",
-                "autumn",
-                "autumn",
-                "summer",
-            ],
-            name="b_timeofyear",
+        df = df.with_columns(
+            nw.col(col).cast(nw.Datetime(time_zone="utc")) for col in ["a", "b"]
         )
 
-        ta.equality.assert_series_equal_msg(
-            transformed["b_timeofyear"],
-            expected_output,
-            "incorrect series returned",
-            print_actual_and_expected=True,
+        x = DatetimeInfoExtractor(columns=[column], include=["timeofyear"])
+        transformed = x.transform(df.to_native())
+
+        expected = df.clone()
+        new_col = "b_timeofyear"
+        expected = expected.with_columns(
+            nw.new_series(
+                name=new_col,
+                values=[
+                    "spring",
+                    "winter",
+                    "autumn",
+                    "autumn",
+                    "autumn",
+                    "autumn",
+                    "autumn",
+                    "summer",
+                ],
+                backend=nw.get_native_namespace(df),
+                dtype=nw.Categorical,
+            ),
+        ).to_native()
+
+        assert_frame_equal_dispatch(
+            transformed,
+            expected,
         )
-
-    def test_map_values_calls(self, mocker):
-        """Test all intermediary methods are being called correct number of times."""
-        # df is 8 rows long so each intermediate function must have 8 calls
-        df = d.create_date_test_df()
-        df = df.astype("datetime64[ns]")
-
-        mocked_map_values = mocker.spy(DatetimeInfoExtractor, "_map_values")
-
-        x = DatetimeInfoExtractor(
-            columns=["b"],
-            include=["timeofday", "timeofyear", "timeofmonth", "dayofweek"],
-        )
-        x.transform(df)
-
-        assert mocked_map_values.call_count == 32
 
     def test_correct_df_returned_datetime_input(self):
         """Test that correct df is returned after transformation."""
