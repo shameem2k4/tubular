@@ -309,7 +309,7 @@ class TestTransform(
         df = d.create_date_test_df(library=library)
         df = nw.from_native(df)
         df = df.with_columns(
-            nw.col(col).cast(nw.Datetime(time_zone="utc")) for col in ["a", "b"]
+            nw.col(col).cast(nw.Datetime(time_zone="UTC")) for col in ["a", "b"]
         )
 
         x = DatetimeInfoExtractor(columns=[column], include=["timeofyear"])

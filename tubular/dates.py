@@ -98,11 +98,12 @@ class BaseGenericDateTransformer(
         """
 
         type_dict = {}
-        datetime_type = "datetime64"
-        date_type = "date32[pyarrow]"
-        allowed_types = [datetime_type]
+        type_msg = ["Datetime"]
+        date_type = nw.Date
+        allowed_types = [*DATETIME_VARIANTS]
         if not datetime_only:
             allowed_types = [*allowed_types, date_type]
+            type_msg += ["Date"]
 
         date_columns = list(
             X.select(ncs.by_dtype(nw.Date)).columns,
@@ -113,26 +114,21 @@ class BaseGenericDateTransformer(
         )
 
         for col in self.columns:
+            type_dict[col] = X.get_column(col).dtype
             is_datetime = col in datetime_columns
             is_date = col in date_columns
-            if is_datetime:
-                type_dict[col] = datetime_type
 
-            elif (not datetime_only) and (is_date):
-                type_dict[col] = date_type
-
-            else:
-                col_dtype = X.get_column(col).dtype
-
-                msg = f"{self.classname()}: {col} type should be in {allowed_types} but got {col_dtype}"
+            if not is_datetime and not (is_date and not datetime_only):
+                msg = f"{self.classname()}: {col} type should be in {type_msg} but got {type_dict[col]}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones()"
                 raise TypeError(msg)
 
+        print(type_dict)
         present_types = set(type_dict.values())
 
         valid_types = present_types.issubset(set(allowed_types))
 
         if not valid_types or len(present_types) > 1:
-            msg = rf"{self.classname()}: Columns fed to datetime transformers should be {allowed_types} and have consistent types, but found {present_types}. Please use ToDatetimeTransformer to standardise."
+            msg = rf"{self.classname()}: Columns fed to datetime transformers should be {type_msg} and have consistent types, but found {present_types}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones(). Please use ToDatetimeTransformer to standardise."
             raise TypeError(
                 msg,
             )
