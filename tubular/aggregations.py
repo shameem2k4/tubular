@@ -1,9 +1,14 @@
-import pandas as pd
+import narwhals as nw
 from beartype import beartype
-from mixins import DropOriginalMixin
+from beartype.typing import List, Literal
+from narwhals import count, mean, median, mode  # Example import statement
+from narwhals.typing import FrameT
+
+from tubular.base import BaseTransformer
+from tubular.mixins import DropOriginalMixin
 
 
-class BaseAggregationTransformer:
+class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
     """Base class for aggregation transformers.
 
     This class provides the foundation for aggregation-based transformations,
@@ -38,24 +43,18 @@ class BaseAggregationTransformer:
     def __init__(
         self,
         columns: list[str],
-        aggregations: list[str],
+        aggregations: List[
+            Literal["min", "max", "mean", "median", "mode", "sum", "count"]
+        ],
         drop_original: bool = False,
-        level: str = "row",
+        level: Literal["row", "column"] = "row",
     ) -> None:
-        valid_aggregations = {"min", "max", "mean", "median", "mode", "sum", "count"}
-
-        if not all(agg in valid_aggregations for agg in aggregations):
-            msg = f"aggregations must be a list containing any of {valid_aggregations}"
-            raise ValueError(msg)
-
-        if level not in {"row", "column"}:
-            msg = "level must be 'row' or 'column'"
-            raise ValueError(msg)
-
         self.columns = columns
         self.aggregations = aggregations
         self.drop_original = drop_original
         self.level = level
+
+        self.set_drop_original_column(drop_original)
 
     @beartype
     def create_new_col_names(self, prefix: str) -> list[str]:
@@ -74,7 +73,7 @@ class BaseAggregationTransformer:
         return [f"{prefix}_{agg}" for agg in self.aggregations]
 
 
-class AggregateRowOverColumnsTransformer(DropOriginalMixin, BaseAggregationTransformer):
+class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
     """Transformer that aggregates rows over specified columns.
 
     This transformer aggregates data within specified columns, grouping by a key column,
@@ -112,23 +111,22 @@ class AggregateRowOverColumnsTransformer(DropOriginalMixin, BaseAggregationTrans
             level="row",
         )
         self.key = key
-        self.set_drop_original_column(drop_original)
 
-    @beartype
+    @nw.narwhalify
     def transform(
         self,
-        df: pd.DataFrame,
-    ) -> pd.DataFrame:
+        df: FrameT,
+    ) -> FrameT:
         """Transforms the dataframe by aggregating rows over specified columns.
 
         Parameters
         ----------
-        df : pd.DataFrame
+        df : FrameT
             DataFrame to transform by aggregating specified columns.
 
         Returns
         -------
-        pd.DataFrame
+        FrameT
             Transformed DataFrame with aggregated columns.
 
         Raises
@@ -141,18 +139,16 @@ class AggregateRowOverColumnsTransformer(DropOriginalMixin, BaseAggregationTrans
             raise ValueError(msg)
 
         aggregation_dict = {col: self.aggregations for col in self.columns}
-        grouped_df = df.groupby(self.key).agg(aggregation_dict)
-
-        # Flatten MultiIndex columns
-        grouped_df.columns = [
-            "_".join(col).strip() for col in grouped_df.columns.to_numpy()
-        ]
-
-        # Reset index to merge with original DataFrame
-        grouped_df = grouped_df.reset_index()
+        grouped_df = df.group_by(self.key).agg(
+            *(
+                getattr(nw.col(col_name), agg)().alias(f"{col_name}_{agg}")
+                for col_name, aggs in aggregation_dict.items()
+                for agg in aggs
+            ),
+        )
 
         # Merge the aggregated results back with the original DataFrame
-        df = df.merge(grouped_df, on=self.key, how="left")
+        df = df.join(grouped_df, on=self.key, how="left")
 
         # Use mixin method to drop original columns
         return self.drop_original_column(
