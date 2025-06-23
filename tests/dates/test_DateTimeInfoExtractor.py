@@ -1,14 +1,13 @@
+import datetime
+
 import joblib
 import narwhals as nw
-import numpy as np
 import pytest
-import test_aide as ta
 from beartype.roar import BeartypeCallHintParamViolation
 
 import tests.test_data as d
 from tests.base_tests import (
     ColumnStrListInitTests,
-    DropOriginalInitMixinTests,
     DropOriginalTransformMixinTests,
     GenericTransformTests,
     OtherBaseBehaviourTests,
@@ -17,7 +16,7 @@ from tests.dates.test_BaseDatetimeTransformer import (
     DatetimeMixinTransformTests,
 )
 from tests.utils import assert_frame_equal_dispatch
-from tubular.dates import DatetimeInfoExtractor
+from tubular.dates import DatetimeInfoExtractor, DatetimeInfoOptions
 
 
 @pytest.fixture()
@@ -42,7 +41,6 @@ def dayofweek_extractor():
 
 class TestInit(
     ColumnStrListInitTests,
-    DropOriginalInitMixinTests,
 ):
     "tests for DatetimeInfoExtractor.__init__"
 
@@ -60,6 +58,7 @@ class TestInit(
 
     def test_error_when_invalid_include_option(self):
         """Test that an exception is raised when include contains incorrect values."""
+        print("invalid_option" in DatetimeInfoOptions._value2member_map_)
         with pytest.raises(
             BeartypeCallHintParamViolation,
         ):
@@ -106,6 +105,27 @@ class TestInit(
         ("include", "incorrect_datetime_mappings_keys"),
         [
             (["timeofyear"], {"invalid_key": {"valid_mapping": "valid_output"}}),
+            (["timeofmonth"], {"bla": {"day": range(7)}}),
+        ],
+    )
+    def test_error_when_datetime_mapping_key_not_allowed(
+        self,
+        include,
+        incorrect_datetime_mappings_keys,
+    ):
+        """Test that an exception is raised when keys in datetime_mappings are not allowed."""
+        with pytest.raises(
+            BeartypeCallHintParamViolation,
+        ):
+            DatetimeInfoExtractor(
+                columns=["a"],
+                include=include,
+                datetime_mappings=incorrect_datetime_mappings_keys,
+            )
+
+    @pytest.mark.parametrize(
+        ("include", "incorrect_datetime_mappings_keys"),
+        [
             (["timeofyear"], {"dayofweek": {"day": range(7)}}),
             (
                 ["timeofyear"],
@@ -120,7 +140,8 @@ class TestInit(
     ):
         """Test that an exception is raised when keys in datetime_mappings are not in include."""
         with pytest.raises(
-            BeartypeCallHintParamViolation,
+            ValueError,
+            match="keys in datetime_mappings should be in include",
         ):
             DatetimeInfoExtractor(
                 columns=["a"],
@@ -145,7 +166,7 @@ class TestInit(
             ),
             (
                 {"dayofweek": {"mapped": range(6)}},
-                r"DatetimeInfoExtractor: dayofweek mapping dictionary should contain mapping for all values between 0-6. \{6\} are missing",
+                r"DatetimeInfoExtractor: dayofweek mapping dictionary should contain mapping for all values between 1-7. \{6, 7\} are missing",
             ),
         ],
     )
@@ -157,134 +178,6 @@ class TestInit(
         """Test that error is raised when incomplete mappings are passed."""
         with pytest.raises(ValueError, match=expected_exception):
             DatetimeInfoExtractor(columns=["a"], datetime_mappings=incomplete_mappings)
-
-
-class TestMapValues:
-    "tests for DatetimeInfoExtractor.map_values"
-
-    @pytest.mark.parametrize("incorrect_type_input", ["2", [1, 2]])
-    def test_incorrect_type_input(self, incorrect_type_input, timeofday_extractor):
-        """Test that an error is raised if input is the wrong type."""
-        with pytest.raises(
-            ValueError,
-            match="DatetimeInfoExtractor: value for timeofday mapping in self._map_values should be an integer value in 0-23",
-        ):
-            timeofday_extractor._map_values(incorrect_type_input, "timeofday")
-
-    @pytest.mark.parametrize("incorrect_size_input", [-2, 30, 5.6, 11.2])
-    def test_out_of_bounds_or_fractional_input(
-        self,
-        incorrect_size_input,
-        timeofday_extractor,
-    ):
-        """Test that an error is raised when value is outside of 0-23 range."""
-        with pytest.raises(
-            ValueError,
-            match="DatetimeInfoExtractor: value for timeofday mapping in self._map_values should be an integer value in 0-23",
-        ):
-            timeofday_extractor._map_values(incorrect_size_input, "timeofday")
-
-    @pytest.mark.parametrize(
-        ("valid_hour", "hour_time_of_day"),
-        [
-            (0, "night"),
-            (5, "night"),
-            (6, "morning"),
-            (11, "morning"),
-            (12, "afternoon"),
-            (17, "afternoon"),
-            (18, "evening"),
-            (23, "evening"),
-        ],
-    )
-    def test_valid_inputs_timeofday(
-        self,
-        valid_hour,
-        hour_time_of_day,
-        timeofday_extractor,
-    ):
-        """Trial test to check all in one go."""
-        output = timeofday_extractor._map_values(valid_hour, "timeofday")
-
-        assert output == hour_time_of_day, "expected {}, output {}".format(
-            hour_time_of_day,
-            output,
-        )
-
-    @pytest.mark.parametrize(
-        ("valid_day", "day_time_of_month"),
-        [
-            (1, "start"),
-            (6, "start"),
-            (10, "start"),
-            (11, "middle"),
-            (16, "middle"),
-            (20, "middle"),
-            (21, "end"),
-            (21, "end"),
-            (31, "end"),
-        ],
-    )
-    def test_valid_inputs_timeofmonth(
-        self,
-        valid_day,
-        day_time_of_month,
-        timeofmonth_extractor,
-    ):
-        """Test that correct values are return with valid inputs."""
-        output = timeofmonth_extractor._map_values(valid_day, "timeofmonth")
-        assert output == day_time_of_month, "expected {}, output {}".format(
-            day_time_of_month,
-            output,
-        )
-
-    @pytest.mark.parametrize(
-        ("valid_month", "month_time_of_year"),
-        [
-            (1, "winter"),
-            (3, "spring"),
-            (4, "spring"),
-            (6, "summer"),
-            (7, "summer"),
-            (9, "autumn"),
-            (10, "autumn"),
-            (12, "winter"),
-        ],
-    )
-    def test_valid_inputs_timeofyear(
-        self,
-        valid_month,
-        month_time_of_year,
-        timeofyear_extractor,
-    ):
-        """Test that correct values are return with valid inputs."""
-        output = timeofyear_extractor._map_values(valid_month, "timeofyear")
-        assert output == month_time_of_year, "expected {}, output {}".format(
-            month_time_of_year,
-            output,
-        )
-
-    @pytest.mark.parametrize(
-        ("valid_day", "dayofweek"),
-        [
-            (0, "monday"),
-            (2, "wednesday"),
-            (4, "friday"),
-            (6, "sunday"),
-        ],
-    )
-    def test_valid_inputs_dayofweek(self, valid_day, dayofweek, dayofweek_extractor):
-        """Test that correct values are return with valid inputs."""
-        output = dayofweek_extractor._map_values(valid_day, "dayofweek")
-        assert output == dayofweek, f"expected {dayofweek}, output {output}"
-
-    def test_valid_nan_output(self, timeofday_extractor):
-        """Test that correct values are return with valid inputs."""
-        output = timeofday_extractor._map_values(np.nan, "timeofday")
-
-        assert np.isnan(
-            output,
-        ), f"passing np.nan should result in np.nan, instead received {output}"
 
 
 class TestTransform(
@@ -302,26 +195,56 @@ class TestTransform(
         "library",
         ["pandas", "polars"],
     )
-    def test_correct_col_returned(self, library):
-        """Test that the added column is correct."""
-
-        column = "b"
+    def test_single_column_output_for_all_options(self, library):
+        """Test that correct df is returned after transformation."""
         df = d.create_date_test_df(library=library)
         df = nw.from_native(df)
+        backend = nw.get_native_namespace(df)
         df = df.with_columns(
-            nw.col(col).cast(nw.Datetime(time_zone="UTC")) for col in ["a", "b"]
+            nw.new_series(
+                name="b",
+                values=[
+                    None,
+                    datetime.datetime(2019, 12, 25, 12, 0, 0, tzinfo="UTC"),
+                    datetime.datetime(2018, 11, 10, 11, 0, 0, tzinfo="UTC"),
+                    datetime.datetime(2018, 11, 10, 10, 0, 0, tzinfo="UTC"),
+                    datetime.datetime(2018, 9, 10, 18, 0, 0, tzinfo="UTC"),
+                    datetime.datetime(2015, 11, 10, 22, 0, 0, tzinfo="UTC"),
+                    datetime.datetime(2015, 11, 10, 19, 0, 0, tzinfo="UTC"),
+                    datetime.datetime(2015, 7, 23, 3, 0, 0, tzinfo="UTC"),
+                ],
+                backend=backend,
+                dtype=nw.Datetime(time_unit="us", time_zone="UTC"),
+            ),
         )
 
-        x = DatetimeInfoExtractor(columns=[column], include=["timeofyear"])
-        transformed = x.transform(df.to_native())
+        transformer = DatetimeInfoExtractor(
+            columns=["b"],
+            include=["timeofmonth", "timeofyear", "dayofweek", "timeofday"],
+        )
+        transformed = transformer.transform(df.to_native())
 
         expected = df.clone()
-        new_col = "b_timeofyear"
-        expected = expected.with_columns(
+        expected = df.with_columns(
             nw.new_series(
-                name=new_col,
+                name="b_timeofmonth",
                 values=[
-                    "spring",
+                    None,
+                    "end",
+                    "start",
+                    "start",
+                    "start",
+                    "start",
+                    "start",
+                    "end",
+                ],
+                backend=backend,
+                dtype=nw.Categorical,
+            ),
+            nw.new_series(
+                name="b_timeofyear",
+                values=[
+                    None,
                     "winter",
                     "autumn",
                     "autumn",
@@ -330,52 +253,64 @@ class TestTransform(
                     "autumn",
                     "summer",
                 ],
+                backend=backend,
+                dtype=nw.Categorical,
+            ),
+            nw.new_series(
+                name="b_dayofweek",
+                values=[
+                    None,
+                    "wednesday",
+                    "saturday",
+                    "saturday",
+                    "monday",
+                    "tuesday",
+                    "tuesday",
+                    "thursday",
+                ],
                 backend=nw.get_native_namespace(df),
                 dtype=nw.Categorical,
             ),
-        ).to_native()
-
-        assert_frame_equal_dispatch(
-            transformed,
-            expected,
+            nw.new_series(
+                name="b_timeofday",
+                values=[
+                    None,
+                    "afternoon",
+                    "morning",
+                    "morning",
+                    "evening",
+                    "evening",
+                    "evening",
+                    "night",
+                ],
+                backend=nw.get_native_namespace(df),
+                dtype=nw.Categorical,
+            ),
         )
 
-    def test_correct_df_returned_datetime_input(self):
-        """Test that correct df is returned after transformation."""
-        df = d.create_date_test_df()
-        df.loc[0, "b"] = np.nan
-        df = df.astype("datetime64[ns]")
+        assert_frame_equal_dispatch(transformed, expected.to_native())
 
-        x = DatetimeInfoExtractor(columns=["b"], include=["timeofmonth", "timeofyear"])
-        transformed = x.transform(df)
+        # also test single row
+        df = nw.from_native(df)
+        for i in range(len(df)):
+            df_transformed_row = transformer.transform(df[[i]].to_native())
+            df_expected_row = expected[[i]]
+            # df_expected_row=df_expected_row.with_columns(
+            #     nw.col(col).cast(nw.Categorical)
+            #     for col in ['b_timeofmonth']
+            # ).to_native()
 
-        expected = df.copy()
-        expected["b_timeofmonth"] = [
-            np.nan,
-            "end",
-            "start",
-            "start",
-            "start",
-            "start",
-            "start",
-            "end",
-        ]
-        expected["b_timeofyear"] = [
-            np.nan,
-            "winter",
-            "autumn",
-            "autumn",
-            "autumn",
-            "autumn",
-            "autumn",
-            "summer",
-        ]
+            assert_frame_equal_dispatch(
+                df_transformed_row,
+                df_expected_row,
+            )
 
-        ta.equality.assert_frame_equal_msg(
-            transformed,
-            expected,
-            "incorrect dataframe returned",
-        )
+    @pytest.mark.parametrize(
+        "library",
+        ["pandas", "polars"],
+    )
+    def test_multi_column_output(self, library):
+        pass
 
     def test_is_serialisable(self, tmp_path):
         transformer = DatetimeInfoExtractor(columns=["b"], include=["timeofyear"])

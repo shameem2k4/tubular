@@ -20,6 +20,8 @@ from tubular.mapping import MappingTransformer
 from tubular.mixins import DropOriginalMixin, NewColumnNameMixin, TwoColumnMixin
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from narhwals.typing import FrameT
 
 TIME_UNITS = ["us", "ns", "ms"]
@@ -122,7 +124,6 @@ class BaseGenericDateTransformer(
                 msg = f"{self.classname()}: {col} type should be in {type_msg} but got {type_dict[col]}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones()"
                 raise TypeError(msg)
 
-        print(type_dict)
         present_types = set(type_dict.values())
 
         valid_types = present_types.issubset(set(allowed_types))
@@ -912,6 +913,14 @@ DatetimeInfoOptionStr = Annotated[
     str,
     Is[lambda s: s in DatetimeInfoOptions._value2member_map_],
 ]
+DatetimeInfoOptionList = Annotated[
+    list,
+    Is[
+        lambda list_value: all(
+            entry in DatetimeInfoOptions._value2member_map_ for entry in list_value
+        )
+    ],
+]
 
 
 class DatetimeInfoExtractor(BaseDatetimeTransformer):
@@ -1015,13 +1024,13 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
             "winter": [12, 1, 2],  # Dec, Jan, Feb
         },
         DatetimeInfoOptions.DAY_OF_WEEK: {
-            "monday": [0],
-            "tuesday": [1],
-            "wednesday": [2],
-            "thursday": [3],
-            "friday": [4],
-            "saturday": [5],
-            "sunday": [6],
+            "monday": [1],
+            "tuesday": [2],
+            "wednesday": [3],
+            "thursday": [4],
+            "friday": [5],
+            "saturday": [6],
+            "sunday": [7],
         },
     }
 
@@ -1031,7 +1040,7 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         DatetimeInfoOptions.TIME_OF_DAY: set(range(24)),
         DatetimeInfoOptions.TIME_OF_MONTH: set(range(1, 32)),
         DatetimeInfoOptions.TIME_OF_YEAR: set(range(1, 13)),
-        DatetimeInfoOptions.DAY_OF_WEEK: set(range(7)),
+        DatetimeInfoOptions.DAY_OF_WEEK: set(range(1, 8)),
     }
 
     DATETIME_ATTR = {
@@ -1045,15 +1054,24 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
     def __init__(
         self,
         columns: Union[str, list[str]],
-        include: Optional[
-            Union[DatetimeInfoOptionStr, list[DatetimeInfoOptionStr]]
+        include: Optional[DatetimeInfoOptionList] = None,
+        datetime_mappings: Optional[
+            dict[DatetimeInfoOptionStr, dict[str, Iterable[int]]]
         ] = None,
-        datetime_mappings: Optional[dict[DatetimeInfoOptionStr, list[int]]] = None,
-        drop_original: bool = False,
+        drop_original: Optional[bool] = False,
         **kwargs: dict[str, bool],
     ) -> None:
         if include is None:
             include = self.INCLUDE_OPTIONS
+
+        if datetime_mappings is None:
+            datetime_mappings = {}
+
+        if datetime_mappings != {}:
+            for key in datetime_mappings:
+                if key not in include:
+                    msg = f"{self.classname()}: keys in datetime_mappings should be in include"
+                    raise ValueError(msg)
 
         if datetime_mappings is None:
             datetime_mappings = {}
@@ -1121,36 +1139,6 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
             else:
                 self.inverted_datetime_mappings[include_option] = {}
 
-    def _map_values(self, value: float, include_option: str) -> str:
-        """Method to apply mappings for a specified interval ("timeofday", "timeofmonth", "timeofyear" or "dayofweek")
-        from corresponding mapping attribute to a single value.
-
-        Parameters
-        ----------
-        include_option : str
-            the time period to map "timeofday", "timeofmonth", "timeofyear" or "dayofweek"
-
-        value : float or int
-            the value to be mapped
-
-
-        Returns
-        -------
-        str : str
-            Mapped value
-        """
-        if isinstance(value, float):
-            if np.isnan(value):
-                return np.nan
-            if value.is_integer():
-                value = int(value)
-
-        if isinstance(value, int) and value in self.RANGE_TO_MAP[include_option]:
-            return self.inverted_datetime_mappings[include_option][value]
-
-        msg = f"{self.classname()}: value for {include_option} mapping in self._map_values should be an integer value in {min(self.RANGE_TO_MAP[include_option])}-{max(self.RANGE_TO_MAP[include_option])}"
-        raise ValueError(msg)
-
     @nw.narwhalify
     def transform(self, X: FrameT) -> FrameT:
         """Transform - Extracts new features from datetime variables.
@@ -1179,14 +1167,6 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
                     ),
                 ),
             )
-
-            # X[col + "_" + include_option] = getattr(
-            #     X[col].dt,
-            #     self.DATETIME_ATTR[include_option],
-            # ).apply(
-            #     self._map_values,
-            #     include_option=include_option,
-            # )
 
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(
