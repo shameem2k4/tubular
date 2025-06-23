@@ -90,8 +90,52 @@ class TestTransform(GenericTransformTests):
         assert_frame_equal_dispatch(expected, df_transformed)
 
     @pytest.mark.parametrize("library", ["pandas", "polars"])
-    def test_expected_output_boolean(self, library):
-        """Test that output is as expected for tricky bool case."""
+    def test_expected_output_boolean_with_nulls(self, library):
+        """Test that output is as expected for tricky bool cases:
+        e.g. mapping {True:1, False:0, None: 0}, potential causes of failure:
+            - None being cast to False when these values are inserted into bool series
+            - None mapping failing, as mapping logic relies on merging and None->None values
+            will not merge
+
+        Example failure 1:
+        df=pd.DataFrame({'a': [True, False, None]})
+        mappings={True:1, False:0, None:0}
+        return_dtypes={'a': 'Int8'}
+        mapping_transformer=MappingTransformer(mappings, return_dtypes)
+
+        mapping_transformer.transform(df)->
+        pd.DataFrame(
+            {
+            'a': [
+                1,
+                0,
+                None # mapping merge has failed on None
+            ]
+            }
+        )
+
+        ---------
+        Example Failure 2
+        df=pd.DataFrame({'a': [1, 0, -1]})
+        mappings={1:True, 0:False, -1:None}
+        return_dtypes={'a': 'Int8'}
+        mapping_transformer=MappingTransformer(mappings, return_dtypes)
+
+        mapping_transformer.transform(df)->
+        pd.DataFrame(
+            {
+            'a': [
+                True,
+                False,
+                # when the mapping values are put into bool series
+                # the none value is converted to False
+                False,
+
+            ]
+            }
+        )
+
+        """
 
         df_dict = {
             "a": [None, 0, 1, None, 0],
