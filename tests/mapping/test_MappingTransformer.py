@@ -243,7 +243,8 @@ class TestTransform(BaseMappingTransformerTransformTests):
             'a': [
                 1,
                 0,
-                None # mapping merge has failed on None
+                None # mapping merge has failed on None,
+                #resulting in None instead of 0
             ]
             }
         )
@@ -262,7 +263,7 @@ class TestTransform(BaseMappingTransformerTransformTests):
                 True,
                 False,
                 # when the mapping values are put into bool series
-                # the none value is converted to False
+                # the none value is converted to False, instead of None
                 False,
 
             ]
