@@ -1176,17 +1176,13 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
                     ),
                 ),
             )
-        print(self.enums)
-        print(X.to_native())
-        print(X.filter(nw.col("b_timeofyear") != "summer").to_native())
-        X = X.filter(nw.col("b_timeofyear") != "summer")
+
         X = X.with_columns(
-            nw.col("b_timeofyear").cast(
-                nw.Enum(["winter", "autumn", "summer", "spring"]),
-            ),
-        )
-        X = X.with_columns(
-            nw.col(col + "_" + include_option).cast(self.enums[include_option])
+            # polars seems to struggle in going from cat->enum, so intermediate
+            # str cast seems to be needed
+            nw.col(col + "_" + include_option)
+            .cast(nw.String)
+            .cast(self.enums[include_option])
             for col in self.columns
             for include_option in self.include
         )

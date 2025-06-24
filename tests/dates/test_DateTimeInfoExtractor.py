@@ -372,7 +372,208 @@ class TestTransform(
         ["pandas", "polars"],
     )
     def test_multi_column_output(self, library):
-        pass
+        "test output for multiple columns"
+
+        df = d.create_date_test_df(library=library)
+        df = nw.from_native(df)
+        backend = nw.get_native_namespace(df)
+        df = df.with_columns(
+            nw.new_series(
+                name="b",
+                values=[
+                    None,
+                    datetime.datetime(
+                        2017,
+                        11,
+                        2,
+                        9,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2015,
+                        4,
+                        11,
+                        19,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2018,
+                        10,
+                        12,
+                        1,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2000,
+                        9,
+                        10,
+                        18,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2007,
+                        11,
+                        15,
+                        22,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2015,
+                        8,
+                        5,
+                        14,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2015,
+                        7,
+                        23,
+                        10,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                ],
+                backend=backend,
+                dtype=nw.Datetime(time_unit="us", time_zone="UTC"),
+            ),
+            nw.new_series(
+                name="a",
+                values=[
+                    None,
+                    datetime.datetime(
+                        2006,
+                        10,
+                        4,
+                        10,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2011,
+                        7,
+                        12,
+                        20,
+                        1,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2003,
+                        10,
+                        22,
+                        6,
+                        6,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        1999,
+                        2,
+                        17,
+                        14,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2004,
+                        9,
+                        15,
+                        22,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2001,
+                        8,
+                        5,
+                        17,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2011,
+                        7,
+                        21,
+                        15,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                ],
+                backend=backend,
+                dtype=nw.Datetime(time_unit="us", time_zone="UTC"),
+            ),
+        )
+
+        transformer = DatetimeInfoExtractor(
+            columns=["a", "b"],
+            include=["timeofmonth"],
+        )
+        transformed = transformer.transform(df.to_native())
+
+        expected = df.clone()
+        expected = df.with_columns(
+            nw.new_series(
+                name="a_timeofmonth",
+                values=[
+                    None,
+                    "start",
+                    "middle",
+                    "end",
+                    "middle",
+                    "middle",
+                    "start",
+                    "end",
+                ],
+                backend=backend,
+                dtype=nw.Enum(["end", "middle", "start"]),
+            ),
+            nw.new_series(
+                name="b_timeofmonth",
+                values=[
+                    None,
+                    "start",
+                    "middle",
+                    "middle",
+                    "start",
+                    "middle",
+                    "start",
+                    "end",
+                ],
+                backend=backend,
+                dtype=nw.Enum(["end", "middle", "start"]),
+            ),
+        )
+
+        assert_frame_equal_dispatch(transformed, expected.to_native())
+
+        # also test single row
+        df = nw.from_native(df)
+        for i in range(len(df)):
+            df_transformed_row = transformer.transform(df[[i]].to_native())
+            df_expected_row = expected[[i]].to_native()
+
+            assert_frame_equal_dispatch(
+                df_transformed_row,
+                df_expected_row,
+            )
 
     def test_is_serialisable(self, tmp_path):
         transformer = DatetimeInfoExtractor(columns=["b"], include=["timeofyear"])
