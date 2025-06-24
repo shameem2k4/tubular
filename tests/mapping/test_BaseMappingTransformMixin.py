@@ -1,6 +1,7 @@
 import copy
 import re
 
+import narwhals as nw
 import pandas as pd
 import polars as pl
 import pytest
@@ -13,7 +14,7 @@ from tests.base_tests import (
     OtherBaseBehaviourTests,
 )
 from tests.utils import assert_frame_equal_dispatch, dataframe_init_dispatch
-from tubular.mapping import BaseMappingTransformMixin
+from tubular.mapping import BaseMappingTransformer, BaseMappingTransformMixin
 
 # Note there are no tests that need inheriting from this file as the only difference is an expected transform output
 
@@ -73,10 +74,130 @@ class TestTransform(GenericTransformTests):
         if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
             return
 
-        transformer.mappings = mapping
-        transformer.return_dtypes = {"a": "String", "b": "Int64"}
+        return_dtypes = {"a": "String", "b": "Int64"}
+
+        base_mapping_transformer = BaseMappingTransformer(
+            mappings=mapping,
+            return_dtypes=return_dtypes,
+        )
+
+        transformer.mappings = base_mapping_transformer.mappings
+        transformer.return_dtypes = base_mapping_transformer.return_dtypes
+        transformer.null_mappings = base_mapping_transformer.null_mappings
 
         df_transformed = transformer.transform(df)
+
+        assert_frame_equal_dispatch(expected, df_transformed)
+
+    @pytest.mark.parametrize("library", ["pandas", "polars"])
+    def test_expected_output_boolean_with_nulls(self, library):
+        """Test that output is as expected for tricky bool cases:
+        e.g. mapping {True:1, False:0, None: 0}, potential causes of failure:
+            - None being cast to False when these values are inserted into bool series
+            - None mapping failing, as mapping logic relies on merging and None->None values
+            will not merge
+
+        Example failure 1:
+        df=pd.DataFrame({'a': [True, False, None]})
+        mappings={True:1, False:0, None:0}
+        return_dtypes={'a': 'Int8'}
+        mapping_transformer=MappingTransformer(mappings, return_dtypes)
+
+        mapping_transformer.transform(df)->
+        pd.DataFrame(
+            {
+            'a': [
+                1,
+                0,
+                None # mapping merge has failed on None,
+                # resulting in None instead of 0
+            ]
+            }
+        )
+
+        ---------
+        Example Failure 2
+        df=pd.DataFrame({'a': [1, 0, -1]})
+        mappings={1:True, 0:False, -1:None}
+        return_dtypes={'a': 'Int8'}
+        mapping_transformer=MappingTransformer(mappings, return_dtypes)
+
+        mapping_transformer.transform(df)->
+        pd.DataFrame(
+            {
+            'a': [
+                True,
+                False,
+                # when the mapping values are put into bool series
+                # the none value is converted to False, instead of None
+                False,
+
+            ]
+            }
+        )
+
+        """
+
+        df_dict = {
+            "a": [None, 0, 1, None, 0],
+            "b": [True, False, None, True, False],
+            "c": [None, 0, 0, None, 1],
+            "d": [True, None, None, True, False],
+        }
+
+        df = dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
+
+        mapping = {
+            "a": {0: False, 1: True},
+            "b": {False: 0, True: 1},
+            "c": {0: False, None: False, 1: True},
+            "d": {False: 1, True: 0, None: 1},
+        }
+
+        return_dtypes = {
+            "a": "Boolean",
+            "b": "Float64",
+            "c": "Boolean",
+            "d": "Int64",
+        }
+
+        expected_dict = {
+            "a": [None, False, True, None, False],
+            "b": [1, 0, None, 1, 0],
+            "c": [False, False, False, False, True],
+            "d": [0, 1, 1, 0, 1],
+        }
+
+        expected = dataframe_init_dispatch(
+            dataframe_dict=expected_dict,
+            library=library,
+        )
+
+        base_mapping_transformer = BaseMappingTransformer(
+            mappings=mapping,
+            return_dtypes=return_dtypes,
+        )
+
+        transformer = BaseMappingTransformMixin(columns=["c"])
+
+        # if transformer is not yet polars compatible, skip this test
+        if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
+            return
+
+        transformer.mappings = base_mapping_transformer.mappings
+
+        transformer.return_dtypes = base_mapping_transformer.return_dtypes
+
+        transformer.null_mappings = base_mapping_transformer.null_mappings
+
+        df_transformed = transformer.transform(df)
+
+        # convert bool type to pyarrow
+        if library == "pandas":
+            expected = nw.from_native(expected)
+            expected = expected.with_columns(nw.maybe_convert_dtypes(expected["c"]))
+            expected = expected.with_columns(nw.maybe_convert_dtypes(expected["a"]))
+            expected = expected.to_native()
 
         assert_frame_equal_dispatch(expected, df_transformed)
 
@@ -91,11 +212,19 @@ class TestTransform(GenericTransformTests):
         if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
             return
 
-        transformer.mappings = mapping
-        transformer.return_dtypes = {
+        return_dtypes = {
             "a": "String",
             "b": "Int64",
         }
+
+        base_mapping_transformer = BaseMappingTransformer(
+            mappings=mapping,
+            return_dtypes=return_dtypes,
+        )
+
+        transformer.mappings = base_mapping_transformer.mappings
+        transformer.return_dtypes = base_mapping_transformer.return_dtypes
+        transformer.null_mappings = base_mapping_transformer.null_mappings
 
         transformer.transform(df)
 
@@ -121,10 +250,18 @@ class TestTransform(GenericTransformTests):
         if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
             return
 
-        transformer.mappings = mapping
-        transformer.return_dtypes = {
+        return_dtypes = {
             "a": "String",
         }
+
+        base_mapping_transformer = BaseMappingTransformer(
+            mappings=mapping,
+            return_dtypes=return_dtypes,
+        )
+
+        transformer.mappings = base_mapping_transformer.mappings
+        transformer.return_dtypes = base_mapping_transformer.return_dtypes
+        transformer.null_mappings = base_mapping_transformer.null_mappings
 
         x_fitted = transformer.fit(df, df["c"])
 
@@ -145,8 +282,16 @@ class TestTransform(GenericTransformTests):
         if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
             return
 
-        transformer.mappings = mapping
-        transformer.return_dtypes = {"a": "String"}
+        return_dtypes = {"a": "String"}
+
+        base_mapping_transformer = BaseMappingTransformer(
+            mappings=mapping,
+            return_dtypes=return_dtypes,
+        )
+
+        transformer.mappings = base_mapping_transformer.mappings
+        transformer.return_dtypes = base_mapping_transformer.return_dtypes
+        transformer.null_mappings = base_mapping_transformer.null_mappings
 
         transformer = transformer.fit(df, df["c"])
 
@@ -170,8 +315,16 @@ class TestTransform(GenericTransformTests):
         if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
             return
 
-        transformer.mappings = mapping
-        transformer.return_dtypes = {"a": "String", "b": "Int64"}
+        return_dtypes = {"a": "String", "b": "Int64"}
+
+        base_mapping_transformer = BaseMappingTransformer(
+            mappings=mapping,
+            return_dtypes=return_dtypes,
+        )
+
+        transformer.mappings = base_mapping_transformer.mappings
+        transformer.return_dtypes = base_mapping_transformer.return_dtypes
+        transformer.null_mappings = base_mapping_transformer.null_mappings
 
         transformer = transformer.fit(df, df["c"])
 
@@ -193,14 +346,22 @@ class TestTransform(GenericTransformTests):
         """Test that the original (pandas) dataframe index is not transformed when transform method used."""
 
         df = minimal_dataframe_lookup[self.transformer_name]
+
+        df = nw.from_native(copy.deepcopy(df))
+        df = nw.maybe_convert_dtypes(df).to_native()
+
         transformer = initialized_transformers[self.transformer_name]
 
-        # if transformer is not yet polars compatible, skip this test
-        if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
-            return
+        return_dtypes = {"a": "String", "b": "String"}
 
-        transformer.mappings = mapping
-        transformer.return_dtypes = {"a": "String", "b": "String"}
+        base_mapping_transformer = BaseMappingTransformer(
+            mappings=mapping,
+            return_dtypes=return_dtypes,
+        )
+
+        transformer.mappings = base_mapping_transformer.mappings
+        transformer.return_dtypes = base_mapping_transformer.return_dtypes
+        transformer.null_mappings = base_mapping_transformer.null_mappings
 
         # update to abnormal index
         df.index = [2 * i for i in df.index]
