@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import warnings
 import zoneinfo
+from collections.abc import Iterable  # noqa: TCH003
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Optional, Union
 
@@ -20,8 +21,6 @@ from tubular.mapping import MappingTransformer
 from tubular.mixins import DropOriginalMixin, NewColumnNameMixin, TwoColumnMixin
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
     from narhwals.typing import FrameT
 
 TIME_UNITS = ["us", "ns", "ms"]
@@ -1089,6 +1088,16 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
 
         self._process_provided_mappings()
 
+        # this is a situation where we know the values our mappings allow,
+        # so enum type is more appropriate than categorical and we
+        # will cast to this at the end
+        self.enums = {
+            include_option: nw.Enum(
+                sorted(set(self.inverted_datetime_mappings[include_option].values())),
+            )
+            for include_option in self.include
+        }
+
         self.mapping_transformers = {
             include_option: MappingTransformer(
                 mappings={
@@ -1167,6 +1176,20 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
                     ),
                 ),
             )
+        print(self.enums)
+        print(X.to_native())
+        print(X.filter(nw.col("b_timeofyear") != "summer").to_native())
+        X = X.filter(nw.col("b_timeofyear") != "summer")
+        X = X.with_columns(
+            nw.col("b_timeofyear").cast(
+                nw.Enum(["winter", "autumn", "summer", "spring"]),
+            ),
+        )
+        X = X.with_columns(
+            nw.col(col + "_" + include_option).cast(self.enums[include_option])
+            for col in self.columns
+            for include_option in self.include
+        )
 
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(

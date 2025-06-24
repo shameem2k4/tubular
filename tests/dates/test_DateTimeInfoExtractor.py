@@ -205,13 +205,69 @@ class TestTransform(
                 name="b",
                 values=[
                     None,
-                    datetime.datetime(2019, 12, 25, 12, 0, 0, tzinfo="UTC"),
-                    datetime.datetime(2018, 11, 10, 11, 0, 0, tzinfo="UTC"),
-                    datetime.datetime(2018, 11, 10, 10, 0, 0, tzinfo="UTC"),
-                    datetime.datetime(2018, 9, 10, 18, 0, 0, tzinfo="UTC"),
-                    datetime.datetime(2015, 11, 10, 22, 0, 0, tzinfo="UTC"),
-                    datetime.datetime(2015, 11, 10, 19, 0, 0, tzinfo="UTC"),
-                    datetime.datetime(2015, 7, 23, 3, 0, 0, tzinfo="UTC"),
+                    datetime.datetime(
+                        2019,
+                        12,
+                        25,
+                        12,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2018,
+                        11,
+                        10,
+                        11,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2018,
+                        11,
+                        10,
+                        10,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2018,
+                        9,
+                        10,
+                        18,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2015,
+                        11,
+                        10,
+                        22,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2015,
+                        11,
+                        10,
+                        19,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
+                    datetime.datetime(
+                        2015,
+                        7,
+                        23,
+                        3,
+                        0,
+                        0,
+                        tzinfo=datetime.timezone.utc,
+                    ),
                 ],
                 backend=backend,
                 dtype=nw.Datetime(time_unit="us", time_zone="UTC"),
@@ -239,7 +295,7 @@ class TestTransform(
                     "end",
                 ],
                 backend=backend,
-                dtype=nw.Categorical,
+                dtype=nw.Enum(["end", "middle", "start"]),
             ),
             nw.new_series(
                 name="b_timeofyear",
@@ -254,7 +310,7 @@ class TestTransform(
                     "summer",
                 ],
                 backend=backend,
-                dtype=nw.Categorical,
+                dtype=nw.Enum(["autumn", "spring", "summer", "winter"]),
             ),
             nw.new_series(
                 name="b_dayofweek",
@@ -269,7 +325,17 @@ class TestTransform(
                     "thursday",
                 ],
                 backend=nw.get_native_namespace(df),
-                dtype=nw.Categorical,
+                dtype=nw.Enum(
+                    [
+                        "friday",
+                        "monday",
+                        "saturday",
+                        "sunday",
+                        "thursday",
+                        "tuesday",
+                        "wednesday",
+                    ],
+                ),
             ),
             nw.new_series(
                 name="b_timeofday",
@@ -284,7 +350,7 @@ class TestTransform(
                     "night",
                 ],
                 backend=nw.get_native_namespace(df),
-                dtype=nw.Categorical,
+                dtype=nw.Enum(["afternoon", "evening", "morning", "night"]),
             ),
         )
 
@@ -294,11 +360,7 @@ class TestTransform(
         df = nw.from_native(df)
         for i in range(len(df)):
             df_transformed_row = transformer.transform(df[[i]].to_native())
-            df_expected_row = expected[[i]]
-            # df_expected_row=df_expected_row.with_columns(
-            #     nw.col(col).cast(nw.Categorical)
-            #     for col in ['b_timeofmonth']
-            # ).to_native()
+            df_expected_row = expected[[i]].to_native()
 
             assert_frame_equal_dispatch(
                 df_transformed_row,
