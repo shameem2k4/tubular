@@ -16,7 +16,17 @@ Subsections for each version can be one of the following;
 
 Each individual change should have a link to the pull request after the description of the change.
 
-1.4.3 (unreleased)
+1.4.5 (unreleased)
+------------------
+
+Changed
+^^^^^^^
+- narwhalified DatetimeInfoExtractor `#378 <https://github.com/azukds/tubular/issues/378>_`
+- placeholder
+- placeholder
+
+
+1.4.4 (24/06/2025)
 ------------------
 
 Changed
@@ -26,7 +36,6 @@ Changed
 - Working on above, found additional bug with mapping null values. 
 Considered removing this functionality, but it is actually needed for 
 inverse pipelines. Changed this part of logic to work more like an imputer.
-- placeholder 
 
 1.4.3 (02/06/2025)
 ------------------
