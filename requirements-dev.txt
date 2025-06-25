@@ -34,12 +34,10 @@ pandas==2.3.0
 platformdirs==4.3.8
     # via virtualenv
 pluggy==1.6.0
-    # via
-    #   pytest
-    #   pytest-cov
+    # via pytest
 polars==1.31.0
     # via tubular (pyproject.toml)
-pre-commit==2.15.0
+pre-commit==4.2.0
     # via tubular (pyproject.toml)
 pyarrow==20.0.0
     # via tubular (pyproject.toml)
@@ -51,7 +49,7 @@ pytest==8.4.1
     #   pytest-cov
     #   pytest-mock
     #   test-aide
-pytest-cov==6.2.1
+pytest-cov==2.10.1
     # via tubular (pyproject.toml)
 pytest-mock==3.14.1
     # via
@@ -75,12 +73,8 @@ test-aide==0.1.1
     # via tubular (pyproject.toml)
 threadpoolctl==3.6.0
     # via scikit-learn
-toml==0.10.2
-    # via pre-commit
 tomli==2.2.1
-    # via
-    #   coverage
-    #   pytest
+    # via pytest
 typing-extensions==4.14.0
     # via exceptiongroup
 tzdata==2025.2
