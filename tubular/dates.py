@@ -1350,40 +1350,45 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             )
             raise ValueError(msg)
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+    @nw.narwhalify
+    def transform(self, X: FrameT) -> FrameT:
         """Transform - creates column containing sine or cosine of another datetime column.
 
         Which function is used is stored in the self.method attribute.
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Data to transform.
 
         Returns
         -------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Input X with additional columns added, these are named "<method>_<original_column>"
         """
         X = super().transform(X)
 
         for column in self.columns:
             if not isinstance(self.units, dict):
-                column_in_desired_unit = getattr(X[column].dt, self.units)
                 desired_units = self.units
             elif isinstance(self.units, dict):
-                column_in_desired_unit = getattr(X[column].dt, self.units[column])
                 desired_units = self.units[column]
             if not isinstance(self.period, dict):
                 desired_period = self.period
             elif isinstance(self.period, dict):
                 desired_period = self.period[column]
 
+            column_in_desired_unit = X.get_column(column).dt[desired_units]
+
             for method in self.method:
                 new_column_name = f"{method}_{desired_period}_{desired_units}_{column}"
 
-                X[new_column_name] = getattr(np, method)(
-                    column_in_desired_unit * (2.0 * np.pi / desired_period),
+                X = X.with_columns(
+                    {
+                        new_column_name: getattr(np, method)(
+                            column_in_desired_unit * (2.0 * np.pi / desired_period),
+                        ),
+                    },
                 )
 
         # Drop original columns if self.drop_original is True
