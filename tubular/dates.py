@@ -1378,7 +1378,7 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             elif isinstance(self.period, dict):
                 desired_period = self.period[column]
 
-            column_in_desired_unit = X.get_column(column).dt[desired_units]
+            column_in_desired_unit = getattr(X[column].dt, desired_units)
 
             for method in self.method:
                 new_column_name = f"{method}_{desired_period}_{desired_units}_{column}"
