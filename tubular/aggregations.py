@@ -1,7 +1,6 @@
 import narwhals as nw
 from beartype import beartype
 from beartype.typing import List, Literal
-from narwhals import count, mean, median, mode  # Example import statement
 from narwhals.typing import FrameT
 
 from tubular.base import BaseTransformer
@@ -24,8 +23,8 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         'mean', 'median', 'mode', 'sum', and 'count'.
     drop_original : bool, optional
         Whether to drop the original columns after transformation. Default is False.
-    level : str, optional
-        Specifies the level of aggregation, either 'row' or 'column'. Default is 'row'.
+    verbose : bool, optional
+        If True, enables verbose output for debugging purposes. Default is False.
 
     Attributes
     ----------
@@ -35,8 +34,8 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         Aggregation methods to apply.
     drop_original : bool
         Indicator for dropping original columns.
-    level : str
-        Level of aggregation.
+    verbose : bool
+        Indicator for verbose output.
     """
 
     @beartype
@@ -47,14 +46,25 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
             Literal["min", "max", "mean", "median", "mode", "sum", "count"]
         ],
         drop_original: bool = False,
-        level: Literal["row", "column"] = "row",
+        verbose: bool = False,
     ) -> None:
+        if not columns:
+            msg = "Columns list cannot be empty."
+            raise ValueError(msg)
+
         self.columns = columns
         self.aggregations = aggregations
         self.drop_original = drop_original
-        self.level = level
+        self.verbose = verbose
 
         self.set_drop_original_column(drop_original)
+
+        if self.verbose:
+            print(
+                f"Initialized {self.__class__.__name__} with columns: {self.columns}, "
+                f"aggregations: {self.aggregations}, drop_original: {self.drop_original}, "
+                f"verbose: {self.verbose}",
+            )
 
     @beartype
     def create_new_col_names(self, prefix: str) -> list[str]:
@@ -108,7 +118,6 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
             columns=columns,
             aggregations=aggregations,
             drop_original=drop_original,
-            level="row",
         )
         self.key = key
 
@@ -149,6 +158,13 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
 
         # Merge the aggregated results back with the original DataFrame
         df = df.join(grouped_df, on=self.key, how="left")
+
+        df = df.with_columns(
+            [
+                nw.col("col1_count").cast(nw.Int64),
+                nw.col("col2_count").cast(nw.Int64),
+            ],
+        )
 
         # Use mixin method to drop original columns
         return self.drop_original_column(

@@ -1,21 +1,19 @@
 import pytest
 from beartype.roar import BeartypeCallHintParamViolation
 
+from tests.base_tests import ColumnStrListInitTests, DropOriginalInitMixinTests
 from tubular.aggregations import BaseAggregationTransformer
 
 
-class TestBaseAggregationTransformerInit:
+class TestBaseAggregationTransformerInit(
+    DropOriginalInitMixinTests,
+    ColumnStrListInitTests,
+):
     """Tests for BaseAggregationTransformer initialization."""
 
-    def test_valid_initialization(self):
-        """Test initialization with valid parameters."""
-        columns = ["col1", "col2"]
-        aggregations = ["min", "max", "mean"]
-        transformer = BaseAggregationTransformer(columns, aggregations)
-        assert transformer.columns == columns
-        assert transformer.aggregations == aggregations
-        assert transformer.drop_original is False
-        assert transformer.level == "row"
+    @classmethod
+    def setup_class(cls):
+        cls.transformer_name = "BaseAggregationTransformer"
 
     def test_invalid_aggregation_error(self):
         """Test that an error is raised for invalid aggregation methods."""
@@ -24,15 +22,32 @@ class TestBaseAggregationTransformerInit:
         with pytest.raises(BeartypeCallHintParamViolation):
             BaseAggregationTransformer(columns, invalid_aggregations)
 
-    def test_invalid_level_error(self):
-        """Test that an error is raised for invalid level."""
-        columns = ["col1", "col2"]
-        aggregations = ["min", "max"]
-        with pytest.raises(BeartypeCallHintParamViolation):
-            BaseAggregationTransformer(columns, aggregations, level="invalid")
+    def test_columns_empty_list_error(
+        self,
+        minimal_attribute_dict,
+        uninitialized_transformers,
+    ):
+        args = minimal_attribute_dict[self.transformer_name].copy()
+        args["columns"] = []
+        with pytest.raises(ValueError):
+            uninitialized_transformers[self.transformer_name](**args)
+
+    @pytest.mark.parametrize("drop_orginal_column", (0, "a", ["a"], {"a": 10}, None))
+    def test_drop_column_arg_errors(
+        self,
+        drop_orginal_column,
+        minimal_attribute_dict,
+        uninitialized_transformers,
+    ):
+        args = minimal_attribute_dict[self.transformer_name].copy()
+        args["drop_original"] = drop_orginal_column
+        with pytest.raises(
+            BeartypeCallHintParamViolation,
+        ):  # Adjust to expect BeartypeCallHintParamViolation
+            uninitialized_transformers[self.transformer_name](**args)
 
 
-class TestBaseAggregationTransformerMethods:
+class TestBaseAggregationTransformerCreateNewColNames:
     """Tests for methods in BaseAggregationTransformer."""
 
     def test_create_new_col_names(self):
