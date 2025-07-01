@@ -1,10 +1,20 @@
 import narwhals as nw
 from beartype import beartype
-from beartype.typing import List, Literal
+from beartype.typing import Annotated, List, Literal
+from beartype.vale import Is
 from narwhals.typing import FrameT
 
 from tubular.base import BaseTransformer
 from tubular.mixins import DropOriginalMixin
+
+_VALID_AGGREGATIONS = frozenset(
+    ["min", "max", "mean", "median", "mode", "sum", "count"],
+)
+
+ListOfAggregations = Annotated[
+    List[Literal["min", "max", "mean", "median", "mode", "sum", "count"]],
+    Is[lambda lst: all(item in _VALID_AGGREGATIONS for item in lst)],
+]
 
 
 class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
@@ -42,9 +52,7 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
     def __init__(
         self,
         columns: list[str],
-        aggregations: List[
-            Literal["min", "max", "mean", "median", "mode", "sum", "count"]
-        ],
+        aggregations: ListOfAggregations,
         drop_original: bool = False,
         verbose: bool = False,
     ) -> None:
