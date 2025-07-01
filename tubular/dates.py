@@ -418,7 +418,7 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
         )
 
 
-class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
+class OldDateDifferenceTransformer(BaseDateTwoColumnTransformer):
     """Class to transform calculate the difference between 2 date fields in specified units.
 
     Parameters
@@ -500,6 +500,135 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
                 (nw.col(self.columns[1]) - nw.col(self.columns[0]))
                 / np.timedelta64(1, self.units)
             ).alias(self.new_column_name),
+        )
+
+        # Drop original columns if self.drop_original is True
+        return DropOriginalMixin.drop_original_column(
+            self,
+            X,
+            self.drop_original,
+            self.columns,
+        )
+
+
+class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
+    """Class to transform calculate the difference between 2 date fields in specified units.
+
+    Parameters
+    ----------
+    columns : List[str]
+        List of 2 columns. First column will be subtracted from second.
+    new_column_name : str, default = None
+        Name given to calculated datediff column. If None then {column_upper}_{column_lower}_datediff_{units}
+        will be used.
+    units : str, default = 'D'
+        Numpy datetime units, accepted values are 'D', 'h', 'm', 's'
+    copy : bool, default = True
+        Should X be copied prior to transform? Copy argument no longer used and will be deprecated in a future release
+    verbose: bool, default = False
+        Control level of detail in printouts
+    drop_original:
+        Boolean flag indicating whether to drop original columns.
+
+    Attributes
+    ----------
+
+    polars_compatible : bool
+        class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+    """
+
+    polars_compatible = True
+
+    def __init__(
+        self,
+        columns: list[str],
+        new_column_name: str | None = None,
+        units: str = "D",
+        copy: bool | None = None,
+        verbose: bool = False,
+        drop_original: bool = False,
+        **kwargs: dict[str, bool],
+    ) -> None:
+        accepted_values_units = [
+            "week",
+            "fortnight",
+            "lunar_month",
+            "common_year",
+            "D",
+            "h",
+            "m",
+            "s",
+        ]
+
+        if units not in accepted_values_units:
+            msg = f"{self.classname()}: units must be one of {accepted_values_units}, got {units}"
+            raise ValueError(msg)
+
+        self.units = units
+
+        super().__init__(
+            columns=columns,
+            new_column_name=new_column_name,
+            drop_original=drop_original,
+            copy=copy,
+            verbose=verbose,
+            **kwargs,
+        )
+
+        # This attribute is not for use in any method, use 'columns' instead.
+        # Here only as a fix to allow string representation of transformer.
+        self.column_lower = columns[0]
+        self.column_upper = columns[1]
+
+    def transform(self, X: FrameT) -> FrameT:
+        """Calculate the difference between the given fields in the specified units.
+
+        Parameters
+        ----------
+        X : pd/pl.DataFrame
+            Data containing self.columns
+
+        """
+
+        X = nw.from_native(super().transform(X))
+
+        # mapping for units and corresponding timedelta arg values
+        UNITS_TO_TIMEDELTA_PARAMS = {
+            "week": (7, "D"),
+            "fortnight": (14, "D"),
+            "lunar_month": (
+                29.5 * 24,
+                "h",
+            ),  # timedelta values need to be whole numbers so (29.5, 'D') cannot be used
+            "common_year": (365, "D"),
+            "D": (1, "D"),
+            "h": (1, "h"),
+            "m": (1, "m"),
+            "s": (1, "s"),
+        }
+
+        # list of units that require time truncation
+        UNITS_TO_TRUNCATE_TIME_FOR = [
+            "week",
+            "fortnight",
+            "lunar_month",
+            "common_year",
+            "D",
+        ]
+
+        start_date_col = nw.col(self.columns[0])
+        end_date_col = nw.col(self.columns[1])
+
+        # truncating time for specific units
+        if self.units in UNITS_TO_TRUNCATE_TIME_FOR:
+            start_date_col = start_date_col.dt.truncate("1d")
+            end_date_col = end_date_col.dt.truncate("1d")
+
+        timedelta_value, timedelta_format = UNITS_TO_TIMEDELTA_PARAMS[self.units]
+        denominator = np.timedelta64(timedelta_value, timedelta_format)
+
+        X = X.with_columns(
+            ((end_date_col - start_date_col) / denominator).alias(self.new_column_name),
         )
 
         # Drop original columns if self.drop_original is True
