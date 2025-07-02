@@ -35,7 +35,7 @@ class TestInit(
         """Test that an exception is raised if the value of inits is not one of accepted_values_units."""
         with pytest.raises(
             ValueError,
-            match=r"DateDifferenceTransformer: units must be one of \['D', 'h', 'm', 's'\], got y",
+            match=r"DateDifferenceTransformer: units must be one of \['week', 'fortnight', 'lunar_month', 'common_year', 'D', 'h', 'm', 's'\], got y",
         ):
             DateDifferenceTransformer(
                 columns=["dummy_1", "dummy_2"],
@@ -198,13 +198,13 @@ def expected_df_3(library="pandas"):
             ),
         ],
         "D": [
-            9713.042372685186,
-            7219.957627314815,
+            9713.0,
+            7220.0,
             0.0,
             31.0,
-            -30.083333333333332,
-            -1064.9583333333333,
-            -1125.9583333333333,
+            -30.0,
+            -1065.0,
+            -1126.0,
             10957.0,
         ],
     }
