@@ -454,6 +454,7 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         copy: bool | None = None,
         verbose: bool = False,
         drop_original: bool = False,
+        custom_days_divider: int = None,
         **kwargs: dict[str, bool],
     ) -> None:
         accepted_values_units = [
@@ -461,6 +462,7 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
             "fortnight",
             "lunar_month",
             "common_year",
+            "custom_days",
             "D",
             "h",
             "m",
@@ -472,6 +474,7 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
             raise ValueError(msg)
 
         self.units = units
+        self.custom_days_divider = custom_days_divider
 
         super().__init__(
             columns=columns,
@@ -531,8 +534,12 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
             start_date_col = start_date_col.dt.truncate("1d")
             end_date_col = end_date_col.dt.truncate("1d")
 
-        timedelta_value, timedelta_format = UNITS_TO_TIMEDELTA_PARAMS[self.units]
-        denominator = np.timedelta64(timedelta_value, timedelta_format)
+        if self.units == "custom_days":
+            timedelta_value, timedelta_format = self.custom_days_divider, "D"
+            denominator = np.timedelta64(timedelta_value, timedelta_format)
+        else:
+            timedelta_value, timedelta_format = UNITS_TO_TIMEDELTA_PARAMS[self.units]
+            denominator = np.timedelta64(timedelta_value, timedelta_format)
 
         X = X.with_columns(
             ((end_date_col - start_date_col) / denominator).alias(self.new_column_name),
