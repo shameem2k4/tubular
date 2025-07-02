@@ -1366,31 +1366,33 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
         X : pd/pl.DataFrame
             Input X with additional columns added, these are named "<method>_<original_column>"
         """
-        X = super().transform(X)
+        X = nw.from_native(super().transform(X))
 
         for column in self.columns:
-            if not isinstance(self.units, dict):
-                desired_units = self.units
-            elif isinstance(self.units, dict):
+            if isinstance(self.units, dict):
                 desired_units = self.units[column]
-            if not isinstance(self.period, dict):
-                desired_period = self.period
-            elif isinstance(self.period, dict):
+            else:
+                desired_units = self.units
+            # Determine the desired period for the sinusoid function
+            if isinstance(self.period, dict):
                 desired_period = self.period[column]
-
-            column_in_desired_unit = getattr(X[column].dt, desired_units)
-
+            else:
+                desired_period = self.period
+           
             for method in self.method:
                 new_column_name = f"{method}_{desired_period}_{desired_units}_{column}"
-
+               
+                # Calculate the sine or cosine of the column in the desired unit
                 X = X.with_columns(
-                    {
-                        new_column_name: getattr(np, method)(
-                            column_in_desired_unit * (2.0 * np.pi / desired_period),
-                        ),
-                    },
-                )
-
+                        nw.col(column)
+                        .map_batches(
+                            lambda s: getattr(np, method)(
+                                getattr(s.dt, desired_units) * (2.0 * np.pi/desired_period)),
+                            return_dtype=nw.Float64
+                        )
+                        .alias(new_column_name)
+                    )
+        
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(
             self,
