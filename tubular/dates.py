@@ -1378,21 +1378,23 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
                 desired_period = self.period[column]
             else:
                 desired_period = self.period
-           
+
             for method in self.method:
                 new_column_name = f"{method}_{desired_period}_{desired_units}_{column}"
-               
+
                 # Calculate the sine or cosine of the column in the desired unit
                 X = X.with_columns(
-                        nw.col(column)
-                        .map_batches(
-                            lambda s: getattr(np, method)(
-                                getattr(s.dt, desired_units) * (2.0 * np.pi/desired_period)),
-                            return_dtype=nw.Float64
-                        )
-                        .alias(new_column_name)
+                    nw.col(column)
+                    .map_batches(
+                        lambda s: getattr(np, method)(
+                            getattr(s.dt, desired_units)
+                            * (2.0 * np.pi / desired_period)
+                        ),
+                        return_dtype=nw.Float64,
                     )
-        
+                    .alias(new_column_name),
+                )
+
         # Drop original columns if self.drop_original is True
         return DropOriginalMixin.drop_original_column(
             self,
