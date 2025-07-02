@@ -35,7 +35,7 @@ class TestInit(
         """Test that an exception is raised if the value of inits is not one of accepted_values_units."""
         with pytest.raises(
             ValueError,
-            match=r"DateDifferenceTransformer: units must be one of \['week', 'fortnight', 'lunar_month', 'common_year', 'D', 'h', 'm', 's'\], got y",
+            match=r"DateDifferenceTransformer: units must be one of \['week', 'fortnight', 'lunar_month', 'common_year', 'custom_days', 'D', 'h', 'm', 's'\], got y",
         ):
             DateDifferenceTransformer(
                 columns=["dummy_1", "dummy_2"],
