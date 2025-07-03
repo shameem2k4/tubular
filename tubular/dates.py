@@ -276,148 +276,6 @@ class BaseDateTwoColumnTransformer(
         self.check_two_columns(columns)
 
 
-class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
-    """Transformer to calculate the number of years between two dates.
-
-    Parameters
-    ----------
-    columns : List[str]
-        List of 2 columns. First column will be subtracted from second.
-
-    new_column_name : str
-        Name for the new year column.
-
-    drop_original : bool
-        Flag for whether to drop the original columns.
-
-    missing_replacement : int/float/str
-        Value to output if either the lower date value or the upper date value are
-        missing. Default value is None.
-
-    **kwargs
-        Arbitrary keyword arguments passed onto BaseTransformer.init method.
-
-    Attributes
-    ----------
-    columns : List[str]
-        List of 2 columns. First column will be subtracted from second.
-
-    new_column_name : str, default = None
-        Name given to calculated datediff column. If None then {column_upper}_{column_lower}_datediff
-        will be used.
-
-    drop_original : bool
-        Indicator whether to drop old columns during transform method.
-
-    polars_compatible : bool
-        class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
-
-    """
-
-    polars_compatible = True
-
-    def __init__(
-        self,
-        columns: list[str],
-        new_column_name: str | None = None,
-        missing_replacement: float | str | None = None,
-        drop_original: bool = False,
-        **kwargs: dict[str, bool],
-    ) -> None:
-        super().__init__(
-            columns=columns,
-            new_column_name=new_column_name,
-            drop_original=drop_original,
-            **kwargs,
-        )
-
-        if (missing_replacement) and (
-            type(missing_replacement) not in [int, float, str]
-        ):
-            msg = f"{self.classname()}: if not None, missing_replacement should be an int, float or string"
-            raise TypeError(msg)
-
-        self.missing_replacement = missing_replacement
-
-        # This attribute is not for use in any method, use 'columns' instead.
-        # Here only as a fix to allow string representation of transformer.
-        self.column_lower = columns[0]
-        self.column_upper = columns[1]
-
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> FrameT:
-        """Calculate year gap between the two provided columns.
-
-        New column is created under the 'new_column_name', and optionally removes the
-        old date columns.
-
-        Parameters
-        ----------
-        X : pd/pl.DataFrame
-            Data containing self.columns
-
-        Returns
-        -------
-        X : pd/pl.DataFrame
-            Data containing self.columns
-
-        """
-
-        X = nw.from_native(super().transform(X))
-
-        # Create a helping column col0 for the first date. This will convert the date into an integer in a format or YYYYMMDD
-        X = X.with_columns(
-            (
-                nw.col(self.columns[0]).cast(nw.Date).dt.year().cast(nw.Int64) * 10000
-                + nw.col(self.columns[0]).cast(nw.Date).dt.month().cast(nw.Int64) * 100
-                + nw.col(self.columns[0]).cast(nw.Date).dt.day().cast(nw.Int64)
-            ).alias("col0"),
-        )
-        # Create a helping column col1 for the second date. This will convert the date into an integer in a format or YYYYMMDD
-        X = X.with_columns(
-            (
-                nw.col(self.columns[1]).cast(nw.Date).dt.year().cast(nw.Int64) * 10000
-                + nw.col(self.columns[1]).cast(nw.Date).dt.month().cast(nw.Int64) * 100
-                + nw.col(self.columns[1]).cast(nw.Date).dt.day().cast(nw.Int64)
-            ).alias("col1"),
-        )
-
-        # Compute difference between integers and if the difference is negative then adjust.
-        # Finally devide by 10000 to get the years.
-        X = X.with_columns(
-            nw.when(nw.col("col1") < nw.col("col0"))
-            .then(((nw.col("col0") - nw.col("col1")) // 10000) * (-1))
-            .otherwise((nw.col("col1") - nw.col("col0")) // 10000)
-            .cast(nw.Int64)
-            .alias(self.new_column_name),
-        ).drop(["col0", "col1"])
-
-        # When we get a missing then replace with missing_replacement otherwise return the above calculation
-        if self.missing_replacement is not None:
-            X = X.with_columns(
-                nw.when(
-                    (nw.col(self.columns[0]).is_null())
-                    or (nw.col(self.columns[1]).is_null()),
-                )
-                .then(
-                    self.missing_replacement,
-                )
-                .otherwise(
-                    nw.col(self.new_column_name),
-                )
-                .cast(nw.Int64)
-                .alias(self.new_column_name),
-            )
-
-        # Drop original columns if self.drop_original is True
-        return DropOriginalMixin.drop_original_column(
-            self,
-            X,
-            self.drop_original,
-            self.columns,
-        )
-
-
 class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
     """Class to transform calculate the difference between 2 date fields in specified units.
 
@@ -429,14 +287,15 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         Name given to calculated datediff column. If None then {column_upper}_{column_lower}_datediff_{units}
         will be used.
     units : str, default = 'D'
-        Numpy datetime units, accepted values are 'D', 'h', 'm', 's'
+        Accepted values are "week", "fortnight", "lunar_month", "common_year", "custom_days", 'D', 'h', 'm', 's'
     copy : bool, default = True
         Should X be copied prior to transform? Copy argument no longer used and will be deprecated in a future release
     verbose: bool, default = False
         Control level of detail in printouts
     drop_original:
         Boolean flag indicating whether to drop original columns.
-
+    custom_days_divider:
+        Integer value for the "custom_days" unit
     Attributes
     ----------
 
