@@ -1072,9 +1072,6 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
                     msg = f"{self.classname()}: keys in datetime_mappings should be in include"
                     raise ValueError(msg)
 
-        if datetime_mappings is None:
-            datetime_mappings = {}
-
         super().__init__(
             columns=columns,
             drop_original=drop_original,
