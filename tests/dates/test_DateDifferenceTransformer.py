@@ -1394,6 +1394,340 @@ def expected_df_11(library="pandas"):
     return dataframe_init_dispatch(df_dict, library=library)
 
 
+def expected_df_12(library="pandas"):
+    """Expected output for test_expected_output_units_common_year."""
+
+    df_dict = {
+        "a": [
+            datetime.datetime(
+                1993,
+                9,
+                27,
+                11,
+                58,
+                58,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2000,
+                3,
+                19,
+                12,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                11,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                10,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                10,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                10,
+                10,
+                10,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                12,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                1985,
+                7,
+                23,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+        ],
+        "b": [
+            datetime.datetime(
+                2020,
+                5,
+                1,
+                12,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2019,
+                12,
+                25,
+                11,
+                58,
+                58,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                11,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                11,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                9,
+                10,
+                9,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2015,
+                11,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2015,
+                11,
+                10,
+                12,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2015,
+                7,
+                23,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+        ],
+        "common_year": [
+            26.610958,
+            19.780822,
+            0.0,
+            0.084932,
+            -0.082192,
+            -2.917808,
+            -3.084932,
+            30.019178,
+        ],
+    }
+
+    return dataframe_init_dispatch(df_dict, library=library)
+
+
+def expected_df_13(library="pandas"):
+    """Expected output for test_expected_output_units_custom_days."""
+
+    df_dict = {
+        "a": [
+            datetime.datetime(
+                1993,
+                9,
+                27,
+                11,
+                58,
+                58,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2000,
+                3,
+                19,
+                12,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                11,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                10,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                10,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                10,
+                10,
+                10,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                12,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                1985,
+                7,
+                23,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+        ],
+        "b": [
+            datetime.datetime(
+                2020,
+                5,
+                1,
+                12,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2019,
+                12,
+                25,
+                11,
+                58,
+                58,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                11,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                11,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2018,
+                9,
+                10,
+                9,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2015,
+                11,
+                10,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2015,
+                11,
+                10,
+                12,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+            datetime.datetime(
+                2015,
+                7,
+                23,
+                11,
+                59,
+                59,
+                tzinfo=datetime.timezone.utc,
+            ),
+        ],
+        "custom_days": [
+            388.52,
+            288.80,
+            0.0,
+            1.24,
+            -1.20,
+            -42.60,
+            -45.04,
+            438.28,
+        ],
+    }
+
+    return dataframe_init_dispatch(df_dict, library=library)
+
+
 class TestTransform(
     GenericTransformTests,
     GenericDatesMixinTransformTests,
@@ -1608,6 +1942,67 @@ class TestTransform(
             columns=["a", "b"],
             new_column_name="lunar_month",
             units="lunar_month",
+            verbose=False,
+        )
+
+        df_transformed = x.transform(df)
+
+        assert_frame_equal_dispatch(expected, df_transformed)
+
+    @pytest.mark.parametrize(
+        ("df", "expected"),
+        [
+            (
+                d.create_datediff_test_df(library="pandas"),
+                expected_df_12(library="pandas"),
+            ),
+            (
+                d.create_datediff_test_df(library="polars"),
+                expected_df_12(library="polars"),
+            ),
+        ],
+    )
+    def test_expected_output_units_common_year(self, df, expected):
+        """Test that the output is expected from transform, when units is common_year.
+
+        This tests positive month gaps, negative month gaps, and missing values.
+
+        """
+        x = DateDifferenceTransformer(
+            columns=["a", "b"],
+            new_column_name="common_year",
+            units="common_year",
+            verbose=False,
+        )
+
+        df_transformed = x.transform(df)
+
+        assert_frame_equal_dispatch(expected, df_transformed)
+
+    @pytest.mark.parametrize(
+        ("df", "expected"),
+        [
+            (
+                d.create_datediff_test_df(library="pandas"),
+                expected_df_13(library="pandas"),
+            ),
+            (
+                d.create_datediff_test_df(library="polars"),
+                expected_df_13(library="polars"),
+            ),
+        ],
+    )
+    def test_expected_output_units_custom_days(self, df, expected):
+        """Test that the output is expected from transform, when units is custom_days.
+
+        This tests positive month gaps, negative month gaps, and missing values.
+
+        """
+        x = DateDifferenceTransformer(
+            columns=["a", "b"],
+            new_column_name="custom_days",
+            units="custom_days",
+            custom_days_divider=25,
             verbose=False,
         )
 

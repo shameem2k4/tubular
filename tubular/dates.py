@@ -538,6 +538,7 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
             "fortnight",
             "lunar_month",
             "common_year",
+            "custom_days",
             "D",
         ]
 
