@@ -126,10 +126,13 @@ class TestInit(
     @pytest.mark.parametrize(
         ("include", "incorrect_datetime_mappings_keys"),
         [
-            (["timeofyear"], {"dayofweek": {"day": range(7)}}),
+            (["timeofyear"], {"dayofweek": {i: "day" for i in range(7)}}),
             (
                 ["timeofyear"],
-                {"timeofyear": {"month": range(12)}, "timeofday": {"hour": range(24)}},
+                {
+                    "timeofyear": {i: "month" for i in range(12)},
+                    "timeofday": {i: "hour" for i in range(24)},
+                },
             ),
         ],
     )
@@ -153,19 +156,19 @@ class TestInit(
         ("incomplete_mappings", "expected_exception"),
         [
             (
-                {"timeofday": {"mapped": range(23)}},
+                {"timeofday": {i: "mapped" for i in range(23)}},
                 r"DatetimeInfoExtractor: timeofday mapping dictionary should contain mapping for all values between 0-23. \{23\} are missing",
             ),
             (
-                {"timeofmonth": {"mapped": range(1, 31)}},
+                {"timeofmonth": {i: "mapped" for i in range(1, 31)}},
                 r"DatetimeInfoExtractor: timeofmonth mapping dictionary should contain mapping for all values between 1-31. \{31\} are missing",
             ),
             (
-                {"timeofyear": {"mapped": range(1, 12)}},
+                {"timeofyear": {i: "mapped" for i in range(1, 12)}},
                 r"DatetimeInfoExtractor: timeofyear mapping dictionary should contain mapping for all values between 1-12. \{12\} are missing",
             ),
             (
-                {"dayofweek": {"mapped": range(6)}},
+                {"dayofweek": {i: "mapped" for i in range(6)}},
                 r"DatetimeInfoExtractor: dayofweek mapping dictionary should contain mapping for all values between 1-7. \{6, 7\} are missing",
             ),
         ],
