@@ -278,7 +278,7 @@ class BaseDateTwoColumnTransformer(
 
 
 @deprecated(
-    "This Transformer is being deprecated, if you prefer this tranformer to Date Difference transformer let us know through a github issue",
+    "This Transformer is being deprecated, if you prefer this tranformer to DateDifferenceTransformer let us know through a github issue",
 )
 class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
     """Transformer to calculate the number of years between two dates.
