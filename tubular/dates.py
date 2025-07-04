@@ -1063,14 +1063,14 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         if include is None:
             include = self.INCLUDE_OPTIONS
 
-        if datetime_mappings is None:
-            datetime_mappings = {}
-
-        if datetime_mappings != {}:
+        if datetime_mappings:
             for key in datetime_mappings:
                 if key not in include:
                     msg = f"{self.classname()}: keys in datetime_mappings should be in include"
                     raise ValueError(msg)
+
+        else:
+            datetime_mappings = {}
 
         super().__init__(
             columns=columns,
