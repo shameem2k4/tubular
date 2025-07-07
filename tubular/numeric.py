@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
 import numpy as np
 import pandas as pd
 from beartype import beartype
-from beartype.vale import Is  # noqa: TCH002
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import (
@@ -18,6 +17,7 @@ from sklearn.preprocessing import (
     StandardScaler,
 )
 
+from tubular._types import ListOfOneStr, PositiveNumber  # noqa: TCH001
 from tubular.base import BaseTransformer, DataFrameMethodTransformer
 from tubular.mixins import (
     CheckNumericMixin,
@@ -163,12 +163,7 @@ class LogTransformer(BaseNumericTransformer, DropOriginalMixin):
     def __init__(
         self,
         columns: Optional[Union[str, list[str]]],
-        base: Optional[
-            Annotated[
-                Union[int, float],
-                Is[lambda v: v > 0],
-            ]
-        ] = None,
+        base: Optional[PositiveNumber] = None,
         add_1: bool = False,
         drop_original: bool = True,
         suffix: str = "log",
@@ -958,10 +953,7 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
         self,
         columns: Union[
             str,
-            Annotated[
-                list[str],
-                Is[lambda list_arg: len(list_arg) == 1],
-            ],
+            ListOfOneStr,
         ],
         new_column_name: str,
         n_init: Union[str, int] = "auto",

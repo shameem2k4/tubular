@@ -23,6 +23,7 @@ Changed
 ^^^^^^^
 - bugfix: updated env to make package importable, added basic test for this
 - feat: converted DropOriginalMixin and associated transformers to beartype
+- feat: added _types file containing custom types
 - placeholder
 - placeholder
 
