@@ -1,19 +1,34 @@
+from enum import Enum
+
 import narwhals as nw
+import pandas as pd
+import polars as pl
 from beartype import beartype
-from beartype.typing import Annotated, List, Literal
+from beartype.typing import Annotated, List
 from beartype.vale import Is
 from narwhals.typing import FrameT
 
 from tubular.base import BaseTransformer
 from tubular.mixins import DropOriginalMixin
 
-_VALID_AGGREGATIONS = frozenset(
-    ["min", "max", "mean", "median", "mode", "sum", "count"],
-)
+
+class AggregationOptions(str, Enum):
+    MIN = "min"
+    MAX = "max"
+    MEAN = "mean"
+    MEDIAN = "median"
+    MODE = "mode"
+    SUM = "sum"
+    COUNT = "count"
+
 
 ListOfAggregations = Annotated[
-    List[Literal["min", "max", "mean", "median", "mode", "sum", "count"]],
-    Is[lambda lst: all(item in _VALID_AGGREGATIONS for item in lst)],
+    List,
+    Is[
+        lambda list_value: all(
+            entry in AggregationOptions._value2member_map_ for entry in list_value
+        )
+    ],
 ]
 
 
@@ -56,23 +71,11 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         drop_original: bool = False,
         verbose: bool = False,
     ) -> None:
-        if not columns:
-            msg = "Columns list cannot be empty."
-            raise ValueError(msg)
+        super().__init__(columns=columns, verbose=verbose)
 
-        self.columns = columns
         self.aggregations = aggregations
-        self.drop_original = drop_original
-        self.verbose = verbose
 
         self.set_drop_original_column(drop_original)
-
-        if self.verbose:
-            print(
-                f"Initialized {self.__class__.__name__} with columns: {self.columns}, "
-                f"aggregations: {self.aggregations}, drop_original: {self.drop_original}, "
-                f"verbose: {self.verbose}",
-            )
 
     @beartype
     def create_new_col_names(self, prefix: str) -> list[str]:
@@ -118,14 +121,16 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
     def __init__(
         self,
         columns: list[str],
-        aggregations: list[str],
+        aggregations: ListOfAggregations,
         key: str,
         drop_original: bool = False,
+        verbose: bool = False,
     ) -> None:
         super().__init__(
             columns=columns,
             aggregations=aggregations,
             drop_original=drop_original,
+            verbose=verbose,
         )
         self.key = key
 
@@ -138,12 +143,12 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
 
         Parameters
         ----------
-        df : FrameT
+        df : pd.DataFrame or pl.DataFrame
             DataFrame to transform by aggregating specified columns.
 
         Returns
         -------
-        FrameT
+        pd.DataFrame or pl.DataFrame
             Transformed DataFrame with aggregated columns.
 
         Raises
@@ -151,6 +156,18 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
         ValueError
             If the key column is not found in the DataFrame.
         """
+
+        if df is None or not isinstance(
+            df,
+            (pd.DataFrame, pl.DataFrame, nw.DataFrame, nw.LazyFrame),
+        ):
+            msg = f"{self.classname()}: Input must be a pandas, polars, or narwhals DataFrame, got {type(df).__name__}"
+            raise ValueError(msg)
+
+        if df.shape[0] == 0:
+            msg = f"{self.classname()}: X has no rows; {df.shape}"
+            raise ValueError(msg)
+
         if self.key not in df.columns:
             msg = f"key '{self.key}' not found in dataframe columns"
             raise ValueError(msg)
@@ -166,13 +183,6 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
 
         # Merge the aggregated results back with the original DataFrame
         df = df.join(grouped_df, on=self.key, how="left")
-
-        df = df.with_columns(
-            [
-                nw.col("col1_count").cast(nw.Int64),
-                nw.col("col2_count").cast(nw.Int64),
-            ],
-        )
 
         # Use mixin method to drop original columns
         return self.drop_original_column(
