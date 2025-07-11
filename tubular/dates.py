@@ -1127,7 +1127,7 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
                 set(self.final_datetime_mappings[include_option].keys())
                 != self.RANGE_TO_MAP[include_option]
             ):
-                msg = f"{self.classname()}: {include_option} mapping dictionary should contain mapping for all values between {min(self.RANGE_TO_MAP[include_option])}-{max(self.RANGE_TO_MAP[include_option])}. {self.RANGE_TO_MAP[include_option] - set(self.final_datetime_mappings[include_option].keys())} are missing"
+                msg = f"{self.classname()}: {include_option.value} mapping dictionary should contain mapping for all values between {min(self.RANGE_TO_MAP[include_option])}-{max(self.RANGE_TO_MAP[include_option])}. {self.RANGE_TO_MAP[include_option] - set(self.final_datetime_mappings[include_option].keys())} are missing"
                 raise ValueError(msg)
 
     @nw.narwhalify
