@@ -22,7 +22,7 @@ Each individual change should have a link to the pull request after the descript
 Changed
 ^^^^^^^
 - bugfix: updated env to make package importable, added basic test for this
-- placeholder
+- narwhalified DatetimeSinusoidCalculator '#425 <https://github.com/azukds/tubular/issues/425>_' 
 - placeholder
 
 1.4.4 (24/06/2025)
