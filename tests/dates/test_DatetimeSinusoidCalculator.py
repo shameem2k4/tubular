@@ -295,7 +295,6 @@ class TestTransform(GenericTransformTests, DatetimeMixinTransformTests):
     @pytest.mark.parametrize(
         "columns, method, units, period",
         [
-            # (["a", "b"], ["sin", "cos"], "month", 12),
             (["a"], ["sin", "cos"], "month", 12),
         ],
     )
