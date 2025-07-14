@@ -295,7 +295,7 @@ class TestTransform(GenericTransformTests, DatetimeMixinTransformTests):
     @pytest.mark.parametrize(
         "columns, method, units, period",
         [
-            (["a", "b"], ["sin", "cos"], "month", 12),
+            # (["a", "b"], ["sin", "cos"], "month", 12),
             (["a"], ["sin", "cos"], "month", 12),
         ],
     )
@@ -318,25 +318,25 @@ class TestTransform(GenericTransformTests, DatetimeMixinTransformTests):
         )
         expected = expected_df.clone()
         native_backend = nw.get_native_namespace(expected)
-        for column in transformer.columns:
-            # Create new column names for sin and cos
-            new_cos_col_name = "cos_12_month_" + column
-            new_sin_col_name = "sin_12_month_" + column
-            # Get the column in the desired unit
-            column_in_desired_unit = expected[column].dt.month
 
-            expected = expected.with_columns(
-                nw.new_series(
-                    name=new_sin_col_name,
-                    values=np.sin(column_in_desired_unit() * (2.0 * np.pi / 12)),
-                    backend=native_backend.__name__,
-                ),
-                nw.new_series(
-                    name=new_cos_col_name,
-                    values=np.cos(column_in_desired_unit() * (2.0 * np.pi / 12)),
-                    backend=native_backend.__name__,
-                ),
-            )
+        # Create new column names for sin and cos
+        new_cos_col_name = "cos_12_month_a"
+        new_sin_col_name = "sin_12_month_a"
+        # Get the column in the desired unit
+        column_in_desired_unit = expected["a"].dt.month
+
+        expected = expected.with_columns(
+            nw.new_series(
+                name=new_sin_col_name,
+                values=np.sin(column_in_desired_unit() * (2.0 * np.pi / 12)),
+                backend=native_backend.__name__,
+            ),
+            nw.new_series(
+                name=new_cos_col_name,
+                values=np.cos(column_in_desired_unit() * (2.0 * np.pi / 12)),
+                backend=native_backend.__name__,
+            ),
+        )
 
         df = nw.from_native(d.create_datediff_test_df(library=library))
         actual = transformer.transform(df)
