@@ -1,7 +1,10 @@
 import pytest
 from beartype.roar import BeartypeCallHintParamViolation
 
-from tests.base_tests import ColumnStrListInitTests, DropOriginalInitMixinTests
+from tests.base_tests import (
+    ColumnStrListInitTests,
+    DropOriginalInitMixinTests,
+)
 from tubular.aggregations import BaseAggregationTransformer
 
 
@@ -29,6 +32,7 @@ class TestBaseAggregationTransformerInit(
         minimal_attribute_dict,
         uninitialized_transformers,
     ):
+        # NOTE - can delete this test once DropOriginalMixin is converted to beartype
         args = minimal_attribute_dict[self.transformer_name].copy()
         args["drop_original"] = drop_orginal_column
         with pytest.raises(
