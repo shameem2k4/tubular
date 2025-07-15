@@ -22,7 +22,7 @@ Each individual change should have a link to the pull request after the descript
 Changed
 ^^^^^^^
 - bugfix: updated env to make package importable, added basic test for this
-- placeholder
+- feat: added BaseAggregationTransformer and AggregateRowOverColumnsTransformer classes in new aggregations module
 - placeholder
 
 1.4.4 (24/06/2025)
@@ -35,7 +35,6 @@ Changed
 - Working on above, found additional bug with mapping null values. 
 Considered removing this functionality, but it is actually needed for 
 inverse pipelines. Changed this part of logic to work more like an imputer.
-- placeholder 
 
 1.4.3 (02/06/2025)
 ------------------
@@ -52,7 +51,6 @@ Changed
 - added OneDKmeansTransformer. `#406 <https://github.com/azukds/tubular/issues/406>_`
 - beartype typechecking for BaseTransformer init method `#417 <https://github.com/azukds/tubular/issues/417>_`
 - narwhalified ToDatetimeTransformer. Also made some usability improvements, e.g. to accept multiple columns `#379 <https://github.com/azukds/tubular/issues/379>_`
-- placeholder
 
 1.4.2 (18/03/2025)
 ------------------
