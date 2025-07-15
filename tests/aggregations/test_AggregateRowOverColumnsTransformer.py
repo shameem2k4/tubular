@@ -2,14 +2,42 @@ import copy
 
 import narwhals as nw
 import pytest
+from beartype.roar import BeartypeCallHintParamViolation
 
 from tests import utils as u
-from tests.base_tests import GenericTransformTests
+from tests.aggregations.test_BaseAggregationTransformer import (
+    TestBaseAggregationTransformerInit,
+    TestBaseAggregationTransformerTransform,
+)
 from tests.test_data import create_aggregate_over_rows_test_df
 
 
-class TestAggregateRowOverColumnsTransformerMethodsTransform(GenericTransformTests):
-    """Tests for methods in AggregateRowOverColumnsTransformer."""
+class TestAggregateRowOverColumnsTransformerInit(TestBaseAggregationTransformerInit):
+    """Tests for init method in AggregateRowOverColumnsTransformer."""
+
+    @classmethod
+    def setup_class(cls):
+        cls.transformer_name = "AggregateRowOverColumnsTransformer"
+
+    @pytest.mark.parametrize("key", (0, ["a"], {"a": 10}, None))
+    def test_key_arg_errors(
+        self,
+        key,
+        minimal_attribute_dict,
+        uninitialized_transformers,
+    ):
+        args = minimal_attribute_dict[self.transformer_name].copy()
+        args["key"] = key
+        with pytest.raises(
+            BeartypeCallHintParamViolation,
+        ):  # Adjust to expect BeartypeCallHintParamViolation
+            uninitialized_transformers[self.transformer_name](**args)
+
+
+class TestAggregateRowOverColumnsTransformerTransform(
+    TestBaseAggregationTransformerTransform,
+):
+    """Tests for transform method in AggregateRowOverColumnsTransformer."""
 
     @classmethod
     def setup_class(cls):
@@ -119,6 +147,14 @@ class TestAggregateRowOverColumnsTransformerMethodsTransform(GenericTransformTes
             "c": ["A"],
         }
         single_row_df = u.dataframe_init_dispatch(single_row_df_dict, library)
+        # ensure none column is numeric type
+        single_row_df = (
+            nw.from_native(single_row_df)
+            .with_columns(
+                nw.col("a").cast(nw.Float64),
+            )
+            .to_native()
+        )
 
         transformer = uninitialized_transformers[self.transformer_name](**args)
         transformed_df = transformer.transform(single_row_df)
@@ -140,6 +176,15 @@ class TestAggregateRowOverColumnsTransformerMethodsTransform(GenericTransformTes
             "b_count": [1],
         }
         expected_df = u.dataframe_init_dispatch(expected_data, library)
+        # ensure none columns are numeric type
+        expected_df = (
+            nw.from_native(expected_df)
+            .with_columns(
+                nw.col(col).cast(nw.Float64)
+                for col in ["a", "a_min", "a_max", "a_mean", "a_median"]
+            )
+            .to_native()
+        )
 
         # Polars uses efficient types which differ from pandas here we do convert.
         # The transformer remains abstract, but tests can be specific
