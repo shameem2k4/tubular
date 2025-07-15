@@ -112,7 +112,7 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         Raises
         ------
         ValueError
-            If the key column is not found in the DataFrame.
+            If columns are non-numeric.
         """
 
         super().transform(X)
