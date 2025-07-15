@@ -223,6 +223,103 @@ class TestTransform(BaseMappingTransformerTransformTests):
         ):
             x.transform(df)
 
+    @pytest.mark.parametrize("library", ["pandas", "polars"])
+    def test_expected_output_boolean_with_nulls(self, library):
+        """Test that output is as expected for tricky bool cases:
+        e.g. mapping {True:1, False:0, None: 0}, potential causes of failure:
+            - None being cast to False when these values are inserted into bool series
+            - None mapping failing, as mapping logic relies on merging and None->None values
+            will not merge
+
+        Example failure 1:
+        df=pd.DataFrame({'a': [True, False, None]})
+        mappings={True:1, False:0, None:0}
+        return_dtypes={'a': 'Int8'}
+        mapping_transformer=MappingTransformer(mappings, return_dtypes)
+
+        mapping_transformer.transform(df)->
+        pd.DataFrame(
+            {
+            'a': [
+                1,
+                0,
+                None # mapping merge has failed on None,
+                #resulting in None instead of 0
+            ]
+            }
+        )
+
+        ---------
+        Example Failure 2
+        df=pd.DataFrame({'a': [1, 0, -1]})
+        mappings={1:True, 0:False, -1:None}
+        return_dtypes={'a': 'Int8'}
+        mapping_transformer=MappingTransformer(mappings, return_dtypes)
+
+        mapping_transformer.transform(df)->
+        pd.DataFrame(
+            {
+            'a': [
+                True,
+                False,
+                # when the mapping values are put into bool series
+                # the none value is converted to False, instead of None
+                False,
+
+            ]
+            }
+        )
+
+        """
+
+        df_dict = {
+            "a": [None, 0, 1, None, 0],
+            "b": [True, False, None, True, False],
+            "c": [None, 0, 0, None, 1],
+            "d": [True, None, None, True, False],
+        }
+
+        df = dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
+
+        mapping = {
+            "a": {0: False, 1: True},
+            "b": {False: 0, True: 1},
+            "c": {0: False, None: False, 1: True},
+            "d": {False: 1, True: 0, None: 1},
+        }
+
+        return_dtypes = {
+            "a": "Boolean",
+            "b": "Float64",
+            "c": "Boolean",
+            "d": "Int64",
+        }
+
+        expected_dict = {
+            "a": [None, False, True, None, False],
+            "b": [1, 0, None, 1, 0],
+            "c": [False, False, False, False, True],
+            "d": [0, 1, 1, 0, 1],
+        }
+
+        expected = dataframe_init_dispatch(
+            dataframe_dict=expected_dict,
+            library=library,
+        )
+
+        # convert bool type to pyarrow
+        if library == "pandas":
+            expected = nw.from_native(expected)
+            expected = expected.with_columns(nw.maybe_convert_dtypes(expected["c"]))
+            expected = expected.with_columns(nw.maybe_convert_dtypes(expected["a"]))
+            expected = expected.to_native()
+
+        transformer = MappingTransformer(mappings=mapping, return_dtypes=return_dtypes)
+
+        df_transformed = transformer.transform(df)
+
+        assert_frame_equal_dispatch(expected, df_transformed)
+
 
 class TestOtherBaseBehaviour(OtherBaseBehaviourTests):
     """

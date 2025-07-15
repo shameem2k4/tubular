@@ -16,7 +16,28 @@ Subsections for each version can be one of the following;
 
 Each individual change should have a link to the pull request after the description of the change.
 
-1.4.3 (unreleased)
+1.4.5 (unreleased))
+------------------
+
+Changed
+^^^^^^^
+- bugfix: updated env to make package importable, added basic test for this
+- placeholder
+- placeholder
+
+1.4.4 (24/06/2025)
+------------------
+
+Changed
+^^^^^^^
+- narwhalified ToDatetimeTransformer. Also made some usability improvements, e.g. to accept multiple columns `#379 <https://github.com/azukds/tubular/issues/379>_`
+- fixed bug with MappingTransformer, BaseMappingTransformerMixin where nullable boolean mappings were being converted to non-nullable booleans
+- Working on above, found additional bug with mapping null values. 
+Considered removing this functionality, but it is actually needed for 
+inverse pipelines. Changed this part of logic to work more like an imputer.
+- placeholder 
+
+1.4.3 (02/06/2025)
 ------------------
 
 Changed
