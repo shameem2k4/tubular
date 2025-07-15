@@ -15,8 +15,6 @@ class AggregationOptions(str, Enum):
     MAX = "max"
     MEAN = "mean"
     MEDIAN = "median"
-    MODE = "mode"
-    SUM = "sum"
     COUNT = "count"
 
 
@@ -43,7 +41,7 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         List of column names to apply the aggregation transformations to.
     aggregations : list[str]
         List of aggregation methods to apply. Valid methods include 'min', 'max',
-        'mean', 'median', 'mode', 'sum', and 'count'.
+        'mean', 'median', and 'count'.
     drop_original : bool, optional
         Whether to drop the original columns after transformation. Default is False.
     verbose : bool, optional
@@ -159,8 +157,7 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
             If the key column is not found in the DataFrame.
         """
 
-        df = super().transform(df)
-        df = nw.from_native(df)
+        super().transform(df)
 
         if self.key not in df.columns:
             msg = f"key '{self.key}' not found in dataframe columns"
@@ -173,23 +170,8 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
                 getattr(nw.col(col_name), agg)().alias(f"{col_name}_{agg}")
                 for col_name, aggs in aggregation_dict.items()
                 for agg in aggs
-                if agg != "mode"
             ),
         )
-
-        # Replace None with 0 for sum columns in the aggregated DataFrame
-        for col_name in self.columns:
-            if "sum" in aggregation_dict[col_name]:
-                sum_col_name = f"{col_name}_sum"
-                grouped_df = grouped_df.with_columns(
-                    nw.when(nw.col(sum_col_name).is_null())
-                    .then(0)
-                    .otherwise(nw.col(sum_col_name))
-                    .alias(sum_col_name),
-                )
-                grouped_df = grouped_df.with_columns(
-                    nw.col(sum_col_name).cast(nw.Float64),
-                )
 
         # Merge the aggregated results back with the original DataFrame
         df = df.join(grouped_df, on=self.key, how="left")
