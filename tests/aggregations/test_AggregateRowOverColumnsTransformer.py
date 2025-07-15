@@ -1,11 +1,11 @@
 import copy
 
 import narwhals as nw
-import pandas as pd
 import pytest
 
 from tests import utils as u
 from tests.base_tests import GenericTransformTests
+from tests.test_data import create_aggregate_over_rows_test_df
 
 
 class TestAggregateRowOverColumnsTransformerMethodsTransform(GenericTransformTests):
@@ -14,15 +14,6 @@ class TestAggregateRowOverColumnsTransformerMethodsTransform(GenericTransformTes
     @classmethod
     def setup_class(cls):
         cls.transformer_name = "AggregateRowOverColumnsTransformer"
-
-    def setup_method(self, method):
-        """Setup method to ensure the test DataFrame contains the necessary columns."""
-        self.df_dict = {
-            "a": [1, 2, 3, 4, 8],
-            "b": [2, 3, 4, 5, 9],
-            "c": ["A", "B", "A", "B", "A"],
-        }
-        self.df = pd.DataFrame(self.df_dict)
 
     @pytest.mark.parametrize("library", ["pandas", "polars"])
     def test_invalid_key_error(
@@ -37,7 +28,7 @@ class TestAggregateRowOverColumnsTransformerMethodsTransform(GenericTransformTes
         args["aggregations"] = ["min", "max"]
         args["key"] = "missing_key"
 
-        df = u.dataframe_init_dispatch(self.df_dict, library)
+        df = create_aggregate_over_rows_test_df(library=library)
 
         transformer = uninitialized_transformers[self.transformer_name](**args)
         with pytest.raises(
@@ -85,7 +76,7 @@ class TestAggregateRowOverColumnsTransformerMethodsTransform(GenericTransformTes
         args["aggregations"] = aggregations
         args["key"] = "c"
 
-        df = u.dataframe_init_dispatch(self.df_dict, library)
+        df = create_aggregate_over_rows_test_df(library=library)
 
         # transformer = transformer_setup(columns, aggregations, key, drop_original)
         transformer = uninitialized_transformers[self.transformer_name](**args)
