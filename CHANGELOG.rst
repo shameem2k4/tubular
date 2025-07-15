@@ -23,6 +23,7 @@ Changed
 ^^^^^^^
 - bugfix: updated env to make package importable, added basic test for this
 - feat: added BaseAggregationTransformer and AggregateRowOverColumnsTransformer classes in new aggregations module
+- narwhalified DatetimeSinusoidCalculator '#425 <https://github.com/azukds/tubular/issues/425>_' 
 - placeholder
 
 1.4.4 (24/06/2025)
