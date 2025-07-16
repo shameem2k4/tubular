@@ -4,17 +4,21 @@ import inspect
 import pkgutil
 from importlib import import_module
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import pandas as pd
 import pytest
 
 import tubular.base as base
 from tests.test_data import (
+    create_aggregate_over_rows_test_df,
     create_is_between_dates_df_1,
     create_numeric_df_1,
     create_numeric_df_2,
     create_object_df,
 )
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 """
 How To Use This Testing Framework
@@ -357,13 +361,12 @@ def minimal_dataframe_lookup(request) -> dict[str, pd.DataFrame]:
     for transformer in other_nan_transformers:
         min_df_dict[transformer] = nan_df
 
-    min_df_dict["AggregateRowOverColumnsTransformer"] = pd.DataFrame(
-        {
-            "a": [1, 2, 3, 4, 8],
-            "b": [2, 3, 4, 5, 9],
-            "c": ["A", "B", "A", "B", "A"],
-        },
+    min_df_dict["BaseAggregationTransformer"] = create_aggregate_over_rows_test_df(
+        library=library,
     )
+    min_df_dict[
+        "AggregateRowOverColumnsTransformer"
+    ] = create_aggregate_over_rows_test_df(library=library)
 
     return min_df_dict
 

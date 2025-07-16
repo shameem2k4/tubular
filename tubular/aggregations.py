@@ -1,6 +1,7 @@
 from enum import Enum
 
 import narwhals as nw
+import narwhals.selectors as ncs
 from beartype import beartype
 from beartype.typing import Annotated, List
 from beartype.vale import Is
@@ -15,8 +16,6 @@ class AggregationOptions(str, Enum):
     MAX = "max"
     MEAN = "mean"
     MEDIAN = "median"
-    MODE = "mode"
-    SUM = "sum"
     COUNT = "count"
 
 
@@ -43,7 +42,7 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         List of column names to apply the aggregation transformations to.
     aggregations : list[str]
         List of aggregation methods to apply. Valid methods include 'min', 'max',
-        'mean', 'median', 'mode', 'sum', and 'count'.
+        'mean', 'median', and 'count'.
     drop_original : bool, optional
         Whether to drop the original columns after transformation. Default is False.
     verbose : bool, optional
@@ -93,6 +92,44 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         """
         return [f"{prefix}_{agg}" for agg in self.aggregations]
 
+    @nw.narwhalify
+    def transform(
+        self,
+        X: FrameT,
+    ) -> FrameT:
+        """Performs pre-transform safety checks.
+
+        Parameters
+        ----------
+        X : pd.DataFrame or pl.DataFrame
+            DataFrame to transform by aggregating specified columns.
+
+        Returns
+        -------
+        pd.DataFrame or pl.DataFrame
+            checked dataframe to transform.
+
+        Raises
+        ------
+        ValueError
+            If columns are non-numeric.
+        """
+
+        super().transform(X)
+
+        numerical_columns = X[self.columns].select(ncs.numeric()).columns
+
+        non_numerical_columns = set(self.columns).difference(numerical_columns)
+
+        # convert to list and sort for consistency in return
+        non_numerical_columns = list(non_numerical_columns)
+        non_numerical_columns.sort()
+        if len(non_numerical_columns) != 0:
+            msg = f"{self.classname}: attempting to call transformer on non-numeric columns {non_numerical_columns}, which is not supported"
+            raise TypeError(msg)
+
+        return X
+
 
 class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
     """Transformer that aggregates rows over specified columns.
@@ -139,13 +176,13 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
     @nw.narwhalify
     def transform(
         self,
-        df: FrameT,
+        X: FrameT,
     ) -> FrameT:
         """Transforms the dataframe by aggregating rows over specified columns.
 
         Parameters
         ----------
-        df : pd.DataFrame or pl.DataFrame
+        X : pd.DataFrame or pl.DataFrame
             DataFrame to transform by aggregating specified columns.
 
         Returns
@@ -159,44 +196,28 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
             If the key column is not found in the DataFrame.
         """
 
-        df = super().transform(df)
-        df = nw.from_native(df)
+        super().transform(X)
 
-        if self.key not in df.columns:
-            msg = f"key '{self.key}' not found in dataframe columns"
+        if self.key not in X.columns:
+            msg = f"{self.classname()}: key '{self.key}' not found in dataframe columns"
             raise ValueError(msg)
 
         aggregation_dict = {col: self.aggregations for col in self.columns}
 
-        grouped_df = df.group_by(self.key).agg(
+        grouped_X = X.group_by(self.key).agg(
             *(
                 getattr(nw.col(col_name), agg)().alias(f"{col_name}_{agg}")
                 for col_name, aggs in aggregation_dict.items()
                 for agg in aggs
-                if agg != "mode"
             ),
         )
 
-        # Replace None with 0 for sum columns in the aggregated DataFrame
-        for col_name in self.columns:
-            if "sum" in aggregation_dict[col_name]:
-                sum_col_name = f"{col_name}_sum"
-                grouped_df = grouped_df.with_columns(
-                    nw.when(nw.col(sum_col_name).is_null())
-                    .then(0)
-                    .otherwise(nw.col(sum_col_name))
-                    .alias(sum_col_name),
-                )
-                grouped_df = grouped_df.with_columns(
-                    nw.col(sum_col_name).cast(nw.Float64),
-                )
-
         # Merge the aggregated results back with the original DataFrame
-        df = df.join(grouped_df, on=self.key, how="left")
+        X = X.join(grouped_X, on=self.key, how="left")
 
         # Use mixin method to drop original columns
         return self.drop_original_column(
-            df,
+            X,
             self.drop_original,
             self.columns,
         )
