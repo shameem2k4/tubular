@@ -10,6 +10,7 @@ import pytest
 
 import tubular.base as base
 from tests.test_data import (
+    create_aggregate_over_rows_test_df,
     create_is_between_dates_df_1,
     create_numeric_df_1,
     create_numeric_df_2,
@@ -286,6 +287,17 @@ def minimal_attribute_dict():
             "new_column_name": "c",
             "pd_method_name": "add",
         },
+        "BaseAggregationTransformer": {
+            "columns": ["a", "b"],
+            "aggregations": ["min", "max"],
+            "drop_original": False,
+        },
+        "AggregateRowOverColumnsTransformer": {
+            "columns": ["a", "b"],
+            "aggregations": ["min", "max"],
+            "key": "c",
+            "drop_original": False,
+        },
     }
 
 
@@ -348,6 +360,13 @@ def minimal_dataframe_lookup(request) -> dict[str, pd.DataFrame]:
     ]
     for transformer in other_nan_transformers:
         min_df_dict[transformer] = nan_df
+
+    min_df_dict["BaseAggregationTransformer"] = create_aggregate_over_rows_test_df(
+        library=library,
+    )
+    min_df_dict[
+        "AggregateRowOverColumnsTransformer"
+    ] = create_aggregate_over_rows_test_df(library=library)
 
     return min_df_dict
 
