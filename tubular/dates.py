@@ -12,6 +12,7 @@ import narwhals.selectors as ncs
 import numpy as np
 import pandas as pd
 from beartype import beartype
+from typing_extensions import deprecated
 
 from tubular.base import BaseTransformer
 from tubular.mixins import DropOriginalMixin, NewColumnNameMixin, TwoColumnMixin
@@ -276,6 +277,11 @@ class BaseDateTwoColumnTransformer(
         self.check_two_columns(columns)
 
 
+@deprecated(
+    "This Transformer is deprecated, use DateDifferenceTransformer instead. "
+    "If you prefer this transformer to DateDifferenceTransformer, "
+    "let us know through a github issue",
+)
 class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
     """Transformer to calculate the number of years between two dates.
 
@@ -332,14 +338,6 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
             new_column_name=new_column_name,
             drop_original=drop_original,
             **kwargs,
-        )
-
-        warnings.warn(
-            "This Transformer is deprecated, use DateDifferenceTransformer instead. "
-            "If you prefer this tranformer to DateDifferenceTransformer, "
-            "let us know through a github issue",
-            DeprecationWarning,
-            stacklevel=2,
         )
 
         if (missing_replacement) and (
