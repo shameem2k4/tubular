@@ -76,22 +76,6 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
 
         self.set_drop_original_column(drop_original)
 
-    @beartype
-    def create_new_col_names(self, prefix: str) -> list[str]:
-        """Automatically generate new column names based on the aggregation type.
-
-        Parameters
-        ----------
-        prefix : str
-            Prefix to use for generating new column names.
-
-        Returns
-        -------
-        list[str]
-            List of new column names with the specified prefix and aggregation type.
-        """
-        return [f"{prefix}_{agg}" for agg in self.aggregations]
-
     @nw.narwhalify
     def transform(
         self,
