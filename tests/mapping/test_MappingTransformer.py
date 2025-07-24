@@ -1,3 +1,5 @@
+import warnings
+
 import narwhals as nw
 import pytest
 
@@ -364,12 +366,13 @@ class TestTransform(BaseMappingTransformerTransformTests):
 
         transformer = MappingTransformer(mappings=mapping, return_dtypes=return_dtypes)
 
-        with pytest.warns(None) as record:
-            transformer.transform(df)
-
-        assert (
-            len(record) == 0
-        ), "Warnings were issued despite verbose being set to False."
+        # Guidance from pytest to use followiong syntax rather than pytest.warns(None)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
+                transformer.transform(df)
+        except Warning:
+            pytest.fail("Warnings were issued despite verbose being set to False.")
 
 
 class TestOtherBaseBehaviour(OtherBaseBehaviourTests):
