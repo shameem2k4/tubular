@@ -8,14 +8,15 @@ import zoneinfo
 from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import narwhals as nw
-import narwhals.selectors as ncs
 import numpy as np
 import pandas as pd
 from beartype import beartype
 from typing_extensions import deprecated
 
+from tubular._utils import _narwhalify_X_if_needed
 from tubular.base import BaseTransformer
 from tubular.mixins import DropOriginalMixin, NewColumnNameMixin, TwoColumnMixin
+from tubular.types import DataFrame
 
 if TYPE_CHECKING:
     from narhwals.typing import FrameT
@@ -51,6 +52,9 @@ class BaseGenericDateTransformer(
     drop_original : bool
         Flag for whether to drop the original columns.
 
+    return_native: bool, default = True
+        Controls whether transformer returns narwhals or native pandas/polars type
+
     **kwargs
         Arbitrary keyword arguments passed onto BaseTransformer.init method.
 
@@ -59,6 +63,9 @@ class BaseGenericDateTransformer(
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    return_native: bool, default = True
+        Controls whether transformer returns narwhals or native pandas/polars type
 
     """
 
@@ -76,10 +83,10 @@ class BaseGenericDateTransformer(
         self.set_drop_original_column(drop_original)
         self.check_and_set_new_column_name(new_column_name)
 
-    @nw.narwhalify
+    @beartype
     def check_columns_are_date_or_datetime(
         self,
-        X: FrameT,
+        X: DataFrame,
         datetime_only: bool,
     ) -> None:
         """Raise a type error if a column to be operated on is not a datetime.datetime or datetime.date object
@@ -95,52 +102,46 @@ class BaseGenericDateTransformer(
 
         """
 
-        type_dict = {}
-        datetime_type = "datetime64"
-        date_type = "date32[pyarrow]"
-        allowed_types = [datetime_type]
+        X = _narwhalify_X_if_needed(X)
+
+        type_msg = ["Datetime"]
+        date_type = nw.Date
+        allowed_types = [*DATETIME_VARIANTS]
         if not datetime_only:
             allowed_types = [*allowed_types, date_type]
+            type_msg += ["Date"]
 
-        date_columns = list(
-            X.select(ncs.by_dtype(nw.Date)).columns,
-        )
-
-        datetime_columns = list(
-            X.select(ncs.by_dtype(*DATETIME_VARIANTS)).columns,
-        )
+        schema = X.schema
 
         for col in self.columns:
-            is_datetime = col in datetime_columns
-            is_date = col in date_columns
-            if is_datetime:
-                type_dict[col] = datetime_type
+            is_datetime = False
+            is_date = False
+            if schema[col] in DATETIME_VARIANTS:
+                is_datetime = True
 
-            elif (not datetime_only) and (is_date):
-                type_dict[col] = date_type
+            elif schema[col] == nw.Date:
+                is_date = True
 
-            else:
-                col_dtype = X.get_column(col).dtype
-
-                msg = f"{self.classname()}: {col} type should be in {allowed_types} but got {col_dtype}"
+            if (not is_datetime) and (not (not datetime_only and is_date)):
+                msg = f"{self.classname()}: {col} type should be in {type_msg} but got {schema[col]}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones()"
                 raise TypeError(msg)
 
-        present_types = set(type_dict.values())
+        present_types = set(schema.values())
 
         valid_types = present_types.issubset(set(allowed_types))
 
         if not valid_types or len(present_types) > 1:
-            msg = rf"{self.classname()}: Columns fed to datetime transformers should be {allowed_types} and have consistent types, but found {present_types}. Please use ToDatetimeTransformer to standardise."
+            msg = rf"{self.classname()}: Columns fed to datetime transformers should be {type_msg} and have consistent types, but found {present_types}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones(). Please use ToDatetimeTransformer to standardise."
             raise TypeError(
                 msg,
             )
 
-    @nw.narwhalify
+    @beartype
     def transform(
         self,
-        X: FrameT,
+        X: DataFrame,
         datetime_only: bool = False,
-    ) -> FrameT:
+    ) -> DataFrame:
         """Base transform method, calls parent transform and validates data.
 
         Parameters
@@ -158,11 +159,13 @@ class BaseGenericDateTransformer(
 
         """
 
-        X = nw.from_native(super().transform(X))
+        X = super().transform(X)
+
+        X = _narwhalify_X_if_needed(X)
 
         self.check_columns_are_date_or_datetime(X, datetime_only=datetime_only)
 
-        return X
+        return X.to_native() if self.return_native else X
 
 
 class BaseDatetimeTransformer(BaseGenericDateTransformer):
@@ -206,11 +209,11 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
             **kwargs,
         )
 
-    @nw.narwhalify
+    @beartype
     def transform(
         self,
-        X: FrameT,
-    ) -> FrameT:
+        X: DataFrame,
+    ) -> DataFrame:
         """base transform method for transformers that operate exclusively on datetime columns
 
         Parameters
@@ -224,6 +227,8 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
             Validated data
 
         """
+
+        X = _narwhalify_X_if_needed(X)
 
         return super().transform(X, datetime_only=True)
 
@@ -510,7 +515,8 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         self.column_lower = columns[0]
         self.column_upper = columns[1]
 
-    def transform(self, X: FrameT) -> FrameT:
+    @beartype
+    def transform(self, X: DataFrame) -> DataFrame:
         """Calculate the difference between the given fields in the specified units.
 
         Parameters
@@ -520,7 +526,9 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
 
         """
 
-        X = nw.from_native(super().transform(X))
+        X = _narwhalify_X_if_needed(X)
+
+        super().transform(X)
 
         # mapping for units and corresponding timedelta arg values
         UNITS_TO_TIMEDELTA_PARAMS = {
@@ -567,12 +575,15 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         )
 
         # Drop original columns if self.drop_original is True
-        return DropOriginalMixin.drop_original_column(
+        X = DropOriginalMixin.drop_original_column(
             self,
             X,
             self.drop_original,
             self.columns,
+            return_native=False,
         )
+
+        return X.to_native() if self.return_native else X
 
 
 class ToDatetimeTransformer(BaseGenericDateTransformer):
