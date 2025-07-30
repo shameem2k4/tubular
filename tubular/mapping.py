@@ -12,7 +12,7 @@ import pandas as pd
 import polars as pl
 from beartype import beartype
 
-from tubular._utils import new_narwhals_series_with_optimal_pandas_types
+from tubular._utils import new_narwhals_series_with_optimal_pandas_types, _narwhalify_X_if_needed
 from tubular.base import BaseTransformer
 from tubular.types import DataFrame
 
@@ -112,8 +112,7 @@ class BaseMappingTransformer(BaseTransformer):
 
         return {col: str(pl.Series(mappings[col].values()).dtype) for col in mappings}
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> FrameT:
+    def transform(self, X: DataFrame) -> DataFrame:
         """Base mapping transformer transform method.  Checks that the mappings
         dict has been fitted and calls the BaseTransformer transform method.
 
@@ -128,6 +127,9 @@ class BaseMappingTransformer(BaseTransformer):
             Input X, copied if specified by user.
 
         """
+
+        X=_narwhalify_X_if_needed(X)
+
         self.check_is_fitted(["mappings", "return_dtypes"])
 
         return super().transform(X)
@@ -150,8 +152,7 @@ class BaseMappingTransformMixin(BaseTransformer):
     polars_compatible = True
 
     @beartype
-    @nw.narwhalify
-    def transform(self, X: DataFrame) -> DataFrame:
+    def transform(self, X: DataFrame, return_native: bool = True) -> DataFrame:
         """Applies the mapping defined in the mappings dict to each column in the columns
         attribute.
 
@@ -168,7 +169,9 @@ class BaseMappingTransformMixin(BaseTransformer):
         """
         self.check_is_fitted(["mappings", "return_dtypes", "null_mappings"])
 
-        X = nw.from_native(super().transform(X))
+        X=_narwhalify_X_if_needed(X)
+
+        X = super().transform(X)
         native_backend = nw.get_native_namespace(X)
 
         # will do a join further down, which does not preserve index
@@ -179,6 +182,8 @@ class BaseMappingTransformMixin(BaseTransformer):
 
         # pull out column order to preserve
         column_order = X.columns
+
+        schema=X.schema
 
         for col in self.mappings:
             mappings = self.mappings[col]
@@ -198,30 +203,30 @@ class BaseMappingTransformMixin(BaseTransformer):
 
             # have to be careful at each stage to avoid pandas
             # default non-nullable types
-            dtypes = {}
-            dtypes["keys"] = X.get_column(col).dtype
-            dtypes["values"] = getattr(nw, self.return_dtypes[col])
+            original_dtype_to_mapped_dtype = {}
+            original_dtype_to_mapped_dtype["original_dtype"] = schema[col]
+            original_dtype_to_mapped_dtype["mapped_dtype"] = getattr(nw, self.return_dtypes[col])
 
             # from_dict also appears to struggle with category dtypes
             # so convert to string and back again later
             temp_dtypes = {}
-            for dtype_key in ["keys", "values"]:
-                temp_dtypes[dtype_key] = dtypes[dtype_key]
-                if dtypes[dtype_key] == nw.Categorical:
+            for dtype_key in ["original_dtype", "mapped_dtype"]:
+                temp_dtypes[dtype_key] = original_dtype_to_mapped_dtype[dtype_key]
+                if original_dtype_to_mapped_dtype[dtype_key] == nw.Categorical:
                     temp_dtypes[dtype_key] = nw.String
 
             mappings_keys = new_narwhals_series_with_optimal_pandas_types(
                 name=col,
                 values=list(mappings.keys()),
                 backend=native_backend.__name__,
-                dtype=temp_dtypes["keys"],
+                dtype=temp_dtypes["original_dtype"],
             )
 
             mappings_values = new_narwhals_series_with_optimal_pandas_types(
                 name=new_col_values,
                 values=list(mappings.values()),
                 backend=native_backend.__name__,
-                dtype=temp_dtypes["values"],
+                dtype=temp_dtypes["mapped_dtype"],
             )
 
             mappings_df = nw.from_dict(
@@ -233,16 +238,44 @@ class BaseMappingTransformMixin(BaseTransformer):
             )
 
             # bring back category types, and keep forcing better bool type
-            for dtype_key, col_name in zip(["keys", "values"], [col, new_col_values]):
-                if dtypes[dtype_key] == nw.Categorical:
-                    mappings_df = mappings_df.with_columns(
-                        nw.col(col_name).cast(nw.Categorical),
-                    )
+            # for dtype_key, col_name in zip(["keys", "values"], [col, new_col_values]):
+            #     if dtypes[dtype_key] == nw.Categorical:
+            #         expre = mappings_df.with_columns(
+            #             nw.col(col_name).cast(nw.Categorical),
+            #         )
 
-                if self.return_dtypes[col] == "Boolean":
-                    mappings_df = mappings_df.with_columns(
-                        nw.maybe_convert_dtypes(mappings_df[col_name]),
-                    )
+            #     if self.return_dtypes[col] == "Boolean":
+            #         mappings_df = mappings_df.with_columns(
+            #             nw.maybe_convert_dtypes(mappings_df[col_name]),
+            #        )
+
+            mappings_df_expressions={
+                **{
+                    col: nw.col(col).cast(nw.Categorical)
+                    if original_dtype_to_mapped_dtype["original_dtype"]==nw.Categorical
+                    else nw.col(col)
+                },
+                **{
+                    new_col_values: nw.col(new_col_values).cast(nw.Categorical)
+                    if original_dtype_to_mapped_dtype["mapped_dtype"]==nw.Categorical
+                    else nw.col(new_col_values)
+                },
+            }
+
+            mappings_df=mappings_df.with_columns(**mappings_df_expressions)
+
+            # mappings_df_expressions={
+            #     nw.maybe_convert_dtypes(mappings_df_expressions[col_name])
+            #     if self.return_dtypes[col_name]==nw.Boolean
+            #     else mappings_df_expressions[col_name]
+            #     for col_name in [col, new_col_values]
+            # }
+
+            mappings_df=mappings_df.with_columns(
+                nw.maybe_convert_dtypes(mappings_df[col_name])
+                for col_name in [col, new_col_values]
+                if self.return_dtypes[col]=="Boolean"
+            )
 
             X = (
                 X.join(
@@ -254,19 +287,30 @@ class BaseMappingTransformMixin(BaseTransformer):
                 .rename({new_col_values: col})
             )
 
-            # null keys are not joined on, so just fill nulls at end
-            if self.null_mappings[col] is not None:
-                X = X.with_columns(nw.col(col).fill_null(self.null_mappings[col]))
-                X = X.with_columns(
-                    nw.col(col).cast(getattr(nw, self.return_dtypes[col])),
-                )
+        # null keys are not joined on, so just fill nulls at end
+        null_handling_expressions={
+            col: (
+                nw.col(col)
+                .fill_null(self.null_mappings[col])
+                .cast(getattr(nw, self.return_dtypes[col]))
+            )
+            if self.null_mappings[col] is not None
+            else nw.col(col)
+            for col in self.columns
+        }
+    
+        X = X.with_columns(
+                **null_handling_expressions
+            )
 
         # restore original index for pandas
         if nw.get_native_namespace(X).__name__ == "pandas":
             X = nw.to_native(X)
             X.index = index
 
-        return X[column_order]
+        X=X[column_order]
+
+        return X.to_native() if return_native else X
 
 
 class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
@@ -310,11 +354,11 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
 
     polars_compatible = True
 
-    @nw.narwhalify
+    @beartype
     def transform(
         self,
-        X: FrameT,
-    ) -> FrameT:
+        X: DataFrame,
+    ) -> DataFrame:
         """Transform the input data X according to the mappings in the mappings attribute dict.
 
         This method calls the BaseMappingTransformMixin.transform. Note, this transform method is
@@ -333,6 +377,8 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
             Transformed input X with levels mapped accoriding to mappings dict.
 
         """
+
+        X=_narwhalify_X_if_needed(X)
 
         BaseTransformer.transform(self, X)
 
@@ -354,7 +400,7 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
                     stacklevel=2,
                 )
 
-        return nw.from_native(BaseMappingTransformMixin.transform(self, X))
+        return BaseMappingTransformMixin.transform(self, X, return_native=self.return_native)
 
 
 class BaseCrossColumnMappingTransformer(BaseMappingTransformer):
