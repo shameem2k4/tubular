@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, Set
 
 import narwhals as nw
 import numpy as np
@@ -77,7 +77,8 @@ class BaseMappingTransformer(BaseTransformer):
             msg = f"{self.classname()}: mappings has no values"
             raise ValueError(msg)
 
-        null_mappings = {col: None for col in mappings}
+        mappings_from_null = {col: None for col in mappings}
+        mappings_to_null = {col: None for col in mappings}
         for col in mappings:
             null_keys = [key for key in mappings[col] if pd.isna(key)]
 
@@ -89,28 +90,47 @@ class BaseMappingTransformer(BaseTransformer):
 
             # Assign the mapping to the single null key if it exists
             if len(null_keys) != 0:
-                null_mappings[col] = mappings[col][null_keys[0]]
+                mappings_from_null[col] = mappings[col][null_keys[0]]
+
+            mappings_to_null[col]=[key for key,value in mappings[col].items() if pd.isna(value)]
 
         self.mappings = mappings
-        self.null_mappings = null_mappings
+        self.mappings_from_null = mappings_from_null
+        self.mappings_to_null=mappings_to_null
 
         columns = list(mappings.keys())
 
         # if return_dtypes is not provided, then infer from mappings
-        if not return_dtypes:
-            return_dtypes = self._infer_return_types(mappings)
+        if return_dtypes is not None:
+            provided_return_dtype_keys=set(return_dtypes.keys())
+        else:
+            return_dtypes={}
+            provided_return_dtype_keys=set()
+
+        for col in set(mappings.keys()).difference(provided_return_dtype_keys):
+            return_dtypes[col] = self._infer_return_types(mappings, col)
 
         self.return_dtypes = return_dtypes
+
+        self.value_casts={
+            col: (
+                int if self.return_dtypes[col].startswith('Int')
+                else float if self.return_dtypes[col].startswith('Float')
+                else None
+            )
+            for col in self.mappings
+        }
 
         super().__init__(columns=columns, **kwargs)
 
     @staticmethod
     def _infer_return_types(
         mappings: dict[str, dict[str, str | float | int]],
+        col: str,
     ) -> dict[str, str]:
         "infer return_dtypes from provided mappings"
 
-        return {col: str(pl.Series(mappings[col].values()).dtype) for col in mappings}
+        return str(pl.Series(mappings[col].values()).dtype)
 
     def transform(self, X: DataFrame) -> DataFrame:
         """Base mapping transformer transform method.  Checks that the mappings
@@ -151,8 +171,28 @@ class BaseMappingTransformMixin(BaseTransformer):
 
     polars_compatible = True
 
+    def _generate_full_mappings(self, col, key):
+
+        if key in self.mappings[col]:
+
+            mapping=self.mappings[col][key]
+            
+        else:
+
+            mapping=key
+
+        if self.value_casts[col] is not None and mapping is not None:
+
+            return self.value_casts[col](mapping)
+            
+        else:
+                
+            return mapping
+
+
+
     @beartype
-    def transform(self, X: DataFrame, return_native: bool = True) -> DataFrame:
+    def transform(self, X: DataFrame, return_native: bool = True, col_values_present: dict[str, Optional[Set[Optional[Union[str, int, float, bool]]]]]=None) -> DataFrame:
         """Applies the mapping defined in the mappings dict to each column in the columns
         attribute.
 
@@ -167,148 +207,72 @@ class BaseMappingTransformMixin(BaseTransformer):
             Transformed input X with levels mapped accoriding to mappings dict.
 
         """
-        self.check_is_fitted(["mappings", "return_dtypes", "null_mappings"])
+        self.check_is_fitted(["mappings", "return_dtypes", "mappings_from_null"])
 
         X=_narwhalify_X_if_needed(X)
 
+        return_native=self.return_native
+        self.return_native=False
         X = super().transform(X)
-        native_backend = nw.get_native_namespace(X)
+        self.return_native=return_native
 
-        # will do a join further down, which does not preserve index
-        # polars does not care about this, but pandas does,
-        # so need to handle a bit carefully
-        if native_backend.__name__ == "pandas":
-            index = nw.to_native(X).index
-
-        # pull out column order to preserve
-        column_order = X.columns
-
-        schema=X.schema
-
-        for col in self.mappings:
-            mappings = self.mappings[col]
-
-            # TODO - update this logic once narwhals implements map_dict
-            # differentiate between unmapped cols and cols mapped to null
-            # by including unmapped cols mapped to self
-            unique = X.get_column(col).unique()
-            mappings = {
-                key: mappings.get(key, key)
-                for key in unique
-                # nulls are handled separately at the end,
-                # treated as imputations
-                if not pd.isna(key)
+        # differentiate between unmapped cols and cols mapped to null
+        # by including unmapped cols mapped to self
+        if col_values_present is None:
+            col_values_present = {
+                col: X.get_column(col).unique()
+                for  col in self.mappings
             }
-            new_col_values = f"new_{col}_values"
+        
+        full_mappings = {col: 
+                         {
+            key: self._generate_full_mappings(col, key)
+            for key in col_values_present[col]
+            # nulls are handled separately at the end,
+            # treated as imputations
+            if not pd.isna(key)
+        }
+        for col in self.mappings
+        }
 
-            # have to be careful at each stage to avoid pandas
-            # default non-nullable types
-            original_dtype_to_mapped_dtype = {}
-            original_dtype_to_mapped_dtype["original_dtype"] = schema[col]
-            original_dtype_to_mapped_dtype["mapped_dtype"] = getattr(nw, self.return_dtypes[col])
+        transform_expressions={
+            col: nw.when(
+                 nw.col(col).is_in(self.mappings_to_null[col])
+                 ).then(None).otherwise(nw.col(col))
+                 if self.mappings_to_null[col] is not None
+                 else nw.col(col)
+                 for col in self.mappings 
+        }
 
-            # from_dict also appears to struggle with category dtypes
-            # so convert to string and back again later
-            temp_dtypes = {}
-            for dtype_key in ["original_dtype", "mapped_dtype"]:
-                temp_dtypes[dtype_key] = original_dtype_to_mapped_dtype[dtype_key]
-                if original_dtype_to_mapped_dtype[dtype_key] == nw.Categorical:
-                    temp_dtypes[dtype_key] = nw.String
-
-            mappings_keys = new_narwhals_series_with_optimal_pandas_types(
-                name=col,
-                values=list(mappings.keys()),
-                backend=native_backend.__name__,
-                dtype=temp_dtypes["original_dtype"],
-            )
-
-            mappings_values = new_narwhals_series_with_optimal_pandas_types(
-                name=new_col_values,
-                values=list(mappings.values()),
-                backend=native_backend.__name__,
-                dtype=temp_dtypes["mapped_dtype"],
-            )
-
-            mappings_df = nw.from_dict(
-                {
-                    col: mappings_keys,
-                    new_col_values: mappings_values,
-                },
-                backend=native_backend,
-            )
-
-            # bring back category types, and keep forcing better bool type
-            # for dtype_key, col_name in zip(["keys", "values"], [col, new_col_values]):
-            #     if dtypes[dtype_key] == nw.Categorical:
-            #         expre = mappings_df.with_columns(
-            #             nw.col(col_name).cast(nw.Categorical),
-            #         )
-
-            #     if self.return_dtypes[col] == "Boolean":
-            #         mappings_df = mappings_df.with_columns(
-            #             nw.maybe_convert_dtypes(mappings_df[col_name]),
-            #        )
-
-            mappings_df_expressions={
-                **{
-                    col: nw.col(col).cast(nw.Categorical)
-                    if original_dtype_to_mapped_dtype["original_dtype"]==nw.Categorical
-                    else nw.col(col)
-                },
-                **{
-                    new_col_values: nw.col(new_col_values).cast(nw.Categorical)
-                    if original_dtype_to_mapped_dtype["mapped_dtype"]==nw.Categorical
-                    else nw.col(new_col_values)
-                },
-            }
-
-            mappings_df=mappings_df.with_columns(**mappings_df_expressions)
-
-            # mappings_df_expressions={
-            #     nw.maybe_convert_dtypes(mappings_df_expressions[col_name])
-            #     if self.return_dtypes[col_name]==nw.Boolean
-            #     else mappings_df_expressions[col_name]
-            #     for col_name in [col, new_col_values]
-            # }
-
-            mappings_df=mappings_df.with_columns(
-                nw.maybe_convert_dtypes(mappings_df[col_name])
-                for col_name in [col, new_col_values]
-                if self.return_dtypes[col]=="Boolean"
-            )
-
-            X = (
-                X.join(
-                    mappings_df,
-                    how="left",
-                    on=col,
+        transform_expressions={
+            col: (
+                transform_expressions[col]
+                .replace_strict(full_mappings[col], return_dtype=getattr(nw, self.return_dtypes[col]))
                 )
-                .drop(col)
-                .rename({new_col_values: col})
-            )
+            for col in full_mappings
+        }
 
         # null keys are not joined on, so just fill nulls at end
-        null_handling_expressions={
+        transform_expressions={
             col: (
-                nw.col(col)
-                .fill_null(self.null_mappings[col])
-                .cast(getattr(nw, self.return_dtypes[col]))
+                transform_expressions[col]
+                .fill_null(self.mappings_from_null[col])
             )
-            if self.null_mappings[col] is not None
-            else nw.col(col)
-            for col in self.columns
+            if self.mappings_from_null[col] is not None
+            else transform_expressions[col]
+            for col in transform_expressions
         }
-    
+        
         X = X.with_columns(
-                **null_handling_expressions
+                **transform_expressions
             )
-
-        # restore original index for pandas
-        if nw.get_native_namespace(X).__name__ == "pandas":
-            X = nw.to_native(X)
-            X.index = index
-
-        X=X[column_order]
+        
+        X = X.with_columns(
+                        nw.maybe_convert_dtypes(X[col]).cast(getattr(nw, self.return_dtypes[col]))
+                        if self.return_dtypes[col] == "Boolean"
+                        else nw.col(col).cast(getattr(nw, self.return_dtypes[col]))
+                        for col in self.mappings
+                    )
 
         return X.to_native() if return_native else X
 
@@ -384,23 +348,24 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
 
         mapped_columns = self.mappings.keys()
 
+        col_values_present={}
         for col in mapped_columns:
             values_to_be_mapped = set(self.mappings[col].keys())
-            values_in_df = set(X.get_column(col).unique())
+            col_values_present[col] = set(X.get_column(col).unique())
 
-            if len(values_to_be_mapped.intersection(values_in_df)) == 0:
+            if len(values_to_be_mapped.intersection(col_values_present[col])) == 0:
                 warnings.warn(
                     f"{self.classname()}: No values from mapping for {col} exist in dataframe.",
                     stacklevel=2,
                 )
 
-            if len(values_to_be_mapped.difference(values_in_df)) > 0:
+            if len(values_to_be_mapped.difference(col_values_present[col])) > 0:
                 warnings.warn(
                     f"{self.classname()}: There are values in the mapping for {col} that are not present in the dataframe",
                     stacklevel=2,
                 )
 
-        return BaseMappingTransformMixin.transform(self, X, return_native=self.return_native)
+        return BaseMappingTransformMixin.transform(self, X, return_native=self.return_native, col_values_present=col_values_present)
 
 
 class BaseCrossColumnMappingTransformer(BaseMappingTransformer):
