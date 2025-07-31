@@ -4,7 +4,7 @@ from pandas.testing import assert_series_equal as assert_pandas_series_equal
 from polars.testing import assert_series_equal as assert_polars_series_equal
 
 from tests.utils import dataframe_init_dispatch
-from tubular._utils import _narwhalify_y_if_needed
+from tubular._utils import _convert_series_to_narwhals
 
 
 @pytest.mark.parametrize("library", ["pandas", "polars"])
@@ -21,7 +21,7 @@ def test_narwhalification(library):
 
     native_namespace = nw.get_native_namespace(series).__name__
 
-    output = _narwhalify_y_if_needed(series)
+    output = _convert_series_to_narwhals(series)
 
     assert isinstance(
         output,
@@ -49,7 +49,7 @@ def test_narwhals_series_left_alone(library):
 
     series = nw.from_native(series, allow_series=True)
 
-    output = _narwhalify_y_if_needed(series)
+    output = _convert_series_to_narwhals(series)
 
     native_namespace = nw.get_native_namespace(series).__name__
 
