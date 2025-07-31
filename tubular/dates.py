@@ -13,7 +13,10 @@ import pandas as pd
 from beartype import beartype
 from typing_extensions import deprecated
 
-from tubular._utils import _narwhalify_X_if_needed
+from tubular._utils import (
+    _convert_dataframe_to_narwhals,
+    _return_narwhals_or_native_dataframe,
+)
 from tubular.base import BaseTransformer
 from tubular.mixins import DropOriginalMixin, NewColumnNameMixin, TwoColumnMixin
 from tubular.types import DataFrame
@@ -102,7 +105,7 @@ class BaseGenericDateTransformer(
 
         """
 
-        X = _narwhalify_X_if_needed(X)
+        X = _convert_dataframe_to_narwhals(X)
 
         type_msg = ["Datetime"]
         date_type = nw.Date
@@ -141,6 +144,7 @@ class BaseGenericDateTransformer(
         self,
         X: DataFrame,
         datetime_only: bool = False,
+        return_native_override: Optional[bool] = None,
     ) -> DataFrame:
         """Base transform method, calls parent transform and validates data.
 
@@ -152,6 +156,10 @@ class BaseGenericDateTransformer(
         datetime_only: bool
             Indicates whether ONLY datetime types are accepted
 
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
+            methods
+
         Returns
         -------
         X : pd/pl.DataFrame
@@ -159,13 +167,15 @@ class BaseGenericDateTransformer(
 
         """
 
-        X = super().transform(X)
+        return_native = self._process_return_native(return_native_override)
 
-        X = _narwhalify_X_if_needed(X)
+        X = super().transform(X, return_native_override=False)
+
+        X = _convert_dataframe_to_narwhals(X)
 
         self.check_columns_are_date_or_datetime(X, datetime_only=datetime_only)
 
-        return X.to_native() if self.return_native else X
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class BaseDatetimeTransformer(BaseGenericDateTransformer):
@@ -213,6 +223,7 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
     def transform(
         self,
         X: DataFrame,
+        return_native_override: Optional[bool] = None,
     ) -> DataFrame:
         """base transform method for transformers that operate exclusively on datetime columns
 
@@ -221,6 +232,10 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
         X : pd/pl.DataFrame
             Data containing self.columns
 
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
+            methods
+
         Returns
         -------
         X : pd/pl.DataFrame
@@ -228,9 +243,13 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
 
         """
 
-        X = _narwhalify_X_if_needed(X)
+        return_native = self._process_return_native(return_native_override)
 
-        return super().transform(X, datetime_only=True)
+        X = _convert_dataframe_to_narwhals(X)
+
+        X = super().transform(X, datetime_only=True, return_native_override=False)
+
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class BaseDateTwoColumnTransformer(
@@ -526,9 +545,9 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
 
         """
 
-        X = _narwhalify_X_if_needed(X)
+        X = _convert_dataframe_to_narwhals(X)
 
-        super().transform(X)
+        X = super().transform(X, return_native_override=False)
 
         # mapping for units and corresponding timedelta arg values
         UNITS_TO_TIMEDELTA_PARAMS = {
@@ -583,7 +602,7 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
             return_native=False,
         )
 
-        return X.to_native() if self.return_native else X
+        return _return_narwhals_or_native_dataframe(X, self.return_native)
 
 
 class ToDatetimeTransformer(BaseGenericDateTransformer):

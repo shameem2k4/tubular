@@ -7,7 +7,7 @@ import narwhals.selectors as ncs
 import numpy as np
 from beartype import beartype
 
-from tubular._utils import _narwhalify_X_if_needed
+from tubular._utils import _convert_dataframe_to_narwhals
 from tubular.types import DataFrame
 
 if TYPE_CHECKING:
@@ -105,7 +105,7 @@ class DropOriginalMixin:
 
         """
 
-        X = _narwhalify_X_if_needed(X)
+        X = _convert_dataframe_to_narwhals(X)
 
         if drop_original:
             X = X.drop(columns)
