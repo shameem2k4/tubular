@@ -12,7 +12,11 @@ from beartype import beartype
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
-from tubular._utils import _narwhalify_X_if_needed, _narwhalify_y_if_needed
+from tubular._utils import (
+    _convert_dataframe_to_narwhals,
+    _convert_series_to_narwhals,
+    _return_narwhals_or_native_dataframe,
+)
 from tubular.mixins import DropOriginalMixin
 from tubular.types import DataFrame, Series
 
@@ -115,8 +119,8 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         if self.verbose:
             print("BaseTransformer.fit() called")
 
-        X = _narwhalify_X_if_needed(X)
-        y = _narwhalify_y_if_needed(y)
+        X = _convert_dataframe_to_narwhals(X)
+        y = _convert_series_to_narwhals(y)
 
         self.columns_check(X)
 
@@ -163,7 +167,32 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         return X.with_columns(_temporary_response=y)
 
     @beartype
-    def transform(self, X: DataFrame) -> DataFrame:
+    def _process_return_native(self, return_native_override: Optional[bool]) -> bool:
+        """determine whether to override return_native attr
+
+        Parameters
+        ----------
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
+            methods
+
+        Returns
+        ----------
+        bool: whether or not to return native type
+        """
+
+        return (
+            return_native_override
+            if return_native_override is not None
+            else self.return_native
+        )
+
+    @beartype
+    def transform(
+        self,
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Base transformer transform method; checks X type (pandas/polars DataFrame only) and copies data if requested.
 
         Transform calls the columns_check method which will check columns in columns attribute are in X.
@@ -173,6 +202,10 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         X : pd/pl.DataFrame
             Data to transform with the transformer.
 
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
+            methods
+
         Returns
         -------
         X : pd/pl.DataFrame
@@ -180,7 +213,9 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
         """
 
-        X = _narwhalify_X_if_needed(X)
+        return_native = self._process_return_native(return_native_override)
+
+        X = _convert_dataframe_to_narwhals(X)
 
         if self.copy:
             # to prevent overwriting original dataframe
@@ -195,7 +230,7 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
             msg = f"{self.classname()}: X has no rows; {X.shape}"
             raise ValueError(msg)
 
-        return X if not self.return_native else X.to_native()
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
     def check_is_fitted(self, attribute: str) -> None:
         """Check if particular attributes are on the object. This is useful to do before running transform to avoid
@@ -222,7 +257,7 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
         """
 
-        X = _narwhalify_X_if_needed(X)
+        X = _convert_dataframe_to_narwhals(X)
 
         if not isinstance(self.columns, list):
             msg = f"{self.classname()}: self.columns should be a list"

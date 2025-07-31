@@ -291,7 +291,7 @@ class TestTransform(
         ],
         indirect=["expected_df_3"],
     )
-    def test_expected_output_3(
+    def test_expected_output_with_object_and_categorical_columns(
         self,
         library,
         expected_df_3,
@@ -348,7 +348,7 @@ class TestTransform(
         ],
         indirect=["expected_df_4"],
     )
-    def test_expected_output_4(
+    def test_expected_output_when_adding_new_categorical_level(
         self,
         library,
         expected_df_4,

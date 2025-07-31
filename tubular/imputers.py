@@ -11,8 +11,9 @@ from beartype import beartype
 
 from tubular._utils import (
     _assess_pandas_object_column,
-    _narwhalify_X_if_needed,
-    _narwhalify_y_if_needed,
+    _convert_dataframe_to_narwhals,
+    _convert_series_to_narwhals,
+    _return_narwhals_or_native_dataframe,
 )
 from tubular.base import BaseTransformer
 from tubular.mixins import WeightColumnMixin
@@ -65,13 +66,21 @@ class BaseImputer(BaseTransformer):
         )
 
     @beartype
-    def transform(self, X: DataFrame) -> DataFrame:
+    def transform(
+        self,
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Impute missing values with values calculated from fit method.
 
         Parameters
         ----------
         X : FrameT
             Data to impute.
+
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
+            methods
 
         Returns
         -------
@@ -81,9 +90,11 @@ class BaseImputer(BaseTransformer):
         """
         self.check_is_fitted("impute_values_")
 
-        X = _narwhalify_X_if_needed(X)
+        return_native = self._process_return_native(return_native_override)
 
-        super().transform(X)
+        X = _convert_dataframe_to_narwhals(X)
+
+        X = super().transform(X, return_native_override=False)
 
         transform_expressions = {
             col: self._generate_imputation_expressions(nw.col(col), col)
@@ -92,7 +103,7 @@ class BaseImputer(BaseTransformer):
 
         X = X.with_columns(**transform_expressions)
 
-        return X if not self.return_native else X.to_native()
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class ArbitraryImputer(BaseImputer):
@@ -301,18 +312,22 @@ class ArbitraryImputer(BaseImputer):
         X : FrameT
             Data containing columns to impute.
 
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
+            methods
+
         Returns
         -------
         X : FrameT
             Transformed input X with nulls imputed with the specified impute_value, for the specified columns.
         """
 
-        X = _narwhalify_X_if_needed(X)
+        X = _convert_dataframe_to_narwhals(X)
 
         schema = X.schema
         native_namespace = nw.get_native_namespace(X).__name__
 
-        BaseTransformer.transform(self, X)
+        X = BaseTransformer.transform(self, X, return_native_override=False)
 
         (
             pandas_object_cols_to_polars_types,
@@ -366,7 +381,7 @@ class ArbitraryImputer(BaseImputer):
 
         X = X.with_columns(**transform_expressions)
 
-        return X if not self.return_native else X.to_native()
+        return _return_narwhals_or_native_dataframe(X, self.return_native)
 
 
 class MedianImputer(BaseImputer, WeightColumnMixin):
@@ -426,8 +441,8 @@ class MedianImputer(BaseImputer, WeightColumnMixin):
 
         """
 
-        X = _narwhalify_X_if_needed(X)
-        y = _narwhalify_y_if_needed(y)
+        X = _convert_dataframe_to_narwhals(X)
+        y = _convert_series_to_narwhals(y)
 
         super().fit(X, y)
 
@@ -523,8 +538,8 @@ class MeanImputer(WeightColumnMixin, BaseImputer):
 
         """
 
-        X = _narwhalify_X_if_needed(X)
-        y = _narwhalify_y_if_needed(y)
+        X = _convert_dataframe_to_narwhals(X)
+        y = _convert_series_to_narwhals(y)
 
         super().fit(X, y)
 
@@ -616,8 +631,8 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
 
         """
 
-        X = _narwhalify_X_if_needed(X)
-        y = _narwhalify_y_if_needed(y)
+        X = _convert_dataframe_to_narwhals(X)
+        y = _convert_series_to_narwhals(y)
 
         super().fit(X, y)
 
@@ -723,8 +738,8 @@ class NearestMeanResponseImputer(BaseImputer):
 
         """
 
-        X = _narwhalify_X_if_needed(X)
-        y = _narwhalify_y_if_needed(y)
+        X = _convert_dataframe_to_narwhals(X)
+        y = _convert_series_to_narwhals(y)
 
         super().fit(X, y)
 
@@ -810,7 +825,7 @@ class NullIndicator(BaseTransformer):
         """
         super().transform(X)
 
-        X = _narwhalify_X_if_needed(X)
+        X = _convert_dataframe_to_narwhals(X)
 
         for c in self.columns:
             X = X.with_columns(
