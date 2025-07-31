@@ -86,7 +86,7 @@ class TestTransform(GenericTransformTests):
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
         transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts=base_mapping_transformer.value_casts
+        transformer.value_casts = base_mapping_transformer.value_casts
 
         df_transformed = transformer.transform(df)
 
@@ -191,7 +191,7 @@ class TestTransform(GenericTransformTests):
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
         transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts=base_mapping_transformer.value_casts
+        transformer.value_casts = base_mapping_transformer.value_casts
 
         df_transformed = transformer.transform(df)
 
@@ -212,7 +212,7 @@ class TestTransform(GenericTransformTests):
         """
 
         df_dict = {
-            "a": [1,2,3],
+            "a": [1, 2, 3],
         }
 
         df = dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
@@ -249,7 +249,7 @@ class TestTransform(GenericTransformTests):
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
         transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts=base_mapping_transformer.value_casts
+        transformer.value_casts = base_mapping_transformer.value_casts
 
         df_transformed = transformer.transform(df)
 
@@ -280,7 +280,7 @@ class TestTransform(GenericTransformTests):
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
         transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts=base_mapping_transformer.value_casts
+        transformer.value_casts = base_mapping_transformer.value_casts
 
         transformer.transform(df)
 
@@ -319,7 +319,7 @@ class TestTransform(GenericTransformTests):
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
         transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts=base_mapping_transformer.value_casts
+        transformer.value_casts = base_mapping_transformer.value_casts
 
         x_fitted = transformer.fit(df, df["c"])
 
@@ -350,7 +350,7 @@ class TestTransform(GenericTransformTests):
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
         transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts=base_mapping_transformer.value_casts
+        transformer.value_casts = base_mapping_transformer.value_casts
 
         transformer = transformer.fit(df, df["c"])
 
@@ -385,8 +385,8 @@ class TestTransform(GenericTransformTests):
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
         transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts=base_mapping_transformer.value_casts
-        transformer.copy=True
+        transformer.value_casts = base_mapping_transformer.value_casts
+        transformer.copy = True
         transformer = transformer.fit(df, df["c"])
 
         _ = transformer.transform(df)
@@ -424,7 +424,7 @@ class TestTransform(GenericTransformTests):
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
         transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts=base_mapping_transformer.value_casts
+        transformer.value_casts = base_mapping_transformer.value_casts
 
         # update to abnormal index
         df.index = [2 * i for i in df.index]
