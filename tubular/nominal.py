@@ -14,6 +14,11 @@ from tubular.base import BaseTransformer
 from tubular.imputers import MeanImputer, MedianImputer
 from tubular.mapping import BaseMappingTransformer, BaseMappingTransformMixin
 from tubular.mixins import DropOriginalMixin, SeparatorColumnMixin, WeightColumnMixin
+from tubular.types import DataFrame, Series
+from tubular._utils import (
+    _narwhalify_X_if_needed,
+    _narwhalify_y_if_needed,
+)
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -332,8 +337,8 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         self.unseen_levels_to_rare = unseen_levels_to_rare
 
-    @nw.narwhalify
-    def _check_str_like_columns(self, X: FrameT) -> None:
+    @beartype
+    def _check_str_like_columns(self, X: DataFrame, schema: nw.Schema) -> None:
         """check that transformer being called on only str-like columns
 
         Parameters
@@ -343,17 +348,11 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         """
 
-        str_like_columns = list(
-            set(self.columns).intersection(
-                set(
-                    X.select(
-                        ncs.string(),
-                        ncs.categorical(),
-                        ncs.by_dtype(nw.Object),
-                    ).columns,
-                ),
-            ),
-        )
+        str_like_columns = [
+            col for col in self.columns if X.schema[col] in {nw.String, nw.Categorical, nw.Object}
+        ]
+
+
 
         non_str_like_columns = set(self.columns).difference(
             set(
@@ -385,15 +384,22 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         """
 
-        for c in self.columns:
-            nulls_count = 0
+        null_check_expressions = {
+            col: nw.col(col).is_null().sum().alias(col)
+            for col in self.columns
+        }
 
-            # pick out str_like dtypes that allow nans
-            nulls_count += X.select(nw.col(c).is_null().sum()).item()
+        null_counts = X.select(**null_check_expressions)
 
-            if nulls_count != 0:
-                msg = f"{self.classname()}: transformer can only fit/apply on columns without nulls, column {c} needs to be imputed first"
-                raise ValueError(msg)
+        columns_with_nulls = [
+            col for col in self.columns if null_counts[col].item() > 0
+        ]
+
+        if columns_with_nulls:
+            msg = f"{self.classname()}: transformer can only fit/apply on columns without nulls, columns {', '.join(columns_with_nulls)} need to be imputed first"
+            raise ValueError(msg)
+
+
 
     @nw.narwhalify
     def fit(self, X: FrameT, y: nw.Series | None = None) -> FrameT:
@@ -486,8 +492,9 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         return self
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> FrameT:
+    @beartype
+    def transform(self, X: DataFrame) -> DataFrame:
+
         """Grouped rare levels together into a new 'rare' level.
 
         Parameters
@@ -501,11 +508,13 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             Transformed input X with rare levels grouped for into a new rare level.
 
         """
-        X = nw.from_native(BaseTransformer.transform(self, X))
+        #X = nw.from_native(BaseTransformer.transform(self, X))
+        X = _narwhalify_X_if_needed(X)
 
-        self._check_str_like_columns(
-            X.with_columns(nw.col(col) for col in self.columns),
-        )
+        schema = X.schema
+
+
+        self._check_str_like_columns(X, schema)
 
         self._check_for_nulls(X)
 
@@ -522,32 +531,28 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
                 ).difference(
                     set(self.training_data_levels[c]),
                 )
-                for unseen_val in unseen_vals:
-                    non_rare_levels[c].append(unseen_val)
+                non_rare_levels[c].extend(unseen_vals)
 
-        for c in self.columns:
-            categorical = False
-            if str(X.schema[c]) == "Categorical":
-                categorical = True
-                X = X.with_columns(nw.col(c).cast(nw.String))
-
-            non_rare_condition = nw.col(c).is_in(non_rare_levels[c])
-
-            X = X.with_columns(
-                nw.when(non_rare_condition)
-                .then(
-                    nw.col(c),
-                )
-                .otherwise(
-                    nw.lit(self.rare_level_name),
-                )
-                .alias(
-                    c,
-                ),
+        
+        transform_expressions = {
+            c: (
+                nw.when(nw.col(c).is_in(non_rare_levels[c]))
+                .then(nw.col(c))
+                .otherwise(nw.lit(self.rare_level_name))
+                .alias(c)
+                .cast(nw.Categorical if str(X.schema[c]) == "Categorical" else X.schema[c])
             )
+            for c in self.columns
+        }
 
-            if categorical:
-                X = X.with_columns(nw.col(c).cast(nw.Categorical))
+        X = X.with_columns(**{
+            c: (
+                nw.col(c).cast(nw.String) if str(X.schema[c]) == "Categorical" else nw.col(c)
+            ).transform(transform_expressions[c])
+            for c in self.columns
+        })
+
+
 
         return X
 
