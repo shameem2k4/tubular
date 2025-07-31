@@ -6,19 +6,17 @@ import warnings
 from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import narwhals as nw
-import narwhals.selectors as ncs
 import numpy as np
 from beartype import beartype
 
+from tubular._utils import (
+    _narwhalify_X_if_needed,
+)
 from tubular.base import BaseTransformer
 from tubular.imputers import MeanImputer, MedianImputer
 from tubular.mapping import BaseMappingTransformer, BaseMappingTransformMixin
 from tubular.mixins import DropOriginalMixin, SeparatorColumnMixin, WeightColumnMixin
-from tubular.types import DataFrame, Series
-from tubular._utils import (
-    _narwhalify_X_if_needed,
-    _narwhalify_y_if_needed,
-)
+from tubular.types import DataFrame
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -349,10 +347,10 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         """
 
         str_like_columns = [
-            col for col in self.columns if schema[col] in {nw.String, nw.Categorical, nw.Object}
+            col
+            for col in self.columns
+            if schema[col] in {nw.String, nw.Categorical, nw.Object}
         ]
-
-
 
         non_str_like_columns = set(self.columns).difference(
             set(
@@ -385,8 +383,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         """
 
         null_check_expressions = {
-            col: nw.col(col).is_null().sum().alias(col)
-            for col in self.columns
+            col: nw.col(col).is_null().sum().alias(col) for col in self.columns
         }
 
         null_counts = X.select(**null_check_expressions)
@@ -398,8 +395,6 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         if columns_with_nulls:
             msg = f"{self.classname()}: transformer can only fit/apply on columns without nulls, columns {', '.join(columns_with_nulls)} need to be imputed first"
             raise ValueError(msg)
-
-
 
     @nw.narwhalify
     def fit(self, X: FrameT, y: nw.Series | None = None) -> FrameT:
@@ -494,7 +489,6 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
     @beartype
     def transform(self, X: DataFrame) -> DataFrame:
-
         """Grouped rare levels together into a new 'rare' level.
 
         Parameters
@@ -508,11 +502,14 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             Transformed input X with rare levels grouped for into a new rare level.
 
         """
-        #X = nw.from_native(BaseTransformer.transform(self, X))
+        # X = nw.from_native(BaseTransformer.transform(self, X))
         X = _narwhalify_X_if_needed(X)
 
-        schema = X.schema
+        if X.shape[0] == 0:
+            msg = f"{self.classname()}: X has no rows; {X.shape}"
+            raise ValueError(msg)
 
+        schema = X.schema
 
         self._check_str_like_columns(X, schema)
 
@@ -533,30 +530,32 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
                 )
                 non_rare_levels[c].extend(unseen_vals)
 
-        
+        transform_expressions = {
+            c: nw.col(c).cast(
+                nw.String,
+            )
+            if schema[c] in [nw.Categorical, nw.Enum]
+            else nw.col(c)
+            for c in self.columns
+        }
+
         transform_expressions = {
             c: (
-                nw.when(nw.col(c).is_in(non_rare_levels[c]))
-                .then(nw.col(c))
+                nw.when(transform_expressions[c].is_in(non_rare_levels[c]))
+                .then(transform_expressions[c])
                 .otherwise(nw.lit(self.rare_level_name))
-                .alias(c)
-                .cast(nw.Categorical if str(X.schema[c]) == "Categorical" else X.schema[c])
             )
             for c in self.columns
         }
 
-        X = X.with_columns(**{
-            c: (
-                nw.col(c).cast(nw.String) if str(X.schema[c]) == "Categorical" else nw.col(c)
-            ).transform(transform_expressions[c])
+        transform_expressions = {
+            c: transform_expressions[c].cast(schema[c])
+            if (schema[c] in [nw.Categorical, nw.Enum])
+            else transform_expressions[c]
             for c in self.columns
-        })
+        }
 
-        #X = X.with_columns(**transform_expressions)
-
-
-
-        return X
+        return X.with_columns(**transform_expressions)
 
 
 class MeanResponseTransformer(
