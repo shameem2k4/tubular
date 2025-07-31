@@ -349,7 +349,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         """
 
         str_like_columns = [
-            col for col in self.columns if X.schema[col] in {nw.String, nw.Categorical, nw.Object}
+            col for col in self.columns if schema[col] in {nw.String, nw.Categorical, nw.Object}
         ]
 
 
@@ -425,9 +425,9 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         if self.weights_column is not None:
             WeightColumnMixin.check_weights_column(self, X, self.weights_column)
 
-        self._check_str_like_columns(
-            X.with_columns(nw.col(col) for col in self.columns),
-        )
+        schema = X.schema
+
+        self._check_str_like_columns(X, schema)
 
         self._check_for_nulls(X)
 
@@ -551,6 +551,8 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             ).transform(transform_expressions[c])
             for c in self.columns
         })
+
+        #X = X.with_columns(**transform_expressions)
 
 
 
