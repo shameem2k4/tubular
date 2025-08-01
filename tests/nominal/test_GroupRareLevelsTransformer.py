@@ -266,7 +266,6 @@ class TestTransform(GenericNominalTransformTests):
         df_transformed = x.transform(df)
 
         # Ensure both data frames are of the same type
-        df_transformed = nw.from_native(df_transformed).to_native()
         expected = nw.from_native(expected).to_native()
 
         assert_frame_equal_dispatch(df_transformed, expected)
@@ -295,7 +294,6 @@ class TestTransform(GenericNominalTransformTests):
         df_transformed = x.transform(df)
 
         # Ensure both data frames are of the same type
-        df_transformed = nw.from_native(df_transformed).to_native()
         expected = nw.from_native(expected).to_native()
 
         assert_frame_equal_dispatch(df_transformed, expected)

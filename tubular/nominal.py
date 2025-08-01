@@ -11,12 +11,14 @@ from beartype import beartype
 
 from tubular._utils import (
     _convert_dataframe_to_narwhals,
+    _convert_series_to_narwhals,
+    _return_narwhals_or_native_dataframe,
 )
 from tubular.base import BaseTransformer
 from tubular.imputers import MeanImputer, MedianImputer
 from tubular.mapping import BaseMappingTransformer, BaseMappingTransformMixin
 from tubular.mixins import DropOriginalMixin, SeparatorColumnMixin, WeightColumnMixin
-from tubular.types import DataFrame
+from tubular.types import DataFrame, Series
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -396,8 +398,12 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             msg = f"{self.classname()}: transformer can only fit/apply on columns without nulls, columns {', '.join(columns_with_nulls)} need to be imputed first"
             raise ValueError(msg)
 
-    @nw.narwhalify
-    def fit(self, X: FrameT, y: nw.Series | None = None) -> FrameT:
+    @beartype
+    def fit(
+        self,
+        X: DataFrame,
+        y: Optional[Series] = None,
+    ) -> GroupRareLevelsTransformer:
         """Records non-rare levels for categorical variables.
 
         When transform is called, only levels records in non_rare_levels during fit will remain
@@ -415,6 +421,11 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             Optional argument only required for the transformer to work with sklearn pipelines.
 
         """
+
+        X = _convert_dataframe_to_narwhals(X)
+
+        y = _convert_series_to_narwhals(y)
+
         super().fit(X, y)
 
         if self.weights_column is not None:
@@ -502,12 +513,8 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             Transformed input X with rare levels grouped for into a new rare level.
 
         """
-        # X = nw.from_native(BaseTransformer.transform(self, X))
+        X = BaseTransformer.transform(self, X, return_native_override=False)
         X = _convert_dataframe_to_narwhals(X)
-
-        if X.shape[0] == 0:
-            msg = f"{self.classname()}: X has no rows; {X.shape}"
-            raise ValueError(msg)
 
         schema = X.schema
 
@@ -555,7 +562,9 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             for c in self.columns
         }
 
-        return X.with_columns(**transform_expressions)
+        X = X.with_columns(**transform_expressions)
+
+        return _return_narwhals_or_native_dataframe(X, self.return_native)
 
 
 class MeanResponseTransformer(
