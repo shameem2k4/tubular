@@ -124,6 +124,8 @@ class GenericDatesMixinTransformTests:
         ) as exc_info:
             transformer.transform(df)
 
+        print(msg)
+        print(str(exc_info.value))
         assert msg in str(exc_info.value)
 
 
