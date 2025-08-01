@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from collections import OrderedDict
-from typing import Any, Literal, Optional, Set, Union
+from typing import Any, Literal, Optional, Union
 
 import narwhals as nw
 import numpy as np
@@ -13,7 +13,8 @@ import polars as pl
 from beartype import beartype
 
 from tubular._utils import (
-    _narwhalify_X_if_needed,
+    _convert_dataframe_to_narwhals,
+    _return_narwhals_or_native_dataframe,
 )
 from tubular.base import BaseTransformer
 from tubular.types import DataFrame
@@ -135,7 +136,11 @@ class BaseMappingTransformer(BaseTransformer):
 
         return str(pl.Series(mappings[col].values()).dtype)
 
-    def transform(self, X: DataFrame) -> DataFrame:
+    def transform(
+        self,
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Base mapping transformer transform method.  Checks that the mappings
         dict has been fitted and calls the BaseTransformer transform method.
 
@@ -144,6 +149,10 @@ class BaseMappingTransformer(BaseTransformer):
         X : pd/pl.DataFrame
             Data to apply mappings to.
 
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
+            methods
+
         Returns
         -------
         X : pd/pl.DataFrame
@@ -151,11 +160,15 @@ class BaseMappingTransformer(BaseTransformer):
 
         """
 
-        X = _narwhalify_X_if_needed(X)
+        X = _convert_dataframe_to_narwhals(X)
+
+        return_native = self._process_return_native(return_native_override)
 
         self.check_is_fitted(["mappings", "return_dtypes"])
 
-        return super().transform(X)
+        X = super().transform(X)
+
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class BaseMappingTransformMixin(BaseTransformer):
@@ -174,25 +187,27 @@ class BaseMappingTransformMixin(BaseTransformer):
 
     polars_compatible = True
 
-    def _generate_full_mappings(self, col, key):
-        if key in self.mappings[col]:
-            mapping = self.mappings[col][key]
+    def _generate_full_mappings(
+        self,
+        col: str,
+        key: str,
+    ) -> Union[int, float, bool, str]:
+        mapping = self.mappings[col].get(key, key)
 
-        else:
-            mapping = key
-
-        if self.value_casts[col] is not None and mapping is not None:
-            return self.value_casts[col](mapping)
-
-        return mapping
+        return (
+            self.value_casts[col](mapping)
+            if self.value_casts[col] is not None and mapping is not None
+            else mapping
+        )
 
     @beartype
     def transform(
         self,
         X: DataFrame,
-        return_native: bool = True,
+        return_native_override: Optional[bool] = None,
         col_values_present: dict[
-            str, Optional[Set[Optional[Union[str, int, float, bool]]]]
+            str,
+            Optional[set[Optional[Union[str, int, float, bool]]]],
         ] = None,
     ) -> DataFrame:
         """Applies the mapping defined in the mappings dict to each column in the columns
@@ -203,6 +218,10 @@ class BaseMappingTransformMixin(BaseTransformer):
         X : pd/pl.DataFrame
             Data with nominal columns to transform.
 
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
+            methods
+
         Returns
         -------
         X : pd/pl.DataFrame
@@ -211,12 +230,11 @@ class BaseMappingTransformMixin(BaseTransformer):
         """
         self.check_is_fitted(["mappings", "return_dtypes", "mappings_from_null"])
 
-        X = _narwhalify_X_if_needed(X)
+        X = _convert_dataframe_to_narwhals(X)
 
-        return_native = self.return_native
-        self.return_native = False
-        X = super().transform(X)
-        self.return_native = return_native
+        return_native = self._process_return_native(return_native_override)
+
+        X = super().transform(X, return_native_override=False)
 
         # differentiate between unmapped cols and cols mapped to null
         # by including unmapped cols mapped to self
@@ -276,7 +294,7 @@ class BaseMappingTransformMixin(BaseTransformer):
             for col in self.mappings
         )
 
-        return X.to_native() if return_native else X
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
@@ -344,9 +362,9 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
 
         """
 
-        X = _narwhalify_X_if_needed(X)
+        X = _convert_dataframe_to_narwhals(X)
 
-        BaseTransformer.transform(self, X)
+        X = BaseTransformer.transform(self, X, return_native_override=False)
 
         mapped_columns = self.mappings.keys()
 
@@ -367,12 +385,14 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
                     stacklevel=2,
                 )
 
-        return BaseMappingTransformMixin.transform(
+        X = BaseMappingTransformMixin.transform(
             self,
             X,
-            return_native=self.return_native,
+            return_native_override=False,
             col_values_present=col_values_present,
         )
+
+        return _return_narwhals_or_native_dataframe(X, self.return_native)
 
 
 class BaseCrossColumnMappingTransformer(BaseMappingTransformer):
