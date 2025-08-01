@@ -132,6 +132,10 @@ class BaseGenericDateTransformer(
         present_types = set(schema.values())
 
         valid_types = present_types.issubset(set(allowed_types))
+        # convert to list and sort to ensure reproducible order
+        present_types = {str(value) for value in present_types}
+        present_types = list(present_types)
+        present_types.sort()
 
         if not valid_types or len(present_types) > 1:
             msg = rf"{self.classname()}: Columns fed to datetime transformers should be {type_msg} and have consistent types, but found {present_types}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones(). Please use ToDatetimeTransformer to standardise."

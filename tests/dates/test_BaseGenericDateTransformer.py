@@ -117,6 +117,10 @@ class GenericDatesMixinTransformTests:
             if datetime_col == 0
             else {nw.Date(), nw.Datetime(time_unit="ns", time_zone="UTC")}
         )
+        # convert to list and sort to ensure reproducible order
+        present_types = {str(value) for value in present_types}
+        present_types = list(present_types)
+        present_types.sort()
         msg = f"Columns fed to datetime transformers should be ['Datetime', 'Date'] and have consistent types, but found {present_types}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones(). Please use ToDatetimeTransformer to standardise."
 
         with pytest.raises(
@@ -124,8 +128,6 @@ class GenericDatesMixinTransformTests:
         ) as exc_info:
             transformer.transform(df)
 
-        print(msg)
-        print(str(exc_info.value))
         assert msg in str(exc_info.value)
 
 
