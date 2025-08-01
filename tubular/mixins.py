@@ -5,6 +5,9 @@ from typing import TYPE_CHECKING, Optional, Union
 import narwhals as nw
 import narwhals.selectors as ncs
 import numpy as np
+from beartype import beartype
+
+from tubular.types import DataFrame
 
 if TYPE_CHECKING:
     from narhwals.typing import FrameT
@@ -54,13 +57,14 @@ class DropOriginalMixin:
 
         return type(self).__name__
 
+    @beartype
     @nw.narwhalify
     def drop_original_column(
         self,
-        X: FrameT,
+        X: DataFrame,
         drop_original: bool,
         columns: Optional[Union[list[str], str]],
-    ) -> FrameT:
+    ) -> DataFrame:
         """Method for dropping input columns from X if drop_original set to True.
 
         Parameters
