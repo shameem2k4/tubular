@@ -10,7 +10,7 @@ import numpy as np
 from beartype import beartype
 
 from tubular._utils import (
-    _narwhalify_X_if_needed,
+    _convert_dataframe_to_narwhals,
 )
 from tubular.base import BaseTransformer
 from tubular.imputers import MeanImputer, MedianImputer
@@ -503,7 +503,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         """
         # X = nw.from_native(BaseTransformer.transform(self, X))
-        X = _narwhalify_X_if_needed(X)
+        X = _convert_dataframe_to_narwhals(X)
 
         if X.shape[0] == 0:
             msg = f"{self.classname()}: X has no rows; {X.shape}"
