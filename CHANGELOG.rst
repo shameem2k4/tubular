@@ -24,6 +24,14 @@ Changed
 - bugfix: updated env to make package importable, added basic test for this
 - feat: converted DropOriginalMixin and associated transformers to beartype
 - feat: added _types file containing custom types
+- feat: added BaseAggregationTransformer and AggregateRowOverColumnsTransformer classes in new aggregations module
+- narwhalified DatetimeSinusoidCalculator '#425 <https://github.com/azukds/tubular/issues/425>_' 
+- Added deprecated warning for DateDiffLeapYearTransformer `#244 <https://github.com/azukds/tubular/issues/244>`
+- Added new units 'week', 'fornight', 'lunar_month', 'common_year' and 'custom_days' to DateDifferenceTransformer. The time component will be truncated for these units and for unit 'D'.
+- feat: optimisation changes to BaseTransfomer and imputers file. Edited to reduce number of copies and type changes from to/from_native calls, and select/with_columns being called many times.
+- feat: added 'return_native' argument to BaseTransfomer to control whether native or narwhals types are returned, and limit type changes. Idea is for this to be rolled out across transformers.
+- feat: made creation of copies in BaseTransfomer optional, and default to False.
+- placeholder
 - placeholder
 - placeholder
 
@@ -37,7 +45,6 @@ Changed
 - Working on above, found additional bug with mapping null values. 
 Considered removing this functionality, but it is actually needed for 
 inverse pipelines. Changed this part of logic to work more like an imputer.
-- placeholder 
 
 1.4.3 (02/06/2025)
 ------------------
@@ -54,7 +61,6 @@ Changed
 - added OneDKmeansTransformer. `#406 <https://github.com/azukds/tubular/issues/406>_`
 - beartype typechecking for BaseTransformer init method `#417 <https://github.com/azukds/tubular/issues/417>_`
 - narwhalified ToDatetimeTransformer. Also made some usability improvements, e.g. to accept multiple columns `#379 <https://github.com/azukds/tubular/issues/379>_`
-- placeholder
 
 1.4.2 (18/03/2025)
 ------------------

@@ -17,7 +17,6 @@ from sklearn.preprocessing import (
     StandardScaler,
 )
 
-from tubular._types import ListOfOneStr, PositiveNumber  # noqa: TCH001
 from tubular.base import BaseTransformer, DataFrameMethodTransformer
 from tubular.mixins import (
     CheckNumericMixin,
@@ -25,6 +24,7 @@ from tubular.mixins import (
     NewColumnNameMixin,
     TwoColumnMixin,
 )
+from tubular.types import ListOfOneStr, PositiveNumber  # noqa: TCH001
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT, IntoSeriesT

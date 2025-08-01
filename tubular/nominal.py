@@ -10,11 +10,11 @@ import narwhals.selectors as ncs
 import numpy as np
 from beartype import beartype
 
-from tubular._types import ListOfStrs, PositiveInt  # noqa: TCH001
 from tubular.base import BaseTransformer
 from tubular.imputers import MeanImputer, MedianImputer
 from tubular.mapping import BaseMappingTransformer, BaseMappingTransformMixin
 from tubular.mixins import DropOriginalMixin, SeparatorColumnMixin, WeightColumnMixin
+from tubular.types import ListOfStrs, PositiveInt  # noqa: TCH001
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -528,7 +528,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         for c in self.columns:
             categorical = False
-            if str(X.schema[c]) == "Categorical":
+            if X.schema[c] in [nw.Categorical, nw.Enum]:
                 categorical = True
                 X = X.with_columns(nw.col(c).cast(nw.String))
 
@@ -1301,7 +1301,7 @@ class OneHotEncodingTransformer(
     drop_original : bool, default = False
         Should original columns be dropped after creating dummy fields?
 
-    copy : bool, default = True
+    copy : bool, default = False
         Should X be copied prior to transform? Should X be copied prior to transform? Copy argument no longer used and will be deprecated in a future release
 
     verbose : bool, default = True
@@ -1339,7 +1339,7 @@ class OneHotEncodingTransformer(
         ] = None,
         separator: str = "_",
         drop_original: bool = False,
-        copy: Optional[bool] = None,
+        copy: bool = False,
         verbose: bool = False,
     ) -> None:
         BaseTransformer.__init__(

@@ -5,13 +5,14 @@ from __future__ import annotations
 import datetime
 import warnings
 import zoneinfo
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import narwhals as nw
 import narwhals.selectors as ncs
 import numpy as np
 import pandas as pd
 from beartype import beartype
+from typing_extensions import deprecated
 
 from tubular.base import BaseTransformer
 from tubular.mixins import DropOriginalMixin, NewColumnNameMixin, TwoColumnMixin
@@ -277,8 +278,16 @@ class BaseDateTwoColumnTransformer(
         self.check_two_columns(columns)
 
 
+@deprecated(
+    "This Transformer is deprecated, use DateDifferenceTransformer instead. "
+    "If you prefer this transformer to DateDifferenceTransformer, "
+    "let us know through a github issue",
+)
 class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
     """Transformer to calculate the number of years between two dates.
+
+    !!! warning "Deprecated"
+        This transformer is now deprecated; use `DateDifferenceTransformer` instead.
 
     Parameters
     ----------
@@ -430,14 +439,15 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         Name given to calculated datediff column. If None then {column_upper}_{column_lower}_datediff_{units}
         will be used.
     units : str, default = 'D'
-        Numpy datetime units, accepted values are 'D', 'h', 'm', 's'
-    copy : bool, default = True
+        Accepted values are "week", "fortnight", "lunar_month", "common_year", "custom_days", 'D', 'h', 'm', 's'
+    copy : bool, default = False
         Should X be copied prior to transform? Copy argument no longer used and will be deprecated in a future release
     verbose: bool, default = False
         Control level of detail in printouts
     drop_original:
         Boolean flag indicating whether to drop original columns.
-
+    custom_days_divider:
+        Integer value for the "custom_days" unit
     Attributes
     ----------
 
@@ -451,13 +461,29 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         self,
         columns: list[str],
         new_column_name: str | None = None,
-        units: str = "D",
-        copy: bool | None = None,
+        units: Literal[
+            "week",
+            "fortnight",
+            "lunar_month",
+            "common_year",
+            "custom_days",
+            "D",
+            "h",
+            "m",
+            "s",
+        ] = "D",
+        copy: bool = False,
         verbose: bool = False,
         drop_original: bool = False,
+        custom_days_divider: int = None,
         **kwargs: dict[str, bool],
     ) -> None:
         accepted_values_units = [
+            "week",
+            "fortnight",
+            "lunar_month",
+            "common_year",
+            "custom_days",
             "D",
             "h",
             "m",
@@ -469,6 +495,7 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
             raise ValueError(msg)
 
         self.units = units
+        self.custom_days_divider = custom_days_divider
 
         super().__init__(
             columns=columns,
@@ -496,11 +523,48 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
 
         X = nw.from_native(super().transform(X))
 
+        # mapping for units and corresponding timedelta arg values
+        UNITS_TO_TIMEDELTA_PARAMS = {
+            "week": (7, "D"),
+            "fortnight": (14, "D"),
+            "lunar_month": (
+                int(29.5 * 24),
+                "h",
+            ),  # timedelta values need to be whole numbers so (29.5, 'D') cannot be used
+            "common_year": (365, "D"),
+            "D": (1, "D"),
+            "h": (1, "h"),
+            "m": (1, "m"),
+            "s": (1, "s"),
+        }
+
+        # list of units that require time truncation
+        UNITS_TO_TRUNCATE_TIME_FOR = [
+            "week",
+            "fortnight",
+            "lunar_month",
+            "common_year",
+            "custom_days",
+            "D",
+        ]
+
+        start_date_col = nw.col(self.columns[0])
+        end_date_col = nw.col(self.columns[1])
+
+        # truncating time for specific units
+        if self.units in UNITS_TO_TRUNCATE_TIME_FOR:
+            start_date_col = start_date_col.dt.truncate("1d")
+            end_date_col = end_date_col.dt.truncate("1d")
+
+        if self.units == "custom_days":
+            timedelta_value, timedelta_format = self.custom_days_divider, "D"
+            denominator = np.timedelta64(timedelta_value, timedelta_format)
+        else:
+            timedelta_value, timedelta_format = UNITS_TO_TIMEDELTA_PARAMS[self.units]
+            denominator = np.timedelta64(timedelta_value, timedelta_format)
+
         X = X.with_columns(
-            (
-                (nw.col(self.columns[1]) - nw.col(self.columns[0]))
-                / np.timedelta64(1, self.units)
-            ).alias(self.new_column_name),
+            ((end_date_col - start_date_col) / denominator).alias(self.new_column_name),
         )
 
         # Drop original columns if self.drop_original is True
@@ -1226,7 +1290,7 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
     """
 
-    polars_compatible = False
+    polars_compatible = True
 
     def __init__(
         self,
@@ -1351,29 +1415,30 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             )
             raise ValueError(msg)
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+    @nw.narwhalify
+    def transform(self, X: FrameT) -> FrameT:
         """Transform - creates column containing sine or cosine of another datetime column.
 
         Which function is used is stored in the self.method attribute.
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Data to transform.
 
         Returns
         -------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Input X with additional columns added, these are named "<method>_<original_column>"
         """
-        X = super().transform(X)
+        X = nw.from_native(super().transform(X))
 
         for column in self.columns:
             if not isinstance(self.units, dict):
-                column_in_desired_unit = getattr(X[column].dt, self.units)
+                column_in_desired_unit = getattr(X[column].dt, self.units)()
                 desired_units = self.units
             elif isinstance(self.units, dict):
-                column_in_desired_unit = getattr(X[column].dt, self.units[column])
+                column_in_desired_unit = getattr(X[column].dt, self.units[column])()
                 desired_units = self.units[column]
             if not isinstance(self.period, dict):
                 desired_period = self.period
@@ -1383,8 +1448,19 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             for method in self.method:
                 new_column_name = f"{method}_{desired_period}_{desired_units}_{column}"
 
-                X[new_column_name] = getattr(np, method)(
-                    column_in_desired_unit * (2.0 * np.pi / desired_period),
+                # Calculate the sine or cosine of the column in the desired unit
+                X = X.with_columns(
+                    nw.col(column)
+                    .map_batches(
+                        lambda *_,
+                        method=method,
+                        column_in_desired_unit=column_in_desired_unit,
+                        desired_period=desired_period: getattr(np, method)(
+                            column_in_desired_unit * (2.0 * np.pi / desired_period),
+                        ),
+                        return_dtype=nw.Float64,
+                    )
+                    .alias(new_column_name),
                 )
 
         # Drop original columns if self.drop_original is True
