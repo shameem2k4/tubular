@@ -124,7 +124,12 @@ class GenericImputerTransformTests:
         [("pandas", "pandas"), ("polars", "polars")],
         indirect=["expected_df_1"],
     )
-    def test_expected_output_1(self, library, expected_df_1, initialized_transformers):
+    def test_expected_output_on_float_column(
+        self,
+        library,
+        expected_df_1,
+        initialized_transformers,
+    ):
         """Test that transform is giving the expected output when applied to float column."""
         # Create the DataFrame using the library parameter
         df2 = d.create_df_2(library=library)
@@ -164,7 +169,12 @@ class GenericImputerTransformTests:
         [("pandas", "pandas"), ("polars", "polars")],
         indirect=["expected_df_2"],
     )
-    def test_expected_output_2(self, library, expected_df_2, initialized_transformers):
+    def test_expected_output_on_object_column(
+        self,
+        library,
+        expected_df_2,
+        initialized_transformers,
+    ):
         """Test that transform is giving the expected output when applied to object column."""
         # Create the DataFrame using the library parameter
         df2 = d.create_df_2(library=library)
@@ -208,7 +218,7 @@ class GenericImputerTransformTests:
         ],
         indirect=["expected_df_3"],
     )
-    def test_expected_output_3(
+    def test_expected_output_with_object_and_categorical_columns(
         self,
         library,
         expected_df_3,

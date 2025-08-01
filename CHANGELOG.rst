@@ -26,10 +26,8 @@ Changed
 - narwhalified DatetimeSinusoidCalculator '#425 <https://github.com/azukds/tubular/issues/425>_' 
 - Added deprecated warning for DateDiffLeapYearTransformer `#244 <https://github.com/azukds/tubular/issues/244>`
 - Added new units 'week', 'fornight', 'lunar_month', 'common_year' and 'custom_days' to DateDifferenceTransformer. The time component will be truncated for these units and for unit 'D'.
-- feat: optimisation changes to BaseTransfomer and imputers file. Edited to reduce number of copies and type changes
-from to/from_native calls, and select/with_columns being called many times.
-- feat: added 'return_native' argument to BaseTransfomer to control whether native or narwhals types are returned,
-and limit type changes. Idea is for this to be rolled out across transformers.
+- feat: optimisation changes to BaseTransfomer and imputers file. Edited to reduce number of copies and type changes from to/from_native calls, and select/with_columns being called many times.
+- feat: added 'return_native' argument to BaseTransfomer to control whether native or narwhals types are returned, and limit type changes. Idea is for this to be rolled out across transformers.
 - feat: made creation of copies in BaseTransfomer optional, and default to False.
 - placeholder
 - placeholder
