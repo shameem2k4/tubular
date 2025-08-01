@@ -527,7 +527,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         for c in self.columns:
             categorical = False
-            if str(X.schema[c]) == "Categorical":
+            if X.schema[c] in [nw.Categorical, nw.Enum]:
                 categorical = True
                 X = X.with_columns(nw.col(c).cast(nw.String))
 
