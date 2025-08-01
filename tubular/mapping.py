@@ -166,7 +166,7 @@ class BaseMappingTransformer(BaseTransformer):
 
         self.check_is_fitted(["mappings", "return_dtypes"])
 
-        X = super().transform(X)
+        X = super().transform(X, return_native_override=False)
 
         return _return_narwhals_or_native_dataframe(X, return_native)
 
@@ -192,6 +192,31 @@ class BaseMappingTransformMixin(BaseTransformer):
         col: str,
         key: str,
     ) -> Union[int, float, bool, str]:
+        """adds unmapped values to mapping dict and standardises types
+        of values in mapping. This is needed for cases like below:
+
+        df=pd.DataFrame({'a': [1,2,3]})
+
+        mapping={'a': {1: 1.0}}
+        return_dtypes={'a': 'Float32'}
+
+        The full mapping dict will be {'a': {1: 1.0, 2:2, 3:3}}, and we will have issues
+        when generating a new series from these mixed types. In order for things to work,
+        types in the dict have to be standardised based on return_dtypes.
+
+        Parameters
+        ----------
+        col: str
+            col being mapped
+
+        key: str
+            col value being mapped
+
+        Returns
+        -------
+        typed value that will be mapped to for given key
+
+        """
         mapping = self.mappings[col].get(key, key)
 
         return (
@@ -236,8 +261,8 @@ class BaseMappingTransformMixin(BaseTransformer):
 
         X = super().transform(X, return_native_override=False)
 
-        # differentiate between unmapped cols and cols mapped to null
-        # by including unmapped cols mapped to self
+        # have added option to pass dict down, as it is already calculated in
+        # MappingTransformer.transform and best to avoid doing twice
         if col_values_present is None:
             col_values_present = {
                 col: X.get_column(col).unique() for col in self.mappings
@@ -254,6 +279,9 @@ class BaseMappingTransformMixin(BaseTransformer):
             for col in self.mappings
         }
 
+        # nw.Expr.replace_strict does not allow non-null values
+        # to be mapped to null, so have to handle these separately
+        # first
         transform_expressions = {
             col: nw.when(
                 nw.col(col).is_in(self.mappings_to_null[col]),
@@ -265,6 +293,7 @@ class BaseMappingTransformMixin(BaseTransformer):
             for col in self.mappings
         }
 
+        # main mappings take place here
         transform_expressions = {
             col: (
                 transform_expressions[col].replace_strict(
@@ -275,10 +304,19 @@ class BaseMappingTransformMixin(BaseTransformer):
             for col in full_mappings
         }
 
-        # null keys are not joined on, so just fill nulls at end
+        # finally, handle mappings from null (imputations)
         transform_expressions = {
             col: (transform_expressions[col].fill_null(self.mappings_from_null[col]))
             if self.mappings_from_null[col] is not None
+            else transform_expressions[col]
+            for col in transform_expressions
+        }
+
+        # handle casting for non-bool return types
+        # (bool has special handling at end)
+        transform_expressions = {
+            col: transform_expressions[col].cast(getattr(nw, self.return_dtypes[col]))
+            if self.return_dtypes[col] != "Boolean"
             else transform_expressions[col]
             for col in transform_expressions
         }
@@ -287,10 +325,14 @@ class BaseMappingTransformMixin(BaseTransformer):
             **transform_expressions,
         )
 
+        # this last section is needed to ensure pandas bool columns
+        # are returned in sensible (non object) types
+        # maybe_convert_dtypes will not run on an expression,
+        # so do need a second with_columns call
         X = X.with_columns(
             nw.maybe_convert_dtypes(X[col]).cast(getattr(nw, self.return_dtypes[col]))
             if self.return_dtypes[col] == "Boolean"
-            else nw.col(col).cast(getattr(nw, self.return_dtypes[col]))
+            else nw.col(col)
             for col in self.mappings
         )
 
