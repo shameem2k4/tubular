@@ -110,7 +110,7 @@ class BaseMappingTransformer(BaseTransformer):
             provided_return_dtype_keys = set()
 
         for col in set(mappings.keys()).difference(provided_return_dtype_keys):
-            return_dtypes[col] = self._infer_return_types(mappings, col)
+            return_dtypes[col] = self._infer_return_type(mappings, col)
 
         self.return_dtypes = return_dtypes
 
@@ -128,10 +128,10 @@ class BaseMappingTransformer(BaseTransformer):
         super().__init__(columns=columns, **kwargs)
 
     @staticmethod
-    def _infer_return_types(
+    def _infer_return_type(
         mappings: dict[str, dict[str, str | float | int]],
         col: str,
-    ) -> dict[str, str]:
+    ) -> str:
         "infer return_dtypes from provided mappings"
 
         return str(pl.Series(mappings[col].values()).dtype)
