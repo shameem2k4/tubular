@@ -364,8 +364,8 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             msg = f"{self.classname()}: transformer must run on str-like columns, but got non str-like {non_str_like_columns}"
             raise TypeError(msg)
 
-    @nw.narwhalify
-    def _check_for_nulls(self, X: FrameT) -> None:
+    @beartype
+    def _check_for_nulls(self, X: DataFrame) -> None:
         """check that transformer being called on only non-null columns.
 
         Note, found including nulls to be quite complicated due to:
@@ -383,6 +383,8 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             Data to transform
 
         """
+
+        X = _convert_dataframe_to_narwhals(X)
 
         null_check_expressions = {
             col: nw.col(col).is_null().sum().alias(col) for col in self.columns
