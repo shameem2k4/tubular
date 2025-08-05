@@ -71,7 +71,11 @@ class BaseNominalTransformer(BaseTransformer):
             raise ValueError(msg)
 
     @beartype
-    def transform(self, X: DataFrame) -> DataFrame:
+    def transform(
+        self,
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Base nominal transformer transform method.  Checks that all the rows are able to be
         mapped according to the values in the mappings dict and calls the BaseTransformer transform method.
 
@@ -79,6 +83,9 @@ class BaseNominalTransformer(BaseTransformer):
         ----------
         X : DataFrame
             Data to apply nominal transformations to.
+
+        return_native_override: Optional[bool]=None
+            Allows dfs to be only converted to/from native at the beginning and end
 
         Returns
         -------
