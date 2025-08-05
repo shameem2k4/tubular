@@ -41,8 +41,8 @@ class BaseNominalTransformer(BaseTransformer):
 
     FITS = False
 
-    @nw.narwhalify
-    def check_mappable_rows(self, X: FrameT) -> None:
+    @beartype
+    def check_mappable_rows(self, X: DataFrame) -> None:
         """Method to check that all the rows to apply the transformer to are able to be
         mapped according to the values in the mappings dict.
 
@@ -55,38 +55,54 @@ class BaseNominalTransformer(BaseTransformer):
         """
         self.check_is_fitted(["mappings"])
 
-        for c in self.columns:
-            mappable_rows = X.select(
-                nw.col(c).is_in(list(self.mappings[c])).sum(),
-            ).item()
+        X = _convert_dataframe_to_narwhals(X)
+        mappable_rows_expr = {
+            col: nw.col(col).is_in(list(self.mappings[col])).sum()
+            for col in self.columns
+        }
+        mappable_rows = X.select(**mappable_rows_expr)
 
-            if mappable_rows < X.shape[0]:
-                msg = f"{self.classname()}: nulls would be introduced into column {c} from levels not present in mapping"
-                raise ValueError(msg)
+        mappable_rows_count = [
+            col for col in self.columns if mappable_rows[col].item() < len(X)
+        ]
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> None:
+        if mappable_rows_count:
+            msg = f"{self.classname()}: nulls would be introduced into columns {', '.join(mappable_rows_count)} from levels not present in mapping"
+            raise ValueError(msg)
+
+    @beartype
+    def transform(
+        self,
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Base nominal transformer transform method.  Checks that all the rows are able to be
         mapped according to the values in the mappings dict and calls the BaseTransformer transform method.
 
         Parameters
         ----------
-        X : FrameT
+        X : DataFrame
             Data to apply nominal transformations to.
+
+        return_native_override: Optional[bool]=None
+            Option to override return_native attr in transformer, useful when calling parent
+            methods
 
         Returns
         -------
-        X : FrameT
+        X : DataFrame
             Input X.
 
         """
 
         # specify which class to prevent additional inheritance calls
-        X = BaseTransformer.transform(self, X)
+        return_native = self._process_return_native(return_native_override)
+
+        X = BaseTransformer.transform(self, X, return_native_override=False)
 
         self.check_mappable_rows(X)
 
-        return X
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class NominalToIntegerTransformer(BaseNominalTransformer, BaseMappingTransformMixin):
