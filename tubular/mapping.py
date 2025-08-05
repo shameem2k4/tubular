@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import warnings
 from collections import OrderedDict
+from functools import reduce
 from typing import Any, Literal, Optional, Union
 
 import narwhals as nw
@@ -78,7 +79,6 @@ class BaseMappingTransformer(BaseTransformer):
             raise ValueError(msg)
 
         mappings_from_null = {col: None for col in mappings}
-        mappings_to_null = {col: None for col in mappings}
         for col in mappings:
             null_keys = [key for key in mappings[col] if pd.isna(key)]
 
@@ -92,13 +92,8 @@ class BaseMappingTransformer(BaseTransformer):
             if len(null_keys) != 0:
                 mappings_from_null[col] = mappings[col][null_keys[0]]
 
-            mappings_to_null[col] = [
-                key for key, value in mappings[col].items() if pd.isna(value)
-            ]
-
         self.mappings = mappings
         self.mappings_from_null = mappings_from_null
-        self.mappings_to_null = mappings_to_null
 
         columns = list(mappings.keys())
 
@@ -113,17 +108,6 @@ class BaseMappingTransformer(BaseTransformer):
             return_dtypes[col] = self._infer_return_type(mappings, col)
 
         self.return_dtypes = return_dtypes
-
-        self.value_casts = {
-            col: (
-                int
-                if self.return_dtypes[col].startswith("Int")
-                else float
-                if self.return_dtypes[col].startswith("Float")
-                else None
-            )
-            for col in self.mappings
-        }
 
         super().__init__(columns=columns, **kwargs)
 
@@ -187,53 +171,11 @@ class BaseMappingTransformMixin(BaseTransformer):
 
     polars_compatible = True
 
-    def _generate_full_mappings(
-        self,
-        col: str,
-        key: str,
-    ) -> Union[int, float, bool, str]:
-        """adds unmapped values to mapping dict and standardises types
-        of values in mapping. This is needed for cases like below:
-
-        df=pd.DataFrame({'a': [1,2,3]})
-
-        mapping={'a': {1: 1.0}}
-        return_dtypes={'a': 'Float32'}
-
-        The full mapping dict will be {'a': {1: 1.0, 2:2, 3:3}}, and we will have issues
-        when generating a new series from these mixed types. In order for things to work,
-        types in the dict have to be standardised based on return_dtypes.
-
-        Parameters
-        ----------
-        col: str
-            col being mapped
-
-        key: str
-            col value being mapped
-
-        Returns
-        -------
-        typed value that will be mapped to for given key
-
-        """
-        mapping = self.mappings[col].get(key, key)
-
-        return (
-            self.value_casts[col](mapping)
-            if self.value_casts[col] is not None and mapping is not None
-            else mapping
-        )
-
     @beartype
     def transform(
         self,
         X: DataFrame,
         return_native_override: Optional[bool] = None,
-        col_values_present: dict[
-            str,
-            Optional[set[Optional[Union[str, int, float, bool]]]],
-        ] = None,
     ) -> DataFrame:
         """Applies the mapping defined in the mappings dict to each column in the columns
         attribute.
@@ -261,47 +203,49 @@ class BaseMappingTransformMixin(BaseTransformer):
 
         X = super().transform(X, return_native_override=False)
 
-        # have added option to pass dict down, as it is already calculated in
-        # MappingTransformer.transform and best to avoid doing twice
-        if col_values_present is None:
-            col_values_present = {
-                col: X.get_column(col).unique() for col in self.mappings
-            }
-
-        full_mappings = {
-            col: {
-                key: self._generate_full_mappings(col, key)
-                for key in col_values_present[col]
-                # nulls are handled separately at the end,
-                # treated as imputations
-                if not pd.isna(key)
-            }
-            for col in self.mappings
+        # if the column is categorical, narwhals struggles to infer a type
+        # during the when/then logic, so we need to record this so that we can
+        # tell polars to use string as a common type
+        # types are then corrected before returning at the end
+        schema = X.schema
+        column_is_categorical = {
+            col: bool(schema[col] in [nw.Categorical, nw.Enum]) for col in self.mappings
         }
 
-        # nw.Expr.replace_strict does not allow non-null values
-        # to be mapped to null, so have to handle these separately
-        # first
-        transform_expressions = {
-            col: nw.when(
-                nw.col(col).is_in(self.mappings_to_null[col]),
-            )
-            .then(None)
-            .otherwise(nw.col(col))
-            if self.mappings_to_null[col] is not None
-            else nw.col(col)
-            for col in self.mappings
-        }
-
-        # main mappings take place here
-        transform_expressions = {
-            col: (
-                transform_expressions[col].replace_strict(
-                    full_mappings[col],
-                    return_dtype=getattr(nw, self.return_dtypes[col]),
+        # set up list of paired condition/outcome tuples for mapping
+        conditions_and_outcomes = {
+            col: [
+                (
+                    nw.col(col) == key,
+                    nw.lit(self.mappings[col][key]),
                 )
+                if not column_is_categorical[col]
+                else (
+                    nw.col(col) == key,
+                    nw.lit(self.mappings[col][key], dtype=nw.String),
+                )
+                for key in self.mappings[col]
+                # nulls handled separately with fill_null call
+                if not pd.isna(key)
+            ]
+            for col in self.mappings
+        }
+
+        # apply mapping using functools reduce to build expression
+        transform_expressions = {
+            col: reduce(
+                lambda expr, condition_and_outcome: nw.when(condition_and_outcome[0])
+                .then(condition_and_outcome[1])
+                .otherwise(expr),
+                conditions_and_outcomes[col][
+                    1:
+                ],  # start reduce logic after first entry
+                nw.when(conditions_and_outcomes[col][0][0])
+                .then(conditions_and_outcomes[col][0][1])
+                .otherwise(nw.col(col))
+                .alias(col),
             )
-            for col in full_mappings
+            for col in self.mappings
         }
 
         # finally, handle mappings from null (imputations)
@@ -329,12 +273,15 @@ class BaseMappingTransformMixin(BaseTransformer):
         # are returned in sensible (non object) types
         # maybe_convert_dtypes will not run on an expression,
         # so do need a second with_columns call
-        X = X.with_columns(
-            nw.maybe_convert_dtypes(X[col]).cast(getattr(nw, self.return_dtypes[col]))
-            if self.return_dtypes[col] == "Boolean"
-            else nw.col(col)
-            for col in self.mappings
-        )
+        if "Boolean" in self.return_dtypes.values():
+            X = X.with_columns(
+                nw.maybe_convert_dtypes(X[col]).cast(
+                    getattr(nw, self.return_dtypes[col]),
+                )
+                if self.return_dtypes[col] == "Boolean"
+                else nw.col(col)
+                for col in self.mappings
+            )
 
         return _return_narwhals_or_native_dataframe(X, return_native)
 
@@ -432,7 +379,6 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
             self,
             X,
             return_native_override=False,
-            col_values_present=col_values_present,
         )
 
         return _return_narwhals_or_native_dataframe(X, self.return_native)

@@ -54,8 +54,8 @@ class TestTransform(GenericTransformTests):
         cls.transformer_name = "BaseMappingTransformMixin"
 
     @pytest.mark.parametrize("library", ["pandas", "polars"])
-    def test_expected_output(self, mapping, library):
-        """Test that X is returned from transform."""
+    def test_expected_output_for_str_and_int(self, mapping, library):
+        """Test outputs for str/int type inputs."""
 
         df = d.create_df_1(library=library)
 
@@ -85,8 +85,58 @@ class TestTransform(GenericTransformTests):
         transformer.mappings = base_mapping_transformer.mappings
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
-        transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts = base_mapping_transformer.value_casts
+
+        df_transformed = transformer.transform(df)
+
+        assert_frame_equal_dispatch(expected, df_transformed)
+
+    @pytest.mark.parametrize("library", ["pandas", "polars"])
+    def test_expected_output_for_cat(self, library):
+        """Test that output for cat input"""
+
+        df = d.create_df_2(library=library)
+
+        df = nw.from_native(df).clone().to_native()
+
+        mapping = {
+            "c": {
+                "a": 1,
+                "b": 2,
+                "c": 3,
+                "d": 4,
+                "e": 5,
+                "f": 6,
+                None: -1,
+            },
+        }
+
+        expected_dict = {
+            "a": [1, 2, 3, 4, 5, 6, None],
+            "b": ["a", "b", "c", "d", "e", "f", None],
+            "c": [1, 2, 3, 4, 5, 6, -1],
+        }
+
+        expected = dataframe_init_dispatch(
+            dataframe_dict=expected_dict,
+            library=library,
+        )
+
+        transformer = BaseMappingTransformMixin(columns=["c"])
+
+        # if transformer is not yet polars compatible, skip this test
+        if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
+            return
+
+        return_dtypes = {"c": "Int64"}
+
+        base_mapping_transformer = BaseMappingTransformer(
+            mappings=mapping,
+            return_dtypes=return_dtypes,
+        )
+
+        transformer.mappings = base_mapping_transformer.mappings
+        transformer.return_dtypes = base_mapping_transformer.return_dtypes
+        transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
 
         df_transformed = transformer.transform(df)
 
@@ -190,8 +240,6 @@ class TestTransform(GenericTransformTests):
         transformer.mappings = base_mapping_transformer.mappings
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
-        transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts = base_mapping_transformer.value_casts
 
         df_transformed = transformer.transform(df)
 
@@ -248,8 +296,6 @@ class TestTransform(GenericTransformTests):
         transformer.mappings = base_mapping_transformer.mappings
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
-        transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts = base_mapping_transformer.value_casts
 
         df_transformed = transformer.transform(df)
 
@@ -279,8 +325,6 @@ class TestTransform(GenericTransformTests):
         transformer.mappings = base_mapping_transformer.mappings
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
-        transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts = base_mapping_transformer.value_casts
 
         transformer.transform(df)
 
@@ -318,8 +362,6 @@ class TestTransform(GenericTransformTests):
         transformer.mappings = base_mapping_transformer.mappings
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
-        transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts = base_mapping_transformer.value_casts
 
         x_fitted = transformer.fit(df, df["c"])
 
@@ -349,8 +391,6 @@ class TestTransform(GenericTransformTests):
         transformer.mappings = base_mapping_transformer.mappings
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
-        transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts = base_mapping_transformer.value_casts
 
         transformer = transformer.fit(df, df["c"])
 
@@ -384,8 +424,6 @@ class TestTransform(GenericTransformTests):
         transformer.mappings = base_mapping_transformer.mappings
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
-        transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts = base_mapping_transformer.value_casts
         transformer.copy = True
         transformer = transformer.fit(df, df["c"])
 
@@ -423,8 +461,6 @@ class TestTransform(GenericTransformTests):
         transformer.mappings = base_mapping_transformer.mappings
         transformer.return_dtypes = base_mapping_transformer.return_dtypes
         transformer.mappings_from_null = base_mapping_transformer.mappings_from_null
-        transformer.mappings_to_null = base_mapping_transformer.mappings_to_null
-        transformer.value_casts = base_mapping_transformer.value_casts
 
         # update to abnormal index
         df.index = [2 * i for i in df.index]

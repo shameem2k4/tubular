@@ -138,10 +138,8 @@ class TestTransform(GenericNominalTransformTests):
         )
 
         x.mappings = base_mapping_transformer.mappings
-        x.mappings_to_null = base_mapping_transformer.mappings_to_null
         x.mappings_from_null = base_mapping_transformer.mappings_from_null
         x.return_dtypes = {col: "Int8" for col in x.columns}
-        x.value_casts = base_mapping_transformer.value_casts
 
         x.null_mappings = {"a": None, "b": None}
 
