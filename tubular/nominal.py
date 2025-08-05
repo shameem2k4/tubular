@@ -85,7 +85,8 @@ class BaseNominalTransformer(BaseTransformer):
             Data to apply nominal transformations to.
 
         return_native_override: Optional[bool]=None
-            Allows dfs to be only converted to/from native at the beginning and end
+            Option to override return_native attr in transformer, useful when calling parent
+            methods
 
         Returns
         -------
@@ -95,11 +96,13 @@ class BaseNominalTransformer(BaseTransformer):
         """
 
         # specify which class to prevent additional inheritance calls
+        return_native = self._process_return_native(return_native_override)
+
         X = BaseTransformer.transform(self, X, return_native_override=False)
 
         self.check_mappable_rows(X)
 
-        return _return_narwhals_or_native_dataframe(X, self.return_native)
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class NominalToIntegerTransformer(BaseNominalTransformer, BaseMappingTransformMixin):
