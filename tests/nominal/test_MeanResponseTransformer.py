@@ -1378,7 +1378,7 @@ class TestTransform(GenericTransformTests):
 
         with pytest.raises(
             ValueError,
-            match="MeanResponseTransformer: nulls would be introduced into column b from levels not present in mapping",
+            match="MeanResponseTransformer: nulls would be introduced into columns b from levels not present in mapping",
         ):
             x.transform(df)
 
