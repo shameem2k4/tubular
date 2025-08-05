@@ -92,7 +92,9 @@ class BaseGenericDateTransformer(
         X: DataFrame,
         datetime_only: bool,
     ) -> None:
-        """Raise a type error if a column to be operated on is not a datetime.datetime or datetime.date object
+        """Checks the schema of the DataFrame to ensure that each column listed in
+        self.columns is either a datetime or date type, depending on the datetime_only
+        flag. If a column does not meet the expected type criteria, a TypeError is raised.
 
         Parameters
         ----------
@@ -102,6 +104,14 @@ class BaseGenericDateTransformer(
 
         datetime_only: bool
             Indicates whether ONLY datetime types are accepted
+
+        Raises
+        ----------
+
+        TypeError: if non date/datetime types are found
+
+        TypeError: if mismatched date/datetime types are found,
+        types should be consistent
 
         """
 
@@ -125,6 +135,7 @@ class BaseGenericDateTransformer(
             elif schema[col] == nw.Date:
                 is_date = True
 
+            # first check for invalid types (non date/datetime)
             if (not is_datetime) and (not (not datetime_only and is_date)):
                 msg = f"{self.classname()}: {col} type should be in {type_msg} but got {schema[col]}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones()"
                 raise TypeError(msg)
@@ -137,6 +148,7 @@ class BaseGenericDateTransformer(
         present_types = list(present_types)
         present_types.sort()
 
+        # next check for consistent types (all date or all datetime)
         if not valid_types or len(present_types) > 1:
             msg = rf"{self.classname()}: Columns fed to datetime transformers should be {type_msg} and have consistent types, but found {present_types}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones(). Please use ToDatetimeTransformer to standardise."
             raise TypeError(
