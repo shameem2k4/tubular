@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 import warnings
-import zoneinfo
 from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import narwhals as nw
@@ -25,15 +24,6 @@ if TYPE_CHECKING:
     from narhwals.typing import FrameT
 
 TIME_UNITS = ["us", "ns", "ms"]
-TIME_ZONES = zoneinfo.available_timezones().union({None})
-
-DATETIME_VARIANTS = [
-    nw.Datetime(time_unit=time_unit, time_zone=time_zone)
-    for time_unit in TIME_UNITS
-    for time_zone in TIME_ZONES
-    # exclude problem/generic timezones
-    if time_zone not in ["Factory", "localtime"]
-]
 
 
 class BaseGenericDateTransformer(
@@ -119,7 +109,7 @@ class BaseGenericDateTransformer(
 
         type_msg = ["Datetime"]
         date_type = nw.Date
-        allowed_types = [*DATETIME_VARIANTS]
+        allowed_types = [nw.Datetime]
         if not datetime_only:
             allowed_types = [*allowed_types, date_type]
             type_msg += ["Date"]
@@ -129,7 +119,7 @@ class BaseGenericDateTransformer(
         for col in self.columns:
             is_datetime = False
             is_date = False
-            if schema[col] in DATETIME_VARIANTS:
+            if isinstance(schema[col], nw.Datetime):
                 is_datetime = True
 
             elif schema[col] == nw.Date:
@@ -140,7 +130,11 @@ class BaseGenericDateTransformer(
                 msg = f"{self.classname()}: {col} type should be in {type_msg} but got {schema[col]}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones()"
                 raise TypeError(msg)
 
-        present_types = set(schema.values())
+        # process datetime types for more readable error messages
+        present_types = {
+            dtype if not isinstance(dtype, nw.Datetime) else nw.Datetime
+            for dtype in schema.values()
+        }
 
         valid_types = present_types.issubset(set(allowed_types))
         # convert to list and sort to ensure reproducible order

@@ -113,9 +113,7 @@ class GenericDatesMixinTransformTests:
             return
 
         present_types = (
-            {nw.Datetime(time_unit="ns", time_zone="UTC"), nw.Date()}
-            if datetime_col == 0
-            else {nw.Date(), nw.Datetime(time_unit="ns", time_zone="UTC")}
+            {nw.Datetime, nw.Date()} if datetime_col == 0 else {nw.Date(), nw.Datetime}
         )
         # convert to list and sort to ensure reproducible order
         present_types = {str(value) for value in present_types}
