@@ -353,14 +353,13 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         self.unseen_levels_to_rare = unseen_levels_to_rare
 
-    @beartype
-    def _check_str_like_columns(self, X: DataFrame, schema: nw.Schema) -> None:
+    def _check_str_like_columns(self, schema: nw.Schema) -> None:
         """check that transformer being called on only str-like columns
 
         Parameters
         ----------
-        X : pd/pl.DataFrame
-            Data to transform
+        schema: nw.Schema
+            schema of input data
 
         """
 
@@ -451,7 +450,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         schema = X.schema
 
-        self._check_str_like_columns(X, schema)
+        self._check_str_like_columns(schema)
 
         self._check_for_nulls(X)
 
@@ -536,7 +535,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         schema = X.schema
 
-        self._check_str_like_columns(X, schema)
+        self._check_str_like_columns(schema)
 
         self._check_for_nulls(X)
 
