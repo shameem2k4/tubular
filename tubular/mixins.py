@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
 import narwhals.selectors as ncs
-import numpy as np
 from beartype import beartype
 
 from tubular._utils import _convert_dataframe_to_narwhals
@@ -178,30 +177,37 @@ class WeightColumnMixin:
             msg = f"{self.classname()}: weight column must be numeric."
             raise ValueError(msg)
 
+        expr_min = nw.col(weights_column).min().alias("min")
+        expr_null = nw.col(weights_column).is_null().sum().alias("null_count")
+        expr_nan = nw.col(weights_column).is_nan().sum().alias("nan_count")
+        expr_finite = (nw.col(weights_column).is_finite()).all().alias("all_finite")
+        expr_sum = nw.col(weights_column).sum().alias("sum")
+
+        checks = X.select(expr_min, expr_null, expr_nan, expr_finite, expr_sum)
+        min_val, null_count, nan_count, all_finite, sum_val = checks.row(0)
+
         # check weight is positive
-        if X.select(nw.col(weights_column).min()).item() < 0:
+        if min_val < 0:
             msg = f"{self.classname()}: weight column must be positive"
             raise ValueError(msg)
 
         if (
             # check weight non-None
-            (X.select(nw.col(weights_column).is_null().sum()).item() != 0)
+            null_count != 0
             or
-            # TODO - update this section with narwhals is_nan method once this becomes
-            # available
             # check weight non-NaN - polars differentiates between None and NaN
-            (np.isnan(X.get_column(weights_column).to_numpy()).sum() != 0)
+            nan_count != 0
         ):
             msg = f"{self.classname()}: weight column must be non-null"
             raise ValueError(msg)
 
         # check weight not inf
-        if not X.select((nw.col(weights_column).is_finite()).all()).item():
+        if not all_finite:
             msg = f"{self.classname()}: weight column must not contain infinite values."
             raise ValueError(msg)
 
-        # check weight not all 0
-        if X.select(nw.col(weights_column).sum()).item() == 0:
+        # # check weight not all 0
+        if sum_val == 0:
             msg = f"{self.classname()}: total sample weights are not greater than 0"
             raise ValueError(msg)
 
