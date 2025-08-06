@@ -1257,9 +1257,7 @@ class TestTransform(GenericTransformTests):
         )
 
         x.mappings = base_mapping_transformer.mappings
-        x.mappings_to_null = base_mapping_transformer.mappings_to_null
         x.mappings_from_null = base_mapping_transformer.mappings_from_null
-        x.value_casts = base_mapping_transformer.value_casts
 
         x.column_to_encoded_columns = column_to_encoded_columns
         x.response_levels = level
@@ -1380,7 +1378,7 @@ class TestTransform(GenericTransformTests):
 
         with pytest.raises(
             ValueError,
-            match="MeanResponseTransformer: nulls would be introduced into column b from levels not present in mapping",
+            match="MeanResponseTransformer: nulls would be introduced into columns b from levels not present in mapping",
         ):
             x.transform(df)
 
