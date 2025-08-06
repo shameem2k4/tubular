@@ -4,6 +4,7 @@ import narwhals as nw
 import pandas as pd
 import polars as pl
 import pytest
+from dateutil.tz import gettz
 
 import tests.test_data as d
 from tests.base_tests import (
@@ -18,7 +19,7 @@ from tests.dates.test_BaseGenericDateTransformer import (
     GenericDatesMixinTransformTests,
     create_date_diff_different_dtypes,
 )
-from tests.utils import assert_frame_equal_dispatch
+from tests.utils import assert_frame_equal_dispatch, dataframe_init_dispatch
 from tubular.dates import TIME_UNITS, BetweenDatesTransformer
 
 
@@ -416,6 +417,66 @@ class TestTransform(
         present_types = list(present_types)
         present_types.sort()
         msg = f"Columns fed to datetime transformers should be ['Datetime', 'Date'] and have consistent types, but found {present_types}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones(). Please use ToDatetimeTransformer to standardise."
+
+        with pytest.raises(
+            TypeError,
+        ) as exc_info:
+            transformer.transform(df)
+
+        assert msg in str(exc_info.value)
+
+    @pytest.mark.parametrize("library", ["pandas"])
+    @pytest.mark.parametrize(
+        "bad_timezone",
+        [
+            "Factory",
+            "localtime",
+        ],
+    )
+    def test_bad_timezones_error(
+        self,
+        bad_timezone,
+        uninitialized_transformers,
+        minimal_attribute_dict,
+        library,
+    ):
+        """Test that transform raises an error if
+        datetime columns have non-accepted timezones
+
+        Note:
+        - polars outright rejects these at df init, so nothing to test
+        - pandas accepts these, but narwhals processes into Unknown type,
+        so this still goes through our usual bad dtype error handling
+        """
+        args = minimal_attribute_dict[self.transformer_name].copy()
+        args["columns"] = ["a", "b", "c"]
+
+        transformer = uninitialized_transformers[self.transformer_name](
+            **args,
+        )
+
+        df_dict = {
+            "a": [
+                datetime.datetime(1993, 9, 27, tzinfo=gettz(bad_timezone)),
+                datetime.datetime(2000, 3, 19, tzinfo=gettz(bad_timezone)),
+            ],
+            "b": [
+                datetime.datetime(1993, 9, 27, tzinfo=gettz("UTC")),
+                datetime.datetime(2000, 3, 19, tzinfo=gettz("UTC")),
+            ],
+            "c": [
+                datetime.datetime(1993, 9, 27, tzinfo=gettz("UTC")),
+                datetime.datetime(2000, 3, 19, tzinfo=gettz("UTC")),
+            ],
+        }
+
+        df = dataframe_init_dispatch(dataframe_dict=df_dict, library=library)
+
+        # if transformer is not yet polars compatible, skip this test
+        if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
+            return
+
+        msg = "a type should be in ['Datetime', 'Date'] but got Unknown. Note, Datetime columns should have time_unit in ['us', 'ns', 'ms'] and time_zones from zoneinfo.available_timezones()"
 
         with pytest.raises(
             TypeError,
