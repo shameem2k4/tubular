@@ -1129,6 +1129,7 @@ class MeanResponseTransformer(
             X,
             self.drop_original,
             columns_to_drop,
+            return_native=False
         )
 
         return _return_narwhals_or_native_dataframe(X, self.return_native)
