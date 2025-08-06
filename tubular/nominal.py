@@ -1090,7 +1090,7 @@ class MeanResponseTransformer(
             # temp overwrite columns attr so that check_mappable_rows runs safely
             original_columns = self.columns
             self.columns = self.encoded_columns
-            X = nw.from_native(super().transform(X))  # , return_native_override=False)
+            X = super().transform(X, return_native_override=False)
             self.columns = original_columns
 
         # BaseTransformer.transform as we do not want to run check_mappable_rows in BaseNominalTransformer
@@ -1101,10 +1101,10 @@ class MeanResponseTransformer(
         # (they will be filled later)
         transform_dict = {
             new_col: nw.when(
-                nw.col(col).is_in(self.mappings[new_col].keys()),
+                nw.col(new_col).is_in(self.mappings[new_col].keys()),
             )
             .then(
-                self.mappings[col],
+                nw.lit(self.mappings[col]),
             )
             .otherwise(
                 None
@@ -1112,7 +1112,7 @@ class MeanResponseTransformer(
                 else self.unseen_levels_encoding_dict[new_col],
             )
             .alias(new_col)
-            for col in self.columns
+            for col in self.encoded_columns
             for new_col in self.column_to_encoded_columns[col]
         }
 
