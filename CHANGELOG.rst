@@ -30,6 +30,7 @@ Changed
 - feat: added 'return_native' argument to BaseTransfomer to control whether native or narwhals types are returned, and limit type changes. Idea is for this to be rolled out across transformers.
 - feat: made creation of copies in BaseTransfomer optional, and default to False.
 - feat: optimisations for MappingTransformer and BaseMappingTransformerMixin
+- feat: optimisations to BaseDatetimeTransformer, BaseDateTransformer, DateDifferenceTransformer, DropOriginalMixin
 - feat: optimisation changes to BaseNominalTransformer, reduced select being called many times, added 'return_native_override' argument.
 - placeholder
 
