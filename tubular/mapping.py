@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from beartype import beartype
+from narwhals.typing import IntoDType  # noqa: TCH002
 
 from tubular._utils import (
     _convert_dataframe_to_narwhals,
@@ -171,6 +172,81 @@ class BaseMappingTransformMixin(BaseTransformer):
 
     polars_compatible = True
 
+    def _create_mapping_conditions_and_outcomes(
+        self,
+        col: str,
+        key: str,
+        mappings: dict[str, dict[str, Union[int, str, bool, float]]],
+        dtype: Optional[IntoDType] = None,
+    ) -> tuple[nw.Expr, nw.Expr]:
+        """Applies the mapping defined in the mappings dict to each column in the columns
+        attribute.
+
+        Parameters
+        ----------
+        col : str
+            column to be mapped
+
+        key: str
+            mapping key (value in column) to prepare condition/outcome pair for
+
+        mappings: dict[str, dict[str,Union[int, str, bool, float]]]
+            mappings  for column
+
+        dtype: Optional[nw.IntoDType]
+            dtype for values being mapped to. Generally narwhals will just infer this, but
+            has some issues with categorical variables so can be necessary to cast to string
+            for these (and then cast back after mapping).
+
+        Returns
+        -------
+        Tuple[nw.Expr, nw.Expr]: prepared pair of mapping condition/outcome
+        """
+
+        return (
+            (
+                nw.col(col) == key,
+                nw.lit(mappings[col][key]),
+            )
+            if dtype is None
+            else (
+                nw.col(col) == key,
+                nw.lit(mappings[col][key], dtype=dtype),
+            )
+        )
+
+    def _combine_mappings_into_expression(
+        self,
+        col: str,
+        conditions_and_outcomes: list[tuple[nw.Expr, nw.Expr]],
+    ) -> nw.Expr:
+        """combines mapping conditions/outcomes into one expr for given column
+
+        Parameters
+        ----------
+        col : str
+            column to prepare mappings for
+
+        conditions_and_outcomes: List[Tuple[nw.Expr, nw.Expr]]
+            list of paired conditions/outcomes to be used in mapping expression
+
+        Returns
+        -------
+        nw.Expr: prepared mapping expression
+
+        """
+
+        return reduce(
+            lambda expr, condition_and_outcome: nw.when(condition_and_outcome[0])
+            .then(condition_and_outcome[1])
+            .otherwise(expr),
+            conditions_and_outcomes[col][1:],  # start reduce logic after first entry
+            nw.when(conditions_and_outcomes[col][0][0])
+            .then(conditions_and_outcomes[col][0][1])
+            .otherwise(nw.col(col))
+            .alias(col),
+        )
+
     @beartype
     def transform(
         self,
@@ -215,14 +291,13 @@ class BaseMappingTransformMixin(BaseTransformer):
         # set up list of paired condition/outcome tuples for mapping
         conditions_and_outcomes = {
             col: [
-                (
-                    nw.col(col) == key,
-                    nw.lit(self.mappings[col][key]),
-                )
+                self._create_mapping_conditions_and_outcomes(col, key, self.mappings)
                 if not column_is_categorical[col]
-                else (
-                    nw.col(col) == key,
-                    nw.lit(self.mappings[col][key], dtype=nw.String),
+                else self._create_mapping_conditions_and_outcomes(
+                    col,
+                    key,
+                    self.mappings,
+                    nw.String,
                 )
                 for key in self.mappings[col]
                 # nulls handled separately with fill_null call
@@ -233,18 +308,7 @@ class BaseMappingTransformMixin(BaseTransformer):
 
         # apply mapping using functools reduce to build expression
         transform_expressions = {
-            col: reduce(
-                lambda expr, condition_and_outcome: nw.when(condition_and_outcome[0])
-                .then(condition_and_outcome[1])
-                .otherwise(expr),
-                conditions_and_outcomes[col][
-                    1:
-                ],  # start reduce logic after first entry
-                nw.when(conditions_and_outcomes[col][0][0])
-                .then(conditions_and_outcomes[col][0][1])
-                .otherwise(nw.col(col))
-                .alias(col),
-            )
+            col: self._combine_mappings_into_expression(col, conditions_and_outcomes)
             for col in self.mappings
         }
 
