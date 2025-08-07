@@ -174,17 +174,18 @@ class BaseMappingTransformMixin(BaseTransformer):
 
     def _create_mapping_conditions_and_outcomes(
         self,
-        col: str,
+        input_col: str,
         key: str,
         mappings: dict[str, dict[str, Union[int, str, bool, float]]],
         dtype: Optional[IntoDType] = None,
+        output_col: Optional[str] = None,
     ) -> tuple[nw.Expr, nw.Expr]:
         """Applies the mapping defined in the mappings dict to each column in the columns
         attribute.
 
         Parameters
         ----------
-        col : str
+        input_col : str
             column to be mapped
 
         key: str
@@ -198,37 +199,47 @@ class BaseMappingTransformMixin(BaseTransformer):
             has some issues with categorical variables so can be necessary to cast to string
             for these (and then cast back after mapping).
 
+        output_col : Optional[str]
+            name of output column, which will be present in mappings.
+            If none then defaults to input_col.
+
         Returns
         -------
         Tuple[nw.Expr, nw.Expr]: prepared pair of mapping condition/outcome
         """
+        if output_col is None:
+            output_col = input_col
 
         return (
             (
-                nw.col(col) == key,
-                nw.lit(mappings[col][key]),
+                nw.col(input_col) == key,
+                nw.lit(mappings[output_col][key]),
             )
             if dtype is None
             else (
-                nw.col(col) == key,
-                nw.lit(mappings[col][key], dtype=dtype),
+                nw.col(input_col) == key,
+                nw.lit(mappings[output_col][key], dtype=dtype),
             )
         )
 
     def _combine_mappings_into_expression(
         self,
-        col: str,
+        input_col: str,
         conditions_and_outcomes: list[tuple[nw.Expr, nw.Expr]],
+        output_col: Optional[str] = None,
     ) -> nw.Expr:
         """combines mapping conditions/outcomes into one expr for given column
 
         Parameters
         ----------
-        col : str
+        input_col : str
             column to prepare mappings for
 
         conditions_and_outcomes: List[Tuple[nw.Expr, nw.Expr]]
             list of paired conditions/outcomes to be used in mapping expression
+
+        output_col : Optional[str]
+            name of column to output in expression. If none then defaults to input_col.
 
         Returns
         -------
@@ -236,15 +247,20 @@ class BaseMappingTransformMixin(BaseTransformer):
 
         """
 
+        if output_col is None:
+            output_col = input_col
+
         return reduce(
             lambda expr, condition_and_outcome: nw.when(condition_and_outcome[0])
             .then(condition_and_outcome[1])
             .otherwise(expr),
-            conditions_and_outcomes[col][1:],  # start reduce logic after first entry
-            nw.when(conditions_and_outcomes[col][0][0])
-            .then(conditions_and_outcomes[col][0][1])
-            .otherwise(nw.col(col))
-            .alias(col),
+            conditions_and_outcomes[output_col][
+                1:
+            ],  # start reduce logic after first entry
+            nw.when(conditions_and_outcomes[output_col][0][0])
+            .then(conditions_and_outcomes[output_col][0][1])
+            .otherwise(nw.col(input_col))
+            .alias(output_col),
         )
 
     @beartype

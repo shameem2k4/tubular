@@ -1086,38 +1086,73 @@ class MeanResponseTransformer(
         if self.unseen_level_handling:
             # do not want to run check_mappable_rows in this case, as will not like unseen values
             self.check_is_fitted(["unseen_levels_encoding_dict"])
+
+            # BaseTransformer.transform as we do not want to run check_mappable_rows in BaseNominalTransformer
+            # (it causes complications with unseen levels and new cols, so run later)
+            X = BaseTransformer.transform(self, X, return_native_override=False)
+
         else:
-            # temp overwrite columns attr so that check_mappable_rows runs safely
-            original_columns = self.columns
-            self.columns = self.encoded_columns
+            # mappings might look like {'a_blue': {'a': 1, 'b': 2,...}}
+            # what we want to check is whether the values of a are covered
+            # by the mappings, so temp change the mappings dict to focus on
+            # the original columns and set back to original value after
+            original_mappings = self.mappings
+            self.mappings = {
+                col: self.mappings[self.column_to_encoded_columns[col][0]]
+                for col in self.columns
+            }
             X = super().transform(X, return_native_override=False)
-            self.columns = original_columns
+            self.mappings = original_mappings
 
-        # BaseTransformer.transform as we do not want to run check_mappable_rows in BaseNominalTransformer
-        # (it causes complications with unseen levels and new cols, so run later)
-        X = BaseTransformer.transform(self, X, return_native_override=False)
+        # set up list of paired condition/outcome tuples for mapping
+        conditions_and_outcomes = {
+            output_col: [
+                self._create_mapping_conditions_and_outcomes(
+                    input_col,
+                    key,
+                    self.mappings,
+                    output_col=output_col,
+                )
+                for key in self.mappings[output_col]
+            ]
+            for input_col in self.columns
+            for output_col in self.column_to_encoded_columns[input_col]
+        }
 
-        # create new columns, replacing unseen values with None
-        # (they will be filled later)
-        transform_dict = {
-            new_col: nw.when(
-                nw.col(new_col).is_in(self.mappings[new_col].keys()),
+        if self.unseen_level_handling:
+            unseen_level_condition_and_outcomes = {
+                output_col: (
+                    ~nw.col(input_col).is_in(self.mappings[output_col].keys()),
+                    (nw.lit(self.unseen_levels_encoding_dict[output_col])),
+                )
+                for input_col in self.columns
+                for output_col in self.column_to_encoded_columns[input_col]
+            }
+
+            conditions_and_outcomes = {
+                col: conditions_and_outcomes[col]
+                + [unseen_level_condition_and_outcomes[col]]
+                for col in self.encoded_columns
+            }
+
+        # apply mapping using functools reduce to build expression
+        transform_expressions = {
+            output_col: self._combine_mappings_into_expression(
+                input_col,
+                conditions_and_outcomes,
+                output_col,
             )
-            .then(
-                nw.lit(self.mappings[col]),
-            )
-            .otherwise(
-                None
-                if not self.unseen_level_handling
-                else self.unseen_levels_encoding_dict[new_col],
-            )
-            .alias(new_col)
+            for input_col in self.columns
+            for output_col in self.column_to_encoded_columns[input_col]
+        }
+
+        transform_expressions = {
+            col: transform_expressions[col].cast(getattr(nw, self.return_dtypes[col]))
             for col in self.encoded_columns
-            for new_col in self.column_to_encoded_columns[col]
         }
 
         X = X.with_columns(
-            **transform_dict,
+            **transform_expressions,
         )
 
         columns_to_drop = [
@@ -1129,7 +1164,7 @@ class MeanResponseTransformer(
             X,
             self.drop_original,
             columns_to_drop,
-            return_native=False
+            return_native=False,
         )
 
         return _return_narwhals_or_native_dataframe(X, self.return_native)
