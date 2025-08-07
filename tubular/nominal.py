@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Literal, Optional, Union
 import narwhals as nw
 import numpy as np
 from beartype import beartype
+from narwhals.dtypes import DType  # noqa: F401
 
 from tubular._utils import (
     _convert_dataframe_to_narwhals,
@@ -353,6 +354,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         self.unseen_levels_to_rare = unseen_levels_to_rare
 
+    @beartype
     def _check_str_like_columns(self, schema: nw.Schema) -> None:
         """check that transformer being called on only str-like columns
 
