@@ -30,8 +30,11 @@ Changed
 - feat: added 'return_native' argument to BaseTransfomer to control whether native or narwhals types are returned, and limit type changes. Idea is for this to be rolled out across transformers.
 - feat: made creation of copies in BaseTransfomer optional, and default to False.
 - feat: optimisation changes to BaseNominalTransformer, reduced select being called many times, added 'return_native_override' argument. `#450 <https://github.com/azukds/tubular/issues/450>_``
-- chore: turned off beartype for private GroupRareLevelsTransformer method in order to uncap narwhals `#455 <https://github.com/azukds/tubular/issues/455>`
+- chore: import narwhals.typing.DType for Github in order to uncap narwhals `#455 <https://github.com/azukds/tubular/issues/455>`
 - feat: optimisation changes for GroupRareLevelsTransformer `#446 <https://github.com/azukds/tubular/issues/446>_`
+- feat: optimisations to BaseDatetimeTransformer, BaseDateTransformer, DateDifferenceTransformer, DropOriginalMixin
+- feat: optimisation changes to BaseNominalTransformer, reduced select being called many times, added 'return_native_override' argument.
+- feat: optimisation chnages to BaseCappingTransformer, added 'return_native_override' argument to BaseCappingTransformer and BaseNumericTransformer.
 - placeholder
 - placeholder
 
