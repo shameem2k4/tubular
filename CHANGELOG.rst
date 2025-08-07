@@ -31,7 +31,7 @@ Changed
 - feat: made creation of copies in BaseTransfomer optional, and default to False.
 - feat: optimisations to BaseDatetimeTransformer, BaseDateTransformer, DateDifferenceTransformer, DropOriginalMixin
 - feat: optimisation changes to BaseNominalTransformer, reduced select being called many times, added 'return_native_override' argument.
-- placeholder
+- feat: optimisation chnages to BaseCappingTransformer, added 'return_native_override' argument to BaseCappingTransformer and BaseNumericTransformer.
 
 1.4.4 (24/06/2025)
 ------------------
