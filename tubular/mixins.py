@@ -7,11 +7,16 @@ import narwhals.selectors as ncs
 import numpy as np
 from beartype import beartype
 
-from tubular._utils import _convert_dataframe_to_narwhals
-from tubular.types import DataFrame
+from tubular._utils import (
+    _convert_dataframe_to_narwhals,
+    _return_narwhals_or_native_dataframe,
+)
+from tubular.types import NumericTypes
 
 if TYPE_CHECKING:
     from narhwals.typing import FrameT
+
+from tubular.types import DataFrame
 
 
 class CheckNumericMixin:
@@ -25,8 +30,12 @@ class CheckNumericMixin:
 
         return type(self).__name__
 
-    @nw.narwhalify
-    def check_numeric_columns(self, X: FrameT) -> FrameT:
+    @beartype
+    def check_numeric_columns(
+        self,
+        X: DataFrame,
+        return_native: bool = True,
+    ) -> DataFrame:
         """Helper function for checking column args are numeric for numeric transformers.
 
         Args:
@@ -34,16 +43,21 @@ class CheckNumericMixin:
             X: Data containing columns to check.
 
         """
-        non_numeric_columns = list(
-            set(self.columns).difference(set(X.select(ncs.numeric()).columns)),
-        )
+
+        X = _convert_dataframe_to_narwhals(X)
+        schema = X.schema
+
+        non_numeric_columns = [
+            col for col in self.columns if schema[col] not in NumericTypes
+        ]
+
         # sort as set ordering can be inconsistent
         non_numeric_columns.sort()
         if len(non_numeric_columns) > 0:
             msg = f"{self.classname()}: The following columns are not numeric in X; {non_numeric_columns}"
             raise TypeError(msg)
 
-        return X
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class DropOriginalMixin:
