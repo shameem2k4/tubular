@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
 import narwhals.selectors as ncs
@@ -88,13 +88,14 @@ class DropOriginalMixin:
 
         self.drop_original = drop_original
 
-    @nw.narwhalify
+    @beartype
     def drop_original_column(
         self,
-        X: FrameT,
+        X: DataFrame,
         drop_original: bool,
-        columns: list[str] | str | None,
-    ) -> FrameT:
+        columns: Optional[Union[list[str], str]],
+        return_native: bool = True,
+    ) -> DataFrame:
         """Method for dropping input columns from X if drop_original set to True.
 
         Parameters
@@ -108,6 +109,9 @@ class DropOriginalMixin:
         columns: list[str] | str |  None
             Object containing columns to drop
 
+        return_native: bool
+            controls whether mixin returns native or narwhals type
+
         Returns
         -------
         X : pd/pl.DataFrame
@@ -115,10 +119,12 @@ class DropOriginalMixin:
 
         """
 
+        X = _convert_dataframe_to_narwhals(X)
+
         if drop_original:
             X = X.drop(columns)
 
-        return X
+        return X.to_native() if return_native else X
 
 
 class NewColumnNameMixin:
