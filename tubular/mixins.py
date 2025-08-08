@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
+from narwhals.dtypes import DType # noqa: F401 - required for nw.Schema see #455
 import narwhals.selectors as ncs
 from beartype import beartype
 
