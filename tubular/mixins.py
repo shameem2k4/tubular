@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
-from narwhals.dtypes import DType # noqa: F401 - required for nw.Schema see #455
 import narwhals.selectors as ncs
 from beartype import beartype
+from narwhals.dtypes import DType  # noqa: F401 - required for nw.Schema see #455
 
 from tubular._utils import _convert_dataframe_to_narwhals
 from tubular.types import DataFrame
