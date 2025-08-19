@@ -16,7 +16,17 @@ Subsections for each version can be one of the following;
 
 Each individual change should have a link to the pull request after the description of the change.
 
-1.4.5 (unreleased))
+1.4.6 (19/08/2025)
+------------------
+
+Changed
+^^^^^^^
+
+- feat: optimisations for MappingTransformer and BaseMappingTransformerMixin
+- placeholder
+- placeholder
+
+1.4.5 (19/08/2025)
 ------------------
 
 Changed
@@ -24,14 +34,20 @@ Changed
 - bugfix: updated env to make package importable, added basic test for this
 - feat: added BaseAggregationTransformer and AggregateRowOverColumnsTransformer classes in new aggregations module
 - narwhalified DatetimeSinusoidCalculator '#425 <https://github.com/azukds/tubular/issues/425>_' 
-- Added deprecated warning for DateDiffLeapYearTransformer `#244 <https://github.com/azukds/tubular/issues/244>`
+- Added deprecated warning for DateDiffLeapYearTransformer `#244 <https://github.com/azukds/tubular/issues/244>_`
 - Added new units 'week', 'fornight', 'lunar_month', 'common_year' and 'custom_days' to DateDifferenceTransformer. The time component will be truncated for these units and for unit 'D'.
-- feat: optimisation changes to BaseTransfomer and imputers file. Edited to reduce number of copies and type changes from to/from_native calls, and select/with_columns being called many times.
+- feat: optimisation changes to BaseTransfomer and imputers file. Edited to reduce number of copies and type changes from to/from_native calls, and select/with_columns being called many times. `#444 <https://github.com/azukds/tubular/issues/444>_`
 - feat: added 'return_native' argument to BaseTransfomer to control whether native or narwhals types are returned, and limit type changes. Idea is for this to be rolled out across transformers.
 - feat: made creation of copies in BaseTransfomer optional, and default to False.
-- feat: optimisations for MappingTransformer and BaseMappingTransformerMixin
+- feat: optimisations to BaseDatetimeTransformer, BaseDateTransformer, DateDifferenceTransformer, DropOriginalMixin, CheckNumericMixin
+- feat: optimisation changes to BaseNominalTransformer, reduced select being called many times, added 'return_native_override' argument. `#450 <https://github.com/azukds/tubular/issues/450>_``
+- chore: import narwhals.typing.DType for Github in order to uncap narwhals `#455 <https://github.com/azukds/tubular/issues/455>`
+- feat: optimisation changes for GroupRareLevelsTransformer `#446 <https://github.com/azukds/tubular/issues/446>_`
+- feat: optimisations to BaseDatetimeTransformer, BaseDateTransformer, DateDifferenceTransformer, DropOriginalMixin
 - feat: optimisation changes to BaseNominalTransformer, reduced select being called many times, added 'return_native_override' argument.
-- placeholder
+- feat: optimisation changes to WeightColumnMixin, combined all weight checks into a single .select call and used narhwals is_nan
+- feat: optimisation chnages to BaseCappingTransformer, added 'return_native_override' argument to BaseCappingTransformer and BaseNumericTransformer.
+- bugfix: make datetime transformers perform checks on only relevant columns
 
 1.4.4 (24/06/2025)
 ------------------
