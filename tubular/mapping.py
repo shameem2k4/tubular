@@ -172,8 +172,8 @@ class BaseMappingTransformMixin(BaseTransformer):
 
     polars_compatible = True
 
+    @staticmethod
     def _create_mapping_conditions_and_outcomes(
-        self,
         col: str,
         key: str,
         mappings: dict[str, dict[str, Union[int, str, bool, float]]],
@@ -215,8 +215,8 @@ class BaseMappingTransformMixin(BaseTransformer):
             )
         )
 
+    @staticmethod
     def _combine_mappings_into_expression(
-        self,
         col: str,
         conditions_and_outcomes: dict[str, tuple[nw.Expr, nw.Expr]],
     ) -> nw.Expr:
