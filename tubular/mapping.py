@@ -218,7 +218,7 @@ class BaseMappingTransformMixin(BaseTransformer):
     def _combine_mappings_into_expression(
         self,
         col: str,
-        conditions_and_outcomes: list[tuple[nw.Expr, nw.Expr]],
+        conditions_and_outcomes: dict[str, tuple[nw.Expr, nw.Expr]],
     ) -> nw.Expr:
         """combines mapping conditions/outcomes into one expr for given column
 
