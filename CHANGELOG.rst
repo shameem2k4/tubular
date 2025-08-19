@@ -16,7 +16,17 @@ Subsections for each version can be one of the following;
 
 Each individual change should have a link to the pull request after the description of the change.
 
-1.4.5 (unreleased))
+1.4.6 (19/08/2025)
+------------------
+
+Changed
+^^^^^^^
+
+- feat: optimisations for MappingTransformer and BaseMappingTransformerMixin
+- placeholder
+- placeholder
+
+1.4.5 (19/08/2025)
 ------------------
 
 Changed
