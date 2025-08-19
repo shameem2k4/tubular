@@ -236,6 +236,11 @@ class BaseMappingTransformMixin(BaseTransformer):
 
         """
 
+        # chain together list of conditions/outcomes
+        # e.g. [(condition1, outcome1), (condition2, outcome2)]
+        # nw.when(condition2).then(outcome2).otherwise(
+        # nw.when(condition1).then(outcome1).otherwise(nw.col(col))
+        # )
         return reduce(
             lambda expr, condition_and_outcome: nw.when(condition_and_outcome[0])
             .then(condition_and_outcome[1])
