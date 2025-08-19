@@ -37,6 +37,7 @@ Changed
 - feat: optimisation changes to BaseNominalTransformer, reduced select being called many times, added 'return_native_override' argument.
 - feat: optimisation changes to WeightColumnMixin, combined all weight checks into a single .select call and used narhwals is_nan
 - feat: optimisation chnages to BaseCappingTransformer, added 'return_native_override' argument to BaseCappingTransformer and BaseNumericTransformer.
+- bugfix: make datetime transformers perform checks on only relevant columns
 
 1.4.4 (24/06/2025)
 ------------------

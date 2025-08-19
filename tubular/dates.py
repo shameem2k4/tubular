@@ -133,7 +133,8 @@ class BaseGenericDateTransformer(
         # process datetime types for more readable error messages
         present_types = {
             dtype if not isinstance(dtype, nw.Datetime) else nw.Datetime
-            for dtype in schema.values()
+            for name, dtype in schema.items()
+            if name in self.columns
         }
 
         valid_types = present_types.issubset(set(allowed_types))
