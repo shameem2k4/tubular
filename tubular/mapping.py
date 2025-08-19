@@ -358,8 +358,9 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
     map it to itself. This is because it uses the pandas replace method which only replaces values
     which have a corresponding mapping.
 
-    This transformer inherits from BaseMappingTransformMixin as well as the BaseMappingTransformer
-    in order to access the pd.Series.replace transform function.
+    This transformer inherits from BaseMappingTransformMixin as well as the BaseMappingTransformer,
+    BaseMappingTransformer performs standard checks, while BasemappingTransformMixin handles the
+    actual logic.
 
     Parameters
     ----------
