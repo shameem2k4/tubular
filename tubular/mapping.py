@@ -45,6 +45,10 @@ class BaseMappingTransformer(BaseTransformer):
         Dictionary of mappings for each column individually. The dict passed to mappings in
         init is set to the mappings attribute.
 
+    mappings_from_null: dict[str, Any]
+        dict storing what null values will be mapped to. Generally best to use an imputer,
+        but this functionality is useful for inverting pipelines.
+
     return_dtypes: dict[str, RETURN_DTYPES]
         Dictionary of col:dtype for returned columns
 
@@ -386,6 +390,10 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
     mappings : dict
         Dictionary of mappings for each column individually. The dict passed to mappings in
         init is set to the mappings attribute.
+
+    mappings_from_null: dict[str, Any]
+        dict storing what null values will be mapped to. Generally best to use an imputer,
+        but this functionality is useful for inverting pipelines.
 
     return_dtypes: dict[str, RETURN_DTYPES]
         Dictionary of col:dtype for returned columns
