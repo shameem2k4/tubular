@@ -120,7 +120,7 @@ List of contributors
 
 For the full list of contributors see the `contributors page <https://github.com/azukds/tubular/graphs/contributors>`_.
 
-Prior to the open source release of the package there have been contributions from many individuals in the LV GI Data Science team;
+Prior to the open source release of the package there have been contributions from many individuals in the LV= GI (before becoming part of Allianz Personal) Data Science team:
 
 - Richard Angell
 - Ned Webster
