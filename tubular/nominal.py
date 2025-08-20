@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import copy
 import warnings
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 import narwhals as nw
 import numpy as np
@@ -42,9 +42,22 @@ class BaseNominalTransformer(BaseTransformer):
     FITS = False
 
     @beartype
-    def check_mappable_rows(self, X: DataFrame) -> None:
+    def check_mappable_rows(
+        self,
+        X: DataFrame,
+        present_values: Optional[dict[str, set[Any]]] = None,
+    ) -> None:
         """Method to check that all the rows to apply the transformer to are able to be
         mapped according to the values in the mappings dict.
+
+        Parameters
+        ----------
+        X : DataFrame
+            Data to apply nominal transformations to.
+
+        present_values: Optional[dict[str, set[Any]]]
+            optionally provide dictionary of values present in data by column. Avoided recalculating
+            specifically for validation checks.
 
         Raises
         ------
@@ -56,18 +69,26 @@ class BaseNominalTransformer(BaseTransformer):
         self.check_is_fitted(["mappings"])
 
         X = _convert_dataframe_to_narwhals(X)
-        mappable_rows_expr = {
-            col: nw.col(col).is_in(list(self.mappings[col])).sum()
+
+        if present_values is None:
+            present_values = {
+                col: set(X.get_column(col).unique())
+                for col in self.column_to_encoded_columns
+                for col in self.columns
+            }
+
+        value_diffs = {
+            col: set(present_values[col]).difference(set(self.mappings[col]))
             for col in self.columns
         }
-        mappable_rows = X.select(**mappable_rows_expr)
 
-        mappable_rows_count = [
-            col for col in self.columns if mappable_rows[col].item() < len(X)
-        ]
+        raise_error = any(len(value_diffs[col]) != 0 for col in self.columns)
 
-        if mappable_rows_count:
-            msg = f"{self.classname()}: nulls would be introduced into columns {', '.join(mappable_rows_count)} from levels not present in mapping"
+        if raise_error:
+            columns_with_unmappable_rows = [
+                col for col in self.columns if len(value_diffs[col]) != 0
+            ]
+            msg = f"{self.classname()}: nulls would be introduced into columns {', '.join(columns_with_unmappable_rows)} from levels not present in mapping"
             raise ValueError(msg)
 
     @beartype
@@ -75,6 +96,7 @@ class BaseNominalTransformer(BaseTransformer):
         self,
         X: DataFrame,
         return_native_override: Optional[bool] = None,
+        present_values: Optional[dict[str, set[Any]]] = None,
     ) -> DataFrame:
         """Base nominal transformer transform method.  Checks that all the rows are able to be
         mapped according to the values in the mappings dict and calls the BaseTransformer transform method.
@@ -84,9 +106,13 @@ class BaseNominalTransformer(BaseTransformer):
         X : DataFrame
             Data to apply nominal transformations to.
 
-        return_native_override: Optional[bool]=None
-            Option to override return_native attr in transformer, useful when calling parent
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
             methods
+
+        present_values: Optional[dict[str, set[Any]]]
+            optionally provide dictionary of values present in data by column. Avoided recalculating
+            specifically for validation checks.
 
         Returns
         -------
@@ -95,12 +121,12 @@ class BaseNominalTransformer(BaseTransformer):
 
         """
 
-        # specify which class to prevent additional inheritance calls
         return_native = self._process_return_native(return_native_override)
 
+        # specify which class to prevent additional inheritance calls
         X = BaseTransformer.transform(self, X, return_native_override=False)
 
-        self.check_mappable_rows(X)
+        self.check_mappable_rows(X, present_values)
 
         return _return_narwhals_or_native_dataframe(X, return_native)
 
@@ -1082,6 +1108,11 @@ class MeanResponseTransformer(
 
         X = _convert_dataframe_to_narwhals(X)
 
+        present_values = {
+            col: set(X.get_column(col).unique())
+            for col in self.column_to_encoded_columns
+        }
+
         # with columns created, can now run parent transforms
         if self.unseen_level_handling:
             # do not want to run check_mappable_rows in this case, as will not like unseen values
@@ -1101,7 +1132,11 @@ class MeanResponseTransformer(
                 col: self.mappings[self.column_to_encoded_columns[col][0]]
                 for col in self.columns
             }
-            X = super().transform(X, return_native_override=False)
+            X = super().transform(
+                X,
+                return_native_override=False,
+                present_values=present_values,
+            )
             self.mappings = original_mappings
 
         # set up list of paired condition/outcome tuples for mapping
@@ -1114,6 +1149,7 @@ class MeanResponseTransformer(
                     output_col=output_col,
                 )
                 for key in self.mappings[output_col]
+                if key in present_values[input_col]
             ]
             for input_col in self.columns
             for output_col in self.column_to_encoded_columns[input_col]

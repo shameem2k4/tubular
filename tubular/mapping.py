@@ -250,18 +250,34 @@ class BaseMappingTransformMixin(BaseTransformer):
         if output_col is None:
             output_col = input_col
 
-        return reduce(
-            lambda expr, condition_and_outcome: nw.when(condition_and_outcome[0])
-            .then(condition_and_outcome[1])
-            .otherwise(expr),
-            conditions_and_outcomes[output_col][
-                1:
-            ],  # start reduce logic after first entry
+        if len(conditions_and_outcomes[output_col]) == 0:
+            return nw.col(input_col)
+
+        initial_condition = (
             nw.when(conditions_and_outcomes[output_col][0][0])
             .then(conditions_and_outcomes[output_col][0][1])
             .otherwise(nw.col(input_col))
-            .alias(output_col),
+            .alias(output_col)
         )
+
+        # chain together list of conditions/outcomes
+        # e.g. [(condition1, outcome1), (condition2, outcome2)]
+        # nw.when(condition2).then(outcome2).otherwise(
+        # nw.when(condition1).then(outcome1).otherwise(nw.col(col))
+        # )
+        if len(conditions_and_outcomes[output_col]) > 1:
+            return reduce(
+                lambda expr, condition_and_outcome: nw.when(condition_and_outcome[0])
+                .then(condition_and_outcome[1])
+                .otherwise(expr),
+                conditions_and_outcomes[output_col][
+                    1:
+                ],  # start reduce logic after first entry
+                initial_condition,
+            )
+
+        # if only one condition, just return this
+        return initial_condition
 
     @beartype
     def transform(
@@ -304,6 +320,8 @@ class BaseMappingTransformMixin(BaseTransformer):
             col: bool(schema[col] in [nw.Categorical, nw.Enum]) for col in self.mappings
         }
 
+        present_values = {col: set(X.get_column(col).unique()) for col in self.mappings}
+
         # set up list of paired condition/outcome tuples for mapping
         conditions_and_outcomes = {
             col: [
@@ -317,7 +335,7 @@ class BaseMappingTransformMixin(BaseTransformer):
                 )
                 for key in self.mappings[col]
                 # nulls handled separately with fill_null call
-                if not pd.isna(key)
+                if ((not pd.isna(key)) and (key in present_values[col]))
             ]
             for col in self.mappings
         }
