@@ -1408,8 +1408,8 @@ class OneHotEncodingTransformer(
         self.set_drop_original_column(drop_original)
         self.check_and_set_separator_column(separator)
 
-    @nw.narwhalify
-    def fit(self, X: FrameT, y: nw.Series | None = None) -> FrameT:
+    @beartype
+    def fit(self, X: DataFrame, y: nw.Series | None = None) -> DataFrame:
         """Gets list of levels for each column to be transformed. This defines which dummy columns
         will be created in transform.
 
@@ -1422,6 +1422,9 @@ class OneHotEncodingTransformer(
             Ignored. This parameter exists only for compatibility with sklearn.pipeline.Pipeline.
 
         """
+        X = _convert_dataframe_to_narwhals(X)
+        y = _convert_series_to_narwhals(y)
+        
         BaseTransformer.fit(self, X=X, y=y)
 
         # Check for nulls
@@ -1475,6 +1478,7 @@ class OneHotEncodingTransformer(
 
         return self
 
+    @beartype
     def _warn_missing_levels(
         self,
         present_levels: list,
@@ -1506,7 +1510,8 @@ class OneHotEncodingTransformer(
             warnings.warn(warning_msg, UserWarning, stacklevel=2)
 
         return missing_levels
-
+    
+    @beartype
     def _get_feature_names(
         self,
         column: str,
@@ -1524,14 +1529,18 @@ class OneHotEncodingTransformer(
             column + self.separator + str(level) for level in self.categories_[column]
         ]
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> FrameT:
+    @beartype
+    def transform(self, X: DataFrame, return_native_override: Optional[bool] = None,) -> DataFrame:
         """Create new dummy columns from categorical fields.
 
         Parameters
         ----------
         X : pd/pl.DataFrame
             Data to apply one hot encoding to.
+
+        return_native_override: Optional[bool]
+        option to override return_native attr in transformer, useful when calling parent
+        methods
 
         Returns
         -------
@@ -1541,11 +1550,14 @@ class OneHotEncodingTransformer(
             the output X.
 
         """
+        return_native = self._process_return_native(return_native_override)
 
         # Check that transformer has been fit before calling transform
         self.check_is_fitted(["categories_"])
 
-        X = nw.from_native(BaseTransformer.transform(self, X))
+        X = _convert_dataframe_to_narwhals(X)
+        X = BaseTransformer.transform(self, X, return_native_override=False)
+
 
         missing_levels = {}
         for c in self.columns:
@@ -1583,9 +1595,11 @@ class OneHotEncodingTransformer(
             X = nw.concat([X, dummies.select(wanted_dummies)], how="horizontal")
 
         # Drop original columns if self.drop_original is True
-        return DropOriginalMixin.drop_original_column(
+        X = DropOriginalMixin.drop_original_column(
             self,
             X,
             self.drop_original,
             self.columns,
         )
+
+        return _return_narwhals_or_native_dataframe(X, return_native)
