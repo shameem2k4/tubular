@@ -1424,7 +1424,7 @@ class OneHotEncodingTransformer(
         """
         X = _convert_dataframe_to_narwhals(X)
         y = _convert_series_to_narwhals(y)
-        
+
         BaseTransformer.fit(self, X=X, y=y)
 
         # Check for nulls
@@ -1510,7 +1510,7 @@ class OneHotEncodingTransformer(
             warnings.warn(warning_msg, UserWarning, stacklevel=2)
 
         return missing_levels
-    
+
     @beartype
     def _get_feature_names(
         self,
@@ -1530,7 +1530,11 @@ class OneHotEncodingTransformer(
         ]
 
     @beartype
-    def transform(self, X: DataFrame, return_native_override: Optional[bool] = None,) -> DataFrame:
+    def transform(
+        self,
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Create new dummy columns from categorical fields.
 
         Parameters
@@ -1557,7 +1561,6 @@ class OneHotEncodingTransformer(
 
         X = _convert_dataframe_to_narwhals(X)
         X = BaseTransformer.transform(self, X, return_native_override=False)
-
 
         missing_levels = {}
         for c in self.columns:
