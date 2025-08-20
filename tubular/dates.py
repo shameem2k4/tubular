@@ -1454,8 +1454,12 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             )
             raise ValueError(msg)
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> FrameT:
+    @beartype
+    def transform(
+        self,
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Transform - creates column containing sine or cosine of another datetime column.
 
         Which function is used is stored in the self.method attribute.
@@ -1465,13 +1469,21 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
         X : pd/pl.DataFrame
             Data to transform.
 
+        return_native_override: Optional[bool]
+            Option to override return_native attr in transformer, useful when calling parent
+            methods
+
         Returns
         -------
         X : pd/pl.DataFrame
             Input X with additional columns added, these are named "<method>_<original_column>"
         """
-        X = nw.from_native(super().transform(X))
+        X = _convert_dataframe_to_narwhals(X)
+        return_native = self._process_return_native(return_native_override)
 
+        X = super().transform(X, return_native_override=False)
+
+        exprs = {}
         for column in self.columns:
             if not isinstance(self.units, dict):
                 column_in_desired_unit = getattr(X[column].dt, self.units)()
@@ -1488,7 +1500,7 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
                 new_column_name = f"{method}_{desired_period}_{desired_units}_{column}"
 
                 # Calculate the sine or cosine of the column in the desired unit
-                X = X.with_columns(
+                expr = (
                     nw.col(column)
                     .map_batches(
                         lambda *_,
@@ -1499,13 +1511,17 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
                         ),
                         return_dtype=nw.Float64,
                     )
-                    .alias(new_column_name),
+                    .alias(new_column_name)
                 )
+                exprs[new_column_name] = expr
 
+        X = X.with_columns(**exprs)
         # Drop original columns if self.drop_original is True
-        return DropOriginalMixin.drop_original_column(
+        X = DropOriginalMixin.drop_original_column(
             self,
             X,
             self.drop_original,
             self.columns,
+            return_native=False,
         )
+        return _return_narwhals_or_native_dataframe(X, return_native)
