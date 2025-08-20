@@ -1509,6 +1509,42 @@ class OneHotEncodingTransformer(
         ]
 
     @beartype
+    def _check_for_nulls(self, X: DataFrame) -> None:
+        """check that transformer being called on only non-null columns.
+
+        Note, found including nulls to be quite complicated due to:
+        - categorical variables make use of NaN not None
+        - pl/nw categorical variables do not allow categories to be edited,
+        so adjusting requires converting to str as interim step
+        - NaNs are converted to nan, introducing complications
+
+        As this transformer is generally used post imputation, elected to remove null
+        functionality.
+
+        Parameters
+        ----------
+        X : pd/pl.DataFrame
+            Data to transform
+
+        """
+
+        X = _convert_dataframe_to_narwhals(X)
+
+        null_check_expressions = {
+            col: nw.col(col).is_null().sum().alias(col) for col in self.columns
+        }
+
+        null_counts = X.select(**null_check_expressions)
+
+        columns_with_nulls = [
+            col for col in self.columns if null_counts[col].item() > 0
+        ]
+
+        if columns_with_nulls:
+            msg = f"{self.classname()}: transformer can only fit/apply on columns without nulls, columns {', '.join(columns_with_nulls)} need to be imputed first"
+            raise ValueError(msg)
+
+    @beartype
     def transform(
         self,
         X: DataFrame,
@@ -1541,15 +1577,10 @@ class OneHotEncodingTransformer(
         X = _convert_dataframe_to_narwhals(X)
         X = BaseTransformer.transform(self, X, return_native_override=False)
 
+        self._check_for_nulls(X)
+
         missing_levels = {}
         for c in self.columns:
-            # Check for nulls
-            if X.select(nw.col(c).is_null().sum()).item() > 0:
-                raise ValueError(
-                    f"{self.classname()}: column %s has nulls - replace before proceeding"
-                    % c,
-                )
-
             # print warning for unseen levels
             present_levels = set(X.get_column(c).unique().to_list())
             unseen_levels = present_levels.difference(set(self.categories_[c]))
