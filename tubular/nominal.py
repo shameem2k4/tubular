@@ -73,9 +73,7 @@ class BaseNominalTransformer(BaseTransformer):
 
         if present_values is None:
             present_values = {
-                col: set(X.get_column(col).unique())
-                for col in self.column_to_encoded_columns
-                for col in self.columns
+                col: set(X.get_column(col).unique()) for col in self.columns
             }
 
         value_diffs = {
@@ -1109,10 +1107,7 @@ class MeanResponseTransformer(
 
         X = _convert_dataframe_to_narwhals(X)
 
-        present_values = {
-            col: set(X.get_column(col).unique())
-            for col in self.column_to_encoded_columns
-        }
+        present_values = {col: set(X.get_column(col).unique()) for col in self.columns}
 
         # with columns created, can now run parent transforms
         if self.unseen_level_handling:
