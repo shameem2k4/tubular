@@ -18,13 +18,13 @@ dynamic = ["version"]
 dependencies = [
     "pandas>=1.5.0",
     "scikit-learn>=1.2.0",
-    "narwhals < 2.0.0",
+    "narwhals >= 1.31.0",
     "polars < 1.32.0",
     "beartype >= 0.19.0",
     "typing-extensions>=4.5.0",
 ]
 requires-python = ">=3.9"
-authors = [{ name = "LV GI Data Science Team", email="#DataSciencePackages@lv.co.uk"}]
+authors = [{ name = "Allianz UK Data Science Team", email="datasciencepackages@allianz.co.uk"}]
 description = "Package to perform pre processing steps for machine learning models"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = {file = "LICENSE"}
@@ -52,9 +52,9 @@ dev = [
 
 [project.urls]
 Documentation = "https://tubular.readthedocs.io/en/latest/index.html"
-Repository = "https://github.com/lvgig/tubular"
-Issues = "https://github.com/lvgig/tubular/issues"
-Changelog = "https://github.com/lvgig/tubular/CHANGELOG.md"
+Repository = "https://github.com/azukds/tubular"
+Issues = "https://github.com/azukds/tubular/issues"
+Changelog = "https://github.com/azukds/tubular/CHANGELOG.md"
 
 [tool.ruff]
 # Same as Black.

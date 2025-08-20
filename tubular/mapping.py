@@ -45,6 +45,10 @@ class BaseMappingTransformer(BaseTransformer):
         Dictionary of mappings for each column individually. The dict passed to mappings in
         init is set to the mappings attribute.
 
+    mappings_from_null: dict[str, Any]
+        dict storing what null values will be mapped to. Generally best to use an imputer,
+        but this functionality is useful for inverting pipelines.
+
     return_dtypes: dict[str, RETURN_DTYPES]
         Dictionary of col:dtype for returned columns
 
@@ -172,8 +176,8 @@ class BaseMappingTransformMixin(BaseTransformer):
 
     polars_compatible = True
 
+    @staticmethod
     def _create_mapping_conditions_and_outcomes(
-        self,
         input_col: str,
         key: str,
         mappings: dict[str, dict[str, Union[int, str, bool, float]]],
@@ -222,10 +226,10 @@ class BaseMappingTransformMixin(BaseTransformer):
             )
         )
 
+    @staticmethod
     def _combine_mappings_into_expression(
-        self,
         input_col: str,
-        conditions_and_outcomes: list[tuple[nw.Expr, nw.Expr]],
+        conditions_and_outcomes: dict[str, tuple[nw.Expr, nw.Expr]],
         output_col: Optional[str] = None,
     ) -> nw.Expr:
         """combines mapping conditions/outcomes into one expr for given column
@@ -260,12 +264,12 @@ class BaseMappingTransformMixin(BaseTransformer):
             .alias(output_col)
         )
 
-        # chain together list of conditions/outcomes
-        # e.g. [(condition1, outcome1), (condition2, outcome2)]
-        # nw.when(condition2).then(outcome2).otherwise(
-        # nw.when(condition1).then(outcome1).otherwise(nw.col(col))
-        # )
         if len(conditions_and_outcomes[output_col]) > 1:
+            # chain together list of conditions/outcomes
+            # e.g. [(condition1, outcome1), (condition2, outcome2)]
+            # nw.when(condition2).then(outcome2).otherwise(
+            # nw.when(condition1).then(outcome1).otherwise(nw.col(col))
+            # )
             return reduce(
                 lambda expr, condition_and_outcome: nw.when(condition_and_outcome[0])
                 .then(condition_and_outcome[1])
@@ -392,8 +396,9 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
     map it to itself. This is because it uses the pandas replace method which only replaces values
     which have a corresponding mapping.
 
-    This transformer inherits from BaseMappingTransformMixin as well as the BaseMappingTransformer
-    in order to access the pd.Series.replace transform function.
+    This transformer inherits from BaseMappingTransformMixin as well as the BaseMappingTransformer,
+    BaseMappingTransformer performs standard checks, while BasemappingTransformMixin handles the
+    actual logic.
 
     Parameters
     ----------
@@ -414,6 +419,10 @@ class MappingTransformer(BaseMappingTransformer, BaseMappingTransformMixin):
     mappings : dict
         Dictionary of mappings for each column individually. The dict passed to mappings in
         init is set to the mappings attribute.
+
+    mappings_from_null: dict[str, Any]
+        dict storing what null values will be mapped to. Generally best to use an imputer,
+        but this functionality is useful for inverting pipelines.
 
     return_dtypes: dict[str, RETURN_DTYPES]
         Dictionary of col:dtype for returned columns
