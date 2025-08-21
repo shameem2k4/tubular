@@ -16,6 +16,15 @@ Subsections for each version can be one of the following;
 
 Each individual change should have a link to the pull request after the description of the change.
 
+1.4.7 (unreleased)
+
+Changed
+^^^^^^^
+
+- feat: narwhalified DatetimeInfoExtractor `#378 <https://github.com/azukds/tubular/issues/378>_`
+- placeholder 
+- placeholder
+
 1.4.6 (19/08/2025)
 ------------------
 
@@ -31,7 +40,6 @@ Changed
 
 Changed
 ^^^^^^^
-- narwhalified DatetimeInfoExtractor `#378 <https://github.com/azukds/tubular/issues/378>_`
 - bugfix: updated env to make package importable, added basic test for this
 - feat: added BaseAggregationTransformer and AggregateRowOverColumnsTransformer classes in new aggregations module
 - narwhalified DatetimeSinusoidCalculator '#425 <https://github.com/azukds/tubular/issues/425>_' 
