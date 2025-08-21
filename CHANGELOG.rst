@@ -34,7 +34,6 @@ Changed
 
 - feat: optimisations for MappingTransformer and BaseMappingTransformerMixin
 
-
 1.4.5 (19/08/2025)
 ------------------
 
