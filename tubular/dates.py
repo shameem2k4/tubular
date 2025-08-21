@@ -1487,10 +1487,8 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
         exprs = {}
         for column in self.columns:
             if not isinstance(self.units, dict):
-                column_in_desired_unit = getattr(X[column].dt, self.units)()
                 desired_units = self.units
             elif isinstance(self.units, dict):
-                column_in_desired_unit = getattr(X[column].dt, self.units[column])()
                 desired_units = self.units[column]
             if not isinstance(self.period, dict):
                 desired_period = self.period
@@ -1501,19 +1499,27 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
                 new_column_name = f"{method}_{desired_period}_{desired_units}_{column}"
 
                 # Calculate the sine or cosine of the column in the desired unit
+                expr = getattr(
+                    nw.col(column).dt,
+                    desired_units,
+                )() * (2 * np.pi / desired_period)
+
                 expr = (
-                    nw.col(column)
-                    .map_batches(
-                        lambda *_,
-                        method=method,
-                        column_in_desired_unit=column_in_desired_unit,
-                        desired_period=desired_period: getattr(np, method)(
-                            column_in_desired_unit * (2.0 * np.pi / desired_period),
+                    expr.map_batches(
+                        lambda s: np.sin(
+                            s.to_numpy(),
                         ),
                         return_dtype=nw.Float64,
                     )
-                    .alias(new_column_name)
+                    if method == "sin"
+                    else expr.map_batches(
+                        lambda s: np.cos(
+                            s.to_numpy(),
+                        ),
+                        return_dtype=nw.Float64,
+                    )
                 )
+                expr = expr.alias(new_column_name)
                 exprs[new_column_name] = expr
 
         X = X.with_columns(**exprs)
