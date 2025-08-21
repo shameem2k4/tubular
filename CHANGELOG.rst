@@ -37,7 +37,7 @@ Changed
 - feat: optimisation changes to BaseNominalTransformer, reduced select being called many times, added 'return_native_override' argument.
 - feat: optimisation changes to WeightColumnMixin, combined all weight checks into a single .select call and used narhwals is_nan
 - feat: optimisation chnages to BaseCappingTransformer, added 'return_native_override' argument to BaseCappingTransformer and BaseNumericTransformer.
-- feat: optimisation chnages to DatetimeSinusoidCalculator, added 'return_native_override' argument to DatetimeSinusoidCalculator, reduced with_columns being called many times. https://github.com/azukds/tubular/issues/465
+
 1.4.4 (24/06/2025)
 ------------------
 
