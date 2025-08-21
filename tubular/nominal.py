@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import copy
 import warnings
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 import narwhals as nw
 import numpy as np
@@ -43,9 +43,22 @@ class BaseNominalTransformer(BaseTransformer):
     FITS = False
 
     @beartype
-    def check_mappable_rows(self, X: DataFrame) -> None:
+    def check_mappable_rows(
+        self,
+        X: DataFrame,
+        present_values: Optional[dict[str, set[Any]]] = None,
+    ) -> None:
         """Method to check that all the rows to apply the transformer to are able to be
         mapped according to the values in the mappings dict.
+
+        Parameters
+        ----------
+        X : DataFrame
+            Data to apply nominal transformations to.
+
+        present_values: Optional[dict[str, set[Any]]]
+            optionally provide dictionary of values present in data by column. Avoided recalculating
+            specifically for validation checks.
 
         Raises
         ------
@@ -57,18 +70,24 @@ class BaseNominalTransformer(BaseTransformer):
         self.check_is_fitted(["mappings"])
 
         X = _convert_dataframe_to_narwhals(X)
-        mappable_rows_expr = {
-            col: nw.col(col).is_in(list(self.mappings[col])).sum()
+
+        if present_values is None:
+            present_values = {
+                col: set(X.get_column(col).unique()) for col in self.columns
+            }
+
+        value_diffs = {
+            col: set(present_values[col]).difference(set(self.mappings[col]))
             for col in self.columns
         }
-        mappable_rows = X.select(**mappable_rows_expr)
 
-        mappable_rows_count = [
-            col for col in self.columns if mappable_rows[col].item() < len(X)
-        ]
+        raise_error = any(len(value_diffs[col]) != 0 for col in self.columns)
 
-        if mappable_rows_count:
-            msg = f"{self.classname()}: nulls would be introduced into columns {', '.join(mappable_rows_count)} from levels not present in mapping"
+        if raise_error:
+            columns_with_unmappable_rows = [
+                col for col in self.columns if len(value_diffs[col]) != 0
+            ]
+            msg = f"{self.classname()}: nulls would be introduced into columns {', '.join(columns_with_unmappable_rows)} from levels not present in mapping"
             raise ValueError(msg)
 
     @beartype
@@ -76,6 +95,7 @@ class BaseNominalTransformer(BaseTransformer):
         self,
         X: DataFrame,
         return_native_override: Optional[bool] = None,
+        present_values: Optional[dict[str, set[Any]]] = None,
     ) -> DataFrame:
         """Base nominal transformer transform method.  Checks that all the rows are able to be
         mapped according to the values in the mappings dict and calls the BaseTransformer transform method.
@@ -85,9 +105,13 @@ class BaseNominalTransformer(BaseTransformer):
         X : DataFrame
             Data to apply nominal transformations to.
 
-        return_native_override: Optional[bool]=None
-            Option to override return_native attr in transformer, useful when calling parent
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
             methods
+
+        present_values: Optional[dict[str, set[Any]]]
+            optionally provide dictionary of values present in data by column. Avoided recalculating
+            specifically for validation checks.
 
         Returns
         -------
@@ -96,12 +120,12 @@ class BaseNominalTransformer(BaseTransformer):
 
         """
 
-        # specify which class to prevent additional inheritance calls
         return_native = self._process_return_native(return_native_override)
 
+        # specify which class to prevent additional inheritance calls
         X = BaseTransformer.transform(self, X, return_native_override=False)
 
-        self.check_mappable_rows(X)
+        self.check_mappable_rows(X, present_values)
 
         return _return_narwhals_or_native_dataframe(X, return_native)
 
@@ -200,7 +224,7 @@ class NominalToIntegerTransformer(BaseNominalTransformer, BaseMappingTransformMi
         )
 
         self.mappings = base_mapping_transformer.mappings
-        self.null_mappings = base_mapping_transformer.null_mappings
+        self.mappings_from_null = base_mapping_transformer.mappings_from_null
         self.return_dtypes = base_mapping_transformer.return_dtypes
 
         return self
@@ -972,7 +996,7 @@ class MeanResponseTransformer(
         )
 
         self.mappings = base_mapping_transformer.mappings
-        self.null_mappings = base_mapping_transformer.null_mappings
+        self.mappings_from_null = base_mapping_transformer.mappings_from_null
         self.return_dtypes = base_mapping_transformer.return_dtypes
 
         self._fit_unseen_level_handling_dict(X_y, weights_column)
@@ -1055,8 +1079,8 @@ class MeanResponseTransformer(
                     self.unseen_levels_encoding_dict[c],
                 )
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> FrameT:
+    @beartype
+    def transform(self, X: DataFrame) -> DataFrame:
         """Transform method to apply mean response encoding stored in the mappings attribute to
         each column in the columns attribute.
 
@@ -1081,64 +1105,101 @@ class MeanResponseTransformer(
 
         self.check_is_fitted(["mappings", "return_dtypes"])
 
-        # BaseTransformer.transform as we do not want to run check_mappable_rows in BaseNominalTransformer
-        # (it causes complications with unseen levels and new cols, so run later)
-        X = nw.from_native(BaseTransformer.transform(self, X))
+        X = _convert_dataframe_to_narwhals(X)
 
-        # create new columns, replacing unseen values with None
-        # (they will be filled later)
-        X = X.with_columns(
-            nw.when(
-                nw.col(old_column).is_in(self.mappings[new_column].keys()),
-            )
-            .then(
-                nw.col(old_column),
-            )
-            .otherwise(
-                None,
-            )
-            .alias(new_column)
-            for old_column in self.columns
-            for new_column in self.column_to_encoded_columns[old_column]
-        )
+        present_values = {col: set(X.get_column(col).unique()) for col in self.columns}
 
         # with columns created, can now run parent transforms
         if self.unseen_level_handling:
             # do not want to run check_mappable_rows in this case, as will not like unseen values
             self.check_is_fitted(["unseen_levels_encoding_dict"])
-        else:
-            # temp overwrite columns attr so that check_mappable_rows runs safely
-            original_columns = self.columns
-            self.columns = self.encoded_columns
-            X = nw.from_native(super().transform(X))
-            self.columns = original_columns
 
-        # next apply mappings
-        X = nw.from_native(BaseMappingTransformMixin.transform(self, X))
+            # BaseTransformer.transform as we do not want to run check_mappable_rows in BaseNominalTransformer
+            # (it causes complications with unseen levels and new cols, so run later)
+            X = BaseTransformer.transform(self, X, return_native_override=False)
+
+        else:
+            # mappings might look like {'a_blue': {'a': 1, 'b': 2,...}}
+            # what we want to check is whether the values of a are covered
+            # by the mappings, so temp change the mappings dict to focus on
+            # the original columns and set back to original value after
+            original_mappings = self.mappings
+            self.mappings = {
+                col: self.mappings[self.column_to_encoded_columns[col][0]]
+                for col in self.columns
+            }
+            X = super().transform(
+                X,
+                return_native_override=False,
+                present_values=present_values,
+            )
+            self.mappings = original_mappings
+
+        # set up list of paired condition/outcome tuples for mapping
+        conditions_and_outcomes = {
+            output_col: [
+                self._create_mapping_conditions_and_outcomes(
+                    input_col,
+                    key,
+                    self.mappings,
+                    output_col=output_col,
+                )
+                for key in self.mappings[output_col]
+                if key in present_values[input_col]
+            ]
+            for input_col in self.columns
+            for output_col in self.column_to_encoded_columns[input_col]
+        }
 
         if self.unseen_level_handling:
-            for old_col in self.columns:
-                X = X.with_columns(
-                    nw.when(
-                        nw.col(new_col).is_in(list(self.mappings[new_col].values())),
-                    )
-                    .then(
-                        nw.col(new_col),
-                    )
-                    .otherwise(self.unseen_levels_encoding_dict[new_col])
-                    for new_col in self.column_to_encoded_columns[old_col]
+            unseen_level_condition_and_outcomes = {
+                output_col: (
+                    ~nw.col(input_col).is_in(self.mappings[output_col].keys()),
+                    (nw.lit(self.unseen_levels_encoding_dict[output_col])),
                 )
+                for input_col in self.columns
+                for output_col in self.column_to_encoded_columns[input_col]
+            }
+
+            conditions_and_outcomes = {
+                col: conditions_and_outcomes[col]
+                + [unseen_level_condition_and_outcomes[col]]
+                for col in self.encoded_columns
+            }
+
+        # apply mapping using functools reduce to build expression
+        transform_expressions = {
+            output_col: self._combine_mappings_into_expression(
+                input_col,
+                conditions_and_outcomes,
+                output_col,
+            )
+            for input_col in self.columns
+            for output_col in self.column_to_encoded_columns[input_col]
+        }
+
+        transform_expressions = {
+            col: transform_expressions[col].cast(getattr(nw, self.return_dtypes[col]))
+            for col in self.encoded_columns
+        }
+
+        X = X.with_columns(
+            **transform_expressions,
+        )
 
         columns_to_drop = [
             col for col in self.columns if col not in self.encoded_columns
         ]
 
-        return DropOriginalMixin.drop_original_column(
+        X = DropOriginalMixin.drop_original_column(
             self,
             X,
             self.drop_original,
             columns_to_drop,
+            return_native=False,
         )
+
+        return _return_narwhals_or_native_dataframe(X, self.return_native)
 
 
 class OrdinalEncoderTransformer(
@@ -1286,7 +1347,7 @@ class OrdinalEncoderTransformer(
         )
 
         self.mappings = base_mapping_transformer.mappings
-        self.null_mappings = base_mapping_transformer.null_mappings
+        self.mappings_from_null = base_mapping_transformer.mappings_from_null
         self.return_dtypes = base_mapping_transformer.return_dtypes
 
         return self
