@@ -5,34 +5,29 @@ from __future__ import annotations
 import copy
 import datetime
 import warnings
-import zoneinfo
 from enum import Enum
-from typing import TYPE_CHECKING, Annotated, Optional, Union
+from typing import TYPE_CHECKING, Annotated, Literal, Optional, Union
 
 import narwhals as nw
-import narwhals.selectors as ncs
 import numpy as np
 import pandas as pd
 from beartype import beartype
 from beartype.vale import Is
+from typing_extensions import deprecated
 
+from tubular._utils import (
+    _convert_dataframe_to_narwhals,
+    _return_narwhals_or_native_dataframe,
+)
 from tubular.base import BaseTransformer
 from tubular.mapping import MappingTransformer
 from tubular.mixins import DropOriginalMixin, NewColumnNameMixin, TwoColumnMixin
+from tubular.types import DataFrame
 
 if TYPE_CHECKING:
     from narhwals.typing import FrameT
 
 TIME_UNITS = ["us", "ns", "ms"]
-TIME_ZONES = zoneinfo.available_timezones().union({None})
-
-DATETIME_VARIANTS = [
-    nw.Datetime(time_unit=time_unit, time_zone=time_zone)
-    for time_unit in TIME_UNITS
-    for time_zone in TIME_ZONES
-    # exclude problem/generic timezones
-    if time_zone not in ["Factory", "localtime"]
-]
 
 
 class BaseGenericDateTransformer(
@@ -54,6 +49,9 @@ class BaseGenericDateTransformer(
     drop_original : bool
         Flag for whether to drop the original columns.
 
+    return_native: bool, default = True
+        Controls whether transformer returns narwhals or native pandas/polars type
+
     **kwargs
         Arbitrary keyword arguments passed onto BaseTransformer.init method.
 
@@ -62,6 +60,9 @@ class BaseGenericDateTransformer(
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    return_native: bool, default = True
+        Controls whether transformer returns narwhals or native pandas/polars type
 
     """
 
@@ -79,13 +80,15 @@ class BaseGenericDateTransformer(
         self.set_drop_original_column(drop_original)
         self.check_and_set_new_column_name(new_column_name)
 
-    @nw.narwhalify
+    @beartype
     def check_columns_are_date_or_datetime(
         self,
-        X: FrameT,
+        X: DataFrame,
         datetime_only: bool,
     ) -> None:
-        """Raise a type error if a column to be operated on is not a datetime.datetime or datetime.date object
+        """Checks the schema of the DataFrame to ensure that each column listed in
+        self.columns is either a datetime or date type, depending on the datetime_only
+        flag. If a column does not meet the expected type criteria, a TypeError is raised.
 
         Parameters
         ----------
@@ -96,49 +99,68 @@ class BaseGenericDateTransformer(
         datetime_only: bool
             Indicates whether ONLY datetime types are accepted
 
+        Raises
+        ----------
+
+        TypeError: if non date/datetime types are found
+
+        TypeError: if mismatched date/datetime types are found,
+        types should be consistent
+
         """
 
-        type_dict = {}
+        X = _convert_dataframe_to_narwhals(X)
+
         type_msg = ["Datetime"]
         date_type = nw.Date
-        allowed_types = [*DATETIME_VARIANTS]
+        allowed_types = [nw.Datetime]
         if not datetime_only:
             allowed_types = [*allowed_types, date_type]
             type_msg += ["Date"]
 
-        date_columns = list(
-            X.select(ncs.by_dtype(nw.Date)).columns,
-        )
-
-        datetime_columns = list(
-            X.select(ncs.by_dtype(*DATETIME_VARIANTS)).columns,
-        )
+        schema = X.schema
 
         for col in self.columns:
-            type_dict[col] = X.get_column(col).dtype
-            is_datetime = col in datetime_columns
-            is_date = col in date_columns
+            is_datetime = False
+            is_date = False
+            if isinstance(schema[col], nw.Datetime):
+                is_datetime = True
 
-            if not is_datetime and not (is_date and not datetime_only):
-                msg = f"{self.classname()}: {col} type should be in {type_msg} but got {type_dict[col]}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones()"
+            elif schema[col] == nw.Date:
+                is_date = True
+
+            # first check for invalid types (non date/datetime)
+            if (not is_datetime) and (not (not datetime_only and is_date)):
+                msg = f"{self.classname()}: {col} type should be in {type_msg} but got {schema[col]}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones()"
                 raise TypeError(msg)
 
-        present_types = set(type_dict.values())
+        # process datetime types for more readable error messages
+        present_types = {
+            dtype if not isinstance(dtype, nw.Datetime) else nw.Datetime
+            for name, dtype in schema.items()
+            if name in self.columns
+        }
 
         valid_types = present_types.issubset(set(allowed_types))
+        # convert to list and sort to ensure reproducible order
+        present_types = {str(value) for value in present_types}
+        present_types = list(present_types)
+        present_types.sort()
 
+        # next check for consistent types (all date or all datetime)
         if not valid_types or len(present_types) > 1:
             msg = rf"{self.classname()}: Columns fed to datetime transformers should be {type_msg} and have consistent types, but found {present_types}. Note, Datetime columns should have time_unit in {TIME_UNITS} and time_zones from zoneinfo.available_timezones(). Please use ToDatetimeTransformer to standardise."
             raise TypeError(
                 msg,
             )
 
-    @nw.narwhalify
+    @beartype
     def transform(
         self,
-        X: FrameT,
+        X: DataFrame,
         datetime_only: bool = False,
-    ) -> FrameT:
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Base transform method, calls parent transform and validates data.
 
         Parameters
@@ -149,6 +171,10 @@ class BaseGenericDateTransformer(
         datetime_only: bool
             Indicates whether ONLY datetime types are accepted
 
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
+            methods
+
         Returns
         -------
         X : pd/pl.DataFrame
@@ -156,11 +182,15 @@ class BaseGenericDateTransformer(
 
         """
 
-        X = nw.from_native(super().transform(X))
+        return_native = self._process_return_native(return_native_override)
+
+        X = super().transform(X, return_native_override=False)
+
+        X = _convert_dataframe_to_narwhals(X)
 
         self.check_columns_are_date_or_datetime(X, datetime_only=datetime_only)
 
-        return X
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class BaseDatetimeTransformer(BaseGenericDateTransformer):
@@ -204,17 +234,22 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
             **kwargs,
         )
 
-    @nw.narwhalify
+    @beartype
     def transform(
         self,
-        X: FrameT,
-    ) -> FrameT:
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """base transform method for transformers that operate exclusively on datetime columns
 
         Parameters
         ----------
         X : pd/pl.DataFrame
             Data containing self.columns
+
+        return_native_override: Optional[bool]
+            option to override return_native attr in transformer, useful when calling parent
+            methods
 
         Returns
         -------
@@ -223,7 +258,13 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
 
         """
 
-        return super().transform(X, datetime_only=True)
+        return_native = self._process_return_native(return_native_override)
+
+        X = _convert_dataframe_to_narwhals(X)
+
+        X = super().transform(X, datetime_only=True, return_native_override=False)
+
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class BaseDateTwoColumnTransformer(
@@ -275,8 +316,16 @@ class BaseDateTwoColumnTransformer(
         self.check_two_columns(columns)
 
 
+@deprecated(
+    "This Transformer is deprecated, use DateDifferenceTransformer instead. "
+    "If you prefer this transformer to DateDifferenceTransformer, "
+    "let us know through a github issue",
+)
 class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
     """Transformer to calculate the number of years between two dates.
+
+    !!! warning "Deprecated"
+        This transformer is now deprecated; use `DateDifferenceTransformer` instead.
 
     Parameters
     ----------
@@ -396,7 +445,7 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
             X = X.with_columns(
                 nw.when(
                     (nw.col(self.columns[0]).is_null())
-                    or (nw.col(self.columns[1]).is_null()),
+                    | (nw.col(self.columns[1]).is_null()),
                 )
                 .then(
                     self.missing_replacement,
@@ -428,14 +477,15 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         Name given to calculated datediff column. If None then {column_upper}_{column_lower}_datediff_{units}
         will be used.
     units : str, default = 'D'
-        Numpy datetime units, accepted values are 'D', 'h', 'm', 's'
-    copy : bool, default = True
+        Accepted values are "week", "fortnight", "lunar_month", "common_year", "custom_days", 'D', 'h', 'm', 's'
+    copy : bool, default = False
         Should X be copied prior to transform? Copy argument no longer used and will be deprecated in a future release
     verbose: bool, default = False
         Control level of detail in printouts
     drop_original:
         Boolean flag indicating whether to drop original columns.
-
+    custom_days_divider:
+        Integer value for the "custom_days" unit
     Attributes
     ----------
 
@@ -449,13 +499,29 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         self,
         columns: list[str],
         new_column_name: str | None = None,
-        units: str = "D",
-        copy: bool | None = None,
+        units: Literal[
+            "week",
+            "fortnight",
+            "lunar_month",
+            "common_year",
+            "custom_days",
+            "D",
+            "h",
+            "m",
+            "s",
+        ] = "D",
+        copy: bool = False,
         verbose: bool = False,
         drop_original: bool = False,
+        custom_days_divider: int = None,
         **kwargs: dict[str, bool],
     ) -> None:
         accepted_values_units = [
+            "week",
+            "fortnight",
+            "lunar_month",
+            "common_year",
+            "custom_days",
             "D",
             "h",
             "m",
@@ -467,6 +533,7 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
             raise ValueError(msg)
 
         self.units = units
+        self.custom_days_divider = custom_days_divider
 
         super().__init__(
             columns=columns,
@@ -482,7 +549,8 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         self.column_lower = columns[0]
         self.column_upper = columns[1]
 
-    def transform(self, X: FrameT) -> FrameT:
+    @beartype
+    def transform(self, X: DataFrame) -> DataFrame:
         """Calculate the difference between the given fields in the specified units.
 
         Parameters
@@ -492,22 +560,64 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
 
         """
 
-        X = nw.from_native(super().transform(X))
+        X = _convert_dataframe_to_narwhals(X)
+
+        X = super().transform(X, return_native_override=False)
+
+        # mapping for units and corresponding timedelta arg values
+        UNITS_TO_TIMEDELTA_PARAMS = {
+            "week": (7, "D"),
+            "fortnight": (14, "D"),
+            "lunar_month": (
+                int(29.5 * 24),
+                "h",
+            ),  # timedelta values need to be whole numbers so (29.5, 'D') cannot be used
+            "common_year": (365, "D"),
+            "D": (1, "D"),
+            "h": (1, "h"),
+            "m": (1, "m"),
+            "s": (1, "s"),
+        }
+
+        # list of units that require time truncation
+        UNITS_TO_TRUNCATE_TIME_FOR = [
+            "week",
+            "fortnight",
+            "lunar_month",
+            "common_year",
+            "custom_days",
+            "D",
+        ]
+
+        start_date_col = nw.col(self.columns[0])
+        end_date_col = nw.col(self.columns[1])
+
+        # truncating time for specific units
+        if self.units in UNITS_TO_TRUNCATE_TIME_FOR:
+            start_date_col = start_date_col.dt.truncate("1d")
+            end_date_col = end_date_col.dt.truncate("1d")
+
+        if self.units == "custom_days":
+            timedelta_value, timedelta_format = self.custom_days_divider, "D"
+            denominator = np.timedelta64(timedelta_value, timedelta_format)
+        else:
+            timedelta_value, timedelta_format = UNITS_TO_TIMEDELTA_PARAMS[self.units]
+            denominator = np.timedelta64(timedelta_value, timedelta_format)
 
         X = X.with_columns(
-            (
-                (nw.col(self.columns[1]) - nw.col(self.columns[0]))
-                / np.timedelta64(1, self.units)
-            ).alias(self.new_column_name),
+            ((end_date_col - start_date_col) / denominator).alias(self.new_column_name),
         )
 
         # Drop original columns if self.drop_original is True
-        return DropOriginalMixin.drop_original_column(
+        X = DropOriginalMixin.drop_original_column(
             self,
             X,
             self.drop_original,
             self.columns,
+            return_native=False,
         )
+
+        return _return_narwhals_or_native_dataframe(X, self.return_native)
 
 
 class ToDatetimeTransformer(BaseGenericDateTransformer):
@@ -902,6 +1012,8 @@ class BetweenDatesTransformer(BaseGenericDateTransformer):
 
 
 class DatetimeInfoOptions(str, Enum):
+    __slots__ = ()
+
     TIME_OF_DAY = "timeofday"
     TIME_OF_MONTH = "timeofmonth"
     TIME_OF_YEAR = "timeofyear"
@@ -1221,7 +1333,7 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
     """
 
-    polars_compatible = False
+    polars_compatible = True
 
     def __init__(
         self,
@@ -1346,29 +1458,30 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             )
             raise ValueError(msg)
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+    @nw.narwhalify
+    def transform(self, X: FrameT) -> FrameT:
         """Transform - creates column containing sine or cosine of another datetime column.
 
         Which function is used is stored in the self.method attribute.
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Data to transform.
 
         Returns
         -------
-        X : pd.DataFrame
+        X : pd/pl.DataFrame
             Input X with additional columns added, these are named "<method>_<original_column>"
         """
-        X = super().transform(X)
+        X = nw.from_native(super().transform(X))
 
         for column in self.columns:
             if not isinstance(self.units, dict):
-                column_in_desired_unit = getattr(X[column].dt, self.units)
+                column_in_desired_unit = getattr(X[column].dt, self.units)()
                 desired_units = self.units
             elif isinstance(self.units, dict):
-                column_in_desired_unit = getattr(X[column].dt, self.units[column])
+                column_in_desired_unit = getattr(X[column].dt, self.units[column])()
                 desired_units = self.units[column]
             if not isinstance(self.period, dict):
                 desired_period = self.period
@@ -1378,8 +1491,19 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             for method in self.method:
                 new_column_name = f"{method}_{desired_period}_{desired_units}_{column}"
 
-                X[new_column_name] = getattr(np, method)(
-                    column_in_desired_unit * (2.0 * np.pi / desired_period),
+                # Calculate the sine or cosine of the column in the desired unit
+                X = X.with_columns(
+                    nw.col(column)
+                    .map_batches(
+                        lambda *_,
+                        method=method,
+                        column_in_desired_unit=column_in_desired_unit,
+                        desired_period=desired_period: getattr(np, method)(
+                            column_in_desired_unit * (2.0 * np.pi / desired_period),
+                        ),
+                        return_dtype=nw.Float64,
+                    )
+                    .alias(new_column_name),
                 )
 
         # Drop original columns if self.drop_original is True

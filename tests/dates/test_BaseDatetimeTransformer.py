@@ -13,6 +13,7 @@ from tests.base_tests import (
     GenericTransformTests,
     NewColumnNameInitMixintests,
     OtherBaseBehaviourTests,
+    ReturnNativeTests,
 )
 from tubular.dates import TIME_UNITS
 
@@ -102,7 +103,11 @@ class TestFit(GenericFitTests):
         cls.transformer_name = "BaseDatetimeTransformer"
 
 
-class TestTransform(GenericTransformTests, DatetimeMixinTransformTests):
+class TestTransform(
+    GenericTransformTests,
+    DatetimeMixinTransformTests,
+    ReturnNativeTests,
+):
     """Tests for BaseDatetimeTransformer.transform."""
 
     @classmethod

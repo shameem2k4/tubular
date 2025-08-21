@@ -6,14 +6,20 @@ import warnings
 from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import narwhals as nw
-import narwhals.selectors as ncs
 import numpy as np
 from beartype import beartype
+from narwhals.dtypes import DType  # noqa: F401
 
+from tubular._utils import (
+    _convert_dataframe_to_narwhals,
+    _convert_series_to_narwhals,
+    _return_narwhals_or_native_dataframe,
+)
 from tubular.base import BaseTransformer
 from tubular.imputers import MeanImputer, MedianImputer
 from tubular.mapping import BaseMappingTransformer, BaseMappingTransformMixin
 from tubular.mixins import DropOriginalMixin, SeparatorColumnMixin, WeightColumnMixin
+from tubular.types import DataFrame, Series
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -36,8 +42,8 @@ class BaseNominalTransformer(BaseTransformer):
 
     FITS = False
 
-    @nw.narwhalify
-    def check_mappable_rows(self, X: FrameT) -> None:
+    @beartype
+    def check_mappable_rows(self, X: DataFrame) -> None:
         """Method to check that all the rows to apply the transformer to are able to be
         mapped according to the values in the mappings dict.
 
@@ -50,38 +56,54 @@ class BaseNominalTransformer(BaseTransformer):
         """
         self.check_is_fitted(["mappings"])
 
-        for c in self.columns:
-            mappable_rows = X.select(
-                nw.col(c).is_in(list(self.mappings[c])).sum(),
-            ).item()
+        X = _convert_dataframe_to_narwhals(X)
+        mappable_rows_expr = {
+            col: nw.col(col).is_in(list(self.mappings[col])).sum()
+            for col in self.columns
+        }
+        mappable_rows = X.select(**mappable_rows_expr)
 
-            if mappable_rows < X.shape[0]:
-                msg = f"{self.classname()}: nulls would be introduced into column {c} from levels not present in mapping"
-                raise ValueError(msg)
+        mappable_rows_count = [
+            col for col in self.columns if mappable_rows[col].item() < len(X)
+        ]
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> None:
+        if mappable_rows_count:
+            msg = f"{self.classname()}: nulls would be introduced into columns {', '.join(mappable_rows_count)} from levels not present in mapping"
+            raise ValueError(msg)
+
+    @beartype
+    def transform(
+        self,
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Base nominal transformer transform method.  Checks that all the rows are able to be
         mapped according to the values in the mappings dict and calls the BaseTransformer transform method.
 
         Parameters
         ----------
-        X : FrameT
+        X : DataFrame
             Data to apply nominal transformations to.
+
+        return_native_override: Optional[bool]=None
+            Option to override return_native attr in transformer, useful when calling parent
+            methods
 
         Returns
         -------
-        X : FrameT
+        X : DataFrame
             Input X.
 
         """
 
         # specify which class to prevent additional inheritance calls
-        X = BaseTransformer.transform(self, X)
+        return_native = self._process_return_native(return_native_override)
+
+        X = BaseTransformer.transform(self, X, return_native_override=False)
 
         self.check_mappable_rows(X)
 
-        return X
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class NominalToIntegerTransformer(BaseNominalTransformer, BaseMappingTransformMixin):
@@ -178,7 +200,7 @@ class NominalToIntegerTransformer(BaseNominalTransformer, BaseMappingTransformMi
         )
 
         self.mappings = base_mapping_transformer.mappings
-        self.null_mappings = base_mapping_transformer.null_mappings
+        self.mappings_from_null = base_mapping_transformer.mappings_from_null
         self.return_dtypes = base_mapping_transformer.return_dtypes
 
         return self
@@ -332,28 +354,22 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         self.unseen_levels_to_rare = unseen_levels_to_rare
 
-    @nw.narwhalify
-    def _check_str_like_columns(self, X: FrameT) -> None:
+    @beartype
+    def _check_str_like_columns(self, schema: nw.Schema) -> None:
         """check that transformer being called on only str-like columns
 
         Parameters
         ----------
-        X : pd/pl.DataFrame
-            Data to transform
+        schema: nw.Schema
+            schema of input data
 
         """
 
-        str_like_columns = list(
-            set(self.columns).intersection(
-                set(
-                    X.select(
-                        ncs.string(),
-                        ncs.categorical(),
-                        ncs.by_dtype(nw.Object),
-                    ).columns,
-                ),
-            ),
-        )
+        str_like_columns = [
+            col
+            for col in self.columns
+            if schema[col] in {nw.String, nw.Categorical, nw.Object}
+        ]
 
         non_str_like_columns = set(self.columns).difference(
             set(
@@ -365,8 +381,8 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             msg = f"{self.classname()}: transformer must run on str-like columns, but got non str-like {non_str_like_columns}"
             raise TypeError(msg)
 
-    @nw.narwhalify
-    def _check_for_nulls(self, X: FrameT) -> None:
+    @beartype
+    def _check_for_nulls(self, X: DataFrame) -> None:
         """check that transformer being called on only non-null columns.
 
         Note, found including nulls to be quite complicated due to:
@@ -385,18 +401,28 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         """
 
-        for c in self.columns:
-            nulls_count = 0
+        X = _convert_dataframe_to_narwhals(X)
 
-            # pick out str_like dtypes that allow nans
-            nulls_count += X.select(nw.col(c).is_null().sum()).item()
+        null_check_expressions = {
+            col: nw.col(col).is_null().sum().alias(col) for col in self.columns
+        }
 
-            if nulls_count != 0:
-                msg = f"{self.classname()}: transformer can only fit/apply on columns without nulls, column {c} needs to be imputed first"
-                raise ValueError(msg)
+        null_counts = X.select(**null_check_expressions)
 
-    @nw.narwhalify
-    def fit(self, X: FrameT, y: nw.Series | None = None) -> FrameT:
+        columns_with_nulls = [
+            col for col in self.columns if null_counts[col].item() > 0
+        ]
+
+        if columns_with_nulls:
+            msg = f"{self.classname()}: transformer can only fit/apply on columns without nulls, columns {', '.join(columns_with_nulls)} need to be imputed first"
+            raise ValueError(msg)
+
+    @beartype
+    def fit(
+        self,
+        X: DataFrame,
+        y: Optional[Series] = None,
+    ) -> GroupRareLevelsTransformer:
         """Records non-rare levels for categorical variables.
 
         When transform is called, only levels records in non_rare_levels during fit will remain
@@ -414,14 +440,19 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             Optional argument only required for the transformer to work with sklearn pipelines.
 
         """
+
+        X = _convert_dataframe_to_narwhals(X)
+
+        y = _convert_series_to_narwhals(y)
+
         super().fit(X, y)
 
         if self.weights_column is not None:
             WeightColumnMixin.check_weights_column(self, X, self.weights_column)
 
-        self._check_str_like_columns(
-            X.with_columns(nw.col(col) for col in self.columns),
-        )
+        schema = X.schema
+
+        self._check_str_like_columns(schema)
 
         self._check_for_nulls(X)
 
@@ -486,8 +517,8 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         return self
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> FrameT:
+    @beartype
+    def transform(self, X: DataFrame) -> DataFrame:
         """Grouped rare levels together into a new 'rare' level.
 
         Parameters
@@ -501,11 +532,12 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             Transformed input X with rare levels grouped for into a new rare level.
 
         """
-        X = nw.from_native(BaseTransformer.transform(self, X))
+        X = BaseTransformer.transform(self, X, return_native_override=False)
+        X = _convert_dataframe_to_narwhals(X)
 
-        self._check_str_like_columns(
-            X.with_columns(nw.col(col) for col in self.columns),
-        )
+        schema = X.schema
+
+        self._check_str_like_columns(schema)
 
         self._check_for_nulls(X)
 
@@ -522,34 +554,36 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
                 ).difference(
                     set(self.training_data_levels[c]),
                 )
-                for unseen_val in unseen_vals:
-                    non_rare_levels[c].append(unseen_val)
+                non_rare_levels[c].extend(unseen_vals)
 
-        for c in self.columns:
-            categorical = False
-            if str(X.schema[c]) == "Categorical":
-                categorical = True
-                X = X.with_columns(nw.col(c).cast(nw.String))
-
-            non_rare_condition = nw.col(c).is_in(non_rare_levels[c])
-
-            X = X.with_columns(
-                nw.when(non_rare_condition)
-                .then(
-                    nw.col(c),
-                )
-                .otherwise(
-                    nw.lit(self.rare_level_name),
-                )
-                .alias(
-                    c,
-                ),
+        transform_expressions = {
+            c: nw.col(c).cast(
+                nw.String,
             )
+            if schema[c] in [nw.Categorical, nw.Enum]
+            else nw.col(c)
+            for c in self.columns
+        }
 
-            if categorical:
-                X = X.with_columns(nw.col(c).cast(nw.Categorical))
+        transform_expressions = {
+            c: (
+                nw.when(transform_expressions[c].is_in(non_rare_levels[c]))
+                .then(transform_expressions[c])
+                .otherwise(nw.lit(self.rare_level_name))
+            )
+            for c in self.columns
+        }
 
-        return X
+        transform_expressions = {
+            c: transform_expressions[c].cast(schema[c])
+            if (schema[c] in [nw.Categorical, nw.Enum])
+            else transform_expressions[c]
+            for c in self.columns
+        }
+
+        X = X.with_columns(**transform_expressions)
+
+        return _return_narwhals_or_native_dataframe(X, self.return_native)
 
 
 class MeanResponseTransformer(
@@ -938,7 +972,7 @@ class MeanResponseTransformer(
         )
 
         self.mappings = base_mapping_transformer.mappings
-        self.null_mappings = base_mapping_transformer.null_mappings
+        self.mappings_from_null = base_mapping_transformer.mappings_from_null
         self.return_dtypes = base_mapping_transformer.return_dtypes
 
         self._fit_unseen_level_handling_dict(X_y, weights_column)
@@ -1252,7 +1286,7 @@ class OrdinalEncoderTransformer(
         )
 
         self.mappings = base_mapping_transformer.mappings
-        self.null_mappings = base_mapping_transformer.null_mappings
+        self.mappings_from_null = base_mapping_transformer.mappings_from_null
         self.return_dtypes = base_mapping_transformer.return_dtypes
 
         return self
@@ -1304,7 +1338,7 @@ class OneHotEncodingTransformer(
     drop_original : bool, default = False
         Should original columns be dropped after creating dummy fields?
 
-    copy : bool, default = True
+    copy : bool, default = False
         Should X be copied prior to transform? Should X be copied prior to transform? Copy argument no longer used and will be deprecated in a future release
 
     verbose : bool, default = True
@@ -1336,7 +1370,7 @@ class OneHotEncodingTransformer(
         wanted_values: dict[str, list[str]] | None = None,
         separator: str = "_",
         drop_original: bool = False,
-        copy: bool | None = None,
+        copy: bool = False,
         verbose: bool = False,
         **kwargs: dict[str, bool],
     ) -> None:
