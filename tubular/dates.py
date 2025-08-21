@@ -1194,20 +1194,20 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
             for include_option in self.include
         }
 
-        self.mapping_transformers = {
-            include_option: MappingTransformer(
+        self.mapping_transformer = MappingTransformer(
                 mappings={
                     col + "_" + include_option: self.final_datetime_mappings[
                         include_option
                     ]
                     for col in self.columns
+                    for include_option in self.include
                 },
                 return_dtypes={
-                    col + "_" + include_option: "Categorical" for col in self.columns
+                    col + "_" + include_option: "Categorical" 
+                    for col in self.columns
+                    for include_option in self.include
                 },
             )
-            for include_option in self.include
-        }
 
     def _process_provided_mappings(
         self,
@@ -1242,8 +1242,8 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
                 msg = f"{self.classname()}: {include_option.value} mapping dictionary should contain mapping for all values between {min(self.RANGE_TO_MAP[include_option])}-{max(self.RANGE_TO_MAP[include_option])}. {self.RANGE_TO_MAP[include_option] - set(self.final_datetime_mappings[include_option].keys())} are missing"
                 raise ValueError(msg)
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> FrameT:
+    @beartype
+    def transform(self, X: DataFrame) -> DataFrame:
         """Transform - Extracts new features from datetime variables.
 
         Parameters
@@ -1256,22 +1256,54 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         X : pd/pl.DataFrame
             Transformed input X with added columns of extracted information.
         """
-        X = nw.from_native(super().transform(X))
+        X = super().transform(X, return_native_override=False)
 
-        for include_option in self.include:
-            X = nw.from_native(
-                self.mapping_transformers[include_option].transform(
-                    X.with_columns(
-                        getattr(
-                            nw.col(col).dt,
-                            self.DATETIME_ATTR[include_option],
-                        )().alias(col + "_" + include_option)
-                        for col in self.columns
-                    ),
-                ),
+        present_values = {col: set(X.get_column(col).unique()) for col in self.columns}
+
+        transform_dict={
+            col+'_'+include_option: 
+            getattr(
+                nw.col(col).alias(col+'_'+include_option).dt,
+                self.DATETIME_ATTR[include_option]
+            )()
+            for col in self.columns
+            for include_option in self.include
+        }
+
+        #TODO make mapping expressions be based on transform_dict
+        # need to pull in changes from MRE branch
+        # and then think about how to make below function use the
+        # above expression rather than nw.col(output_col) 
+
+        # set up list of paired condition/outcome tuples for mapping
+        conditions_and_outcomes = {
+            output_col: [
+                self._create_mapping_conditions_and_outcomes(
+                    output_col,
+                    key,
+                    self.mapping_transformer.mappings,
+                )
+                for key in self.mappings[output_col]
+                if key in present_values[input_col]
+            ]
+            for input_col in self.columns
+            for output_col in transform_dict
+        }
+
+        # apply mapping using functools reduce to build expression
+        transform_dict = {
+            output_col: self._combine_mappings_into_expression(
+                input_col,
+                conditions_and_outcomes,
+                output_col,
             )
+            for input_col in self.columns
+            for output_col in self.column_to_encoded_columns[input_col]
+        }
 
-        X = X.with_columns(
+        # final casts
+        transform_dict={
+            col+'_'+include_option:
             # polars seems to struggle in going from cat->enum, so intermediate
             # str cast seems to be needed
             nw.col(col + "_" + include_option)
@@ -1279,15 +1311,22 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
             .cast(self.enums[include_option])
             for col in self.columns
             for include_option in self.include
+        }
+
+        X = X.with_columns(
+            **transform_dict
         )
 
         # Drop original columns if self.drop_original is True
-        return DropOriginalMixin.drop_original_column(
+        X=DropOriginalMixin.drop_original_column(
             self,
             X,
             self.drop_original,
             self.columns,
+            return_native=False
         )
+
+        return _return_narwhals_or_native_dataframe(X, self.return_native)
 
 
 class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
