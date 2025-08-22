@@ -17,12 +17,15 @@ Subsections for each version can be one of the following;
 Each individual change should have a link to the pull request after the description of the change.
 
 1.4.7 (unreleased)
+------------------
 
 Changed
 ^^^^^^^
 
 - feat: narwhalified DatetimeInfoExtractor `#378 <https://github.com/azukds/tubular/issues/378>_`
 - placeholder 
+- feat: optimisations for MeanResponseTransformer, further optimisations for  MappingTransformer `#451 <https://github.com/azukds/tubular/issues/451>_`
+- feat: optimisation changes to DatetimeSinusoidCalculator, added 'return_native_override' argument to DatetimeSinusoidCalculator, reduced with_columns being called many times. https://github.com/azukds/tubular/issues/465
 - placeholder
 
 1.4.6 (19/08/2025)
@@ -32,8 +35,6 @@ Changed
 ^^^^^^^
 
 - feat: optimisations for MappingTransformer and BaseMappingTransformerMixin
-- placeholder
-- placeholder
 
 1.4.5 (19/08/2025)
 ------------------

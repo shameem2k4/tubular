@@ -1195,19 +1195,17 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         }
 
         self.mapping_transformer = MappingTransformer(
-                mappings={
-                    col + "_" + include_option: self.final_datetime_mappings[
-                        include_option
-                    ]
-                    for col in self.columns
-                    for include_option in self.include
-                },
-                return_dtypes={
-                    col + "_" + include_option: "Categorical" 
-                    for col in self.columns
-                    for include_option in self.include
-                },
-            )
+            mappings={
+                col + "_" + include_option: self.final_datetime_mappings[include_option]
+                for col in self.columns
+                for include_option in self.include
+            },
+            return_dtypes={
+                col + "_" + include_option: "Categorical"
+                for col in self.columns
+                for include_option in self.include
+            },
+        )
 
     def _process_provided_mappings(
         self,
@@ -1260,20 +1258,19 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
 
         present_values = {col: set(X.get_column(col).unique()) for col in self.columns}
 
-        transform_dict={
-            col+'_'+include_option: 
-            getattr(
-                nw.col(col).alias(col+'_'+include_option).dt,
-                self.DATETIME_ATTR[include_option]
+        transform_dict = {
+            col + "_" + include_option: getattr(
+                nw.col(col).alias(col + "_" + include_option).dt,
+                self.DATETIME_ATTR[include_option],
             )()
             for col in self.columns
             for include_option in self.include
         }
 
-        #TODO make mapping expressions be based on transform_dict
+        # TODO make mapping expressions be based on transform_dict
         # need to pull in changes from MRE branch
         # and then think about how to make below function use the
-        # above expression rather than nw.col(output_col) 
+        # above expression rather than nw.col(output_col)
 
         # set up list of paired condition/outcome tuples for mapping
         conditions_and_outcomes = {
@@ -1302,8 +1299,8 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         }
 
         # final casts
-        transform_dict={
-            col+'_'+include_option:
+        transform_dict = {
+            col + "_" + include_option:
             # polars seems to struggle in going from cat->enum, so intermediate
             # str cast seems to be needed
             nw.col(col + "_" + include_option)
@@ -1314,16 +1311,16 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         }
 
         X = X.with_columns(
-            **transform_dict
+            **transform_dict,
         )
 
         # Drop original columns if self.drop_original is True
-        X=DropOriginalMixin.drop_original_column(
+        X = DropOriginalMixin.drop_original_column(
             self,
             X,
             self.drop_original,
             self.columns,
-            return_native=False
+            return_native=False,
         )
 
         return _return_narwhals_or_native_dataframe(X, self.return_native)
@@ -1497,8 +1494,12 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             )
             raise ValueError(msg)
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> FrameT:
+    @beartype
+    def transform(
+        self,
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Transform - creates column containing sine or cosine of another datetime column.
 
         Which function is used is stored in the self.method attribute.
@@ -1508,19 +1509,25 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
         X : pd/pl.DataFrame
             Data to transform.
 
+        return_native_override: Optional[bool]
+            Option to override return_native attr in transformer, useful when calling parent
+            methods
+
         Returns
         -------
         X : pd/pl.DataFrame
             Input X with additional columns added, these are named "<method>_<original_column>"
         """
-        X = nw.from_native(super().transform(X))
+        X = _convert_dataframe_to_narwhals(X)
+        return_native = self._process_return_native(return_native_override)
 
+        X = super().transform(X, return_native_override=False)
+
+        exprs = {}
         for column in self.columns:
             if not isinstance(self.units, dict):
-                column_in_desired_unit = getattr(X[column].dt, self.units)()
                 desired_units = self.units
             elif isinstance(self.units, dict):
-                column_in_desired_unit = getattr(X[column].dt, self.units[column])()
                 desired_units = self.units[column]
             if not isinstance(self.period, dict):
                 desired_period = self.period
@@ -1531,24 +1538,36 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
                 new_column_name = f"{method}_{desired_period}_{desired_units}_{column}"
 
                 # Calculate the sine or cosine of the column in the desired unit
-                X = X.with_columns(
-                    nw.col(column)
-                    .map_batches(
-                        lambda *_,
-                        method=method,
-                        column_in_desired_unit=column_in_desired_unit,
-                        desired_period=desired_period: getattr(np, method)(
-                            column_in_desired_unit * (2.0 * np.pi / desired_period),
+                expr = getattr(
+                    nw.col(column).dt,
+                    desired_units,
+                )() * (2 * np.pi / desired_period)
+
+                expr = (
+                    expr.map_batches(
+                        lambda s: np.sin(
+                            s.to_numpy(),
                         ),
                         return_dtype=nw.Float64,
                     )
-                    .alias(new_column_name),
+                    if method == "sin"
+                    else expr.map_batches(
+                        lambda s: np.cos(
+                            s.to_numpy(),
+                        ),
+                        return_dtype=nw.Float64,
+                    )
                 )
+                expr = expr.alias(new_column_name)
+                exprs[new_column_name] = expr
 
+        X = X.with_columns(**exprs)
         # Drop original columns if self.drop_original is True
-        return DropOriginalMixin.drop_original_column(
+        X = DropOriginalMixin.drop_original_column(
             self,
             X,
             self.drop_original,
             self.columns,
+            return_native=False,
         )
+        return _return_narwhals_or_native_dataframe(X, return_native)
