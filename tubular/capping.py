@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import narwhals as nw
 import numpy as np
@@ -14,6 +14,13 @@ from tubular.numeric import BaseNumericTransformer
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT
+from beartype import beartype
+
+from tubular._utils import (
+    _convert_dataframe_to_narwhals,
+    _return_narwhals_or_native_dataframe,
+)
+from tubular.types import DataFrame
 
 
 class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
@@ -382,8 +389,12 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
 
         return list(np.interp(quantiles, weighted_quantiles, values))
 
-    @nw.narwhalify
-    def transform(self, X: FrameT) -> FrameT:
+    @beartype
+    def transform(
+        self,
+        X: DataFrame,
+        return_native_override: Optional[bool] = None,
+    ) -> DataFrame:
         """Apply capping to columns in X.
 
         If cap_value_max is set, any values above cap_value_max will be set to cap_value_max. If cap_value_min
@@ -394,16 +405,23 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
         X : pd/pl.DataFrame
             Data to apply capping to.
 
+        return_native_override: Optional[bool]
+            Option to override return_native attr in transformer, useful when calling parent
+            methods
+
         Returns
         -------
         X : pd/pl.DataFrame
             Transformed input X with min and max capping applied to the specified columns.
 
         """
-
-        X = nw.from_native(super().transform(X))
-
         self.check_is_fitted(["_replacement_values"])
+
+        X = _convert_dataframe_to_narwhals(X)
+
+        return_native = self._process_return_native(return_native_override)
+
+        X = super().transform(X, return_native_override=False)
 
         dict_attrs = ["_replacement_values"]
 
@@ -423,7 +441,7 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
             if getattr(self, attr_name) == {}:
                 msg = f"{self.classname()}: {attr_name} attribute is an empty dict - perhaps the fit method has not been run yet"
                 raise ValueError(msg)
-
+        exprs = {}
         for col in self.columns:
             cap_value_min = capping_values_for_transform[col][0]
             cap_value_max = capping_values_for_transform[col][1]
@@ -431,33 +449,42 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
             replacement_min = self._replacement_values[col][0]
             replacement_max = self._replacement_values[col][1]
 
-            for cap_value, replacement_value, condition in zip(
-                [cap_value_min, cap_value_max],
-                [replacement_min, replacement_max],
-                [nw.col(col) < cap_value_min, nw.col(col) > cap_value_max],
-            ):
-                if cap_value is not None:
-                    X = X.with_columns(
-                        nw.when(
-                            condition,
-                        )
-                        .then(
-                            replacement_value,
-                        )
-                        .otherwise(
-                            nw.col(col),
-                        )
-                        # make sure type is preserved for single row,
-                        # e.g. mapping single row to int could convert
-                        # from float to int
-                        # TODO - look into better ways to achieve this
-                        .cast(
-                            X.get_column(col).dtype,
-                        )
-                        .alias(col),
+            if cap_value_min is not None and cap_value_max is not None:
+                col_expr = (
+                    nw.when(nw.col(col) < cap_value_min)
+                    .then(replacement_min)
+                    .otherwise(
+                        nw.when(nw.col(col) > cap_value_max)
+                        .then(replacement_max)
+                        .otherwise(nw.col(col)),
                     )
+                )
+            elif cap_value_min is not None:
+                col_expr = (
+                    nw.when(nw.col(col) < cap_value_min)
+                    .then(replacement_min)
+                    .otherwise(nw.col(col))
+                )
+            elif cap_value_max is not None:
+                col_expr = (
+                    nw.when(nw.col(col) > cap_value_max)
+                    .then(replacement_max)
+                    .otherwise(nw.col(col))
+                )
+            else:
+                col_expr = nw.col(col)
 
-        return X
+            # make sure type is preserved for single row,
+            #     # e.g. mapping single row to int could convert
+            #     # from float to int
+            #     # TODO - look into better ways to achieve this
+            exprs[col] = col_expr.cast(
+                X[col].dtype,
+            ).alias(col)
+
+        X = X.with_columns(**exprs)
+
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
 
 class CappingTransformer(BaseCappingTransformer):
