@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Union
 
 import narwhals as nw
 from beartype import beartype
@@ -14,20 +15,40 @@ from tubular.mixins import DropOriginalMixin
 from tubular.types import DataFrame, NumericTypes
 
 
-class AggregationOptions(str, Enum):
+class ColumnsOverRowAggregationOptions(str, Enum):
     MIN = "min"
     MAX = "max"
     MEAN = "mean"
+    SUM = "sum"
+    # not currently easy to implement row-wise
+    # median or count, so leaving out for now
+
+
+class RowsOverColumnsAggregationOptions(str, Enum):
+    MIN = "min"
+    MAX = "max"
+    MEAN = "mean"
+    SUM = "sum"
     MEDIAN = "median"
     COUNT = "count"
-    SUM = "sum"
 
 
-ListOfAggregations = Annotated[
+ListOfColumnsOverRowAggregations = Annotated[
     List,
     Is[
         lambda list_value: all(
-            entry in AggregationOptions._value2member_map_ for entry in list_value
+            entry in ColumnsOverRowAggregationOptions._value2member_map_
+            for entry in list_value
+        )
+    ],
+]
+
+ListOfRowsOverColumnsAggregations = Annotated[
+    List,
+    Is[
+        lambda list_value: all(
+            entry in RowsOverColumnsAggregationOptions._value2member_map_
+            for entry in list_value
         )
     ],
 ]
@@ -70,7 +91,10 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
     def __init__(
         self,
         columns: list[str],
-        aggregations: ListOfAggregations,
+        aggregations: Union[
+            ListOfColumnsOverRowAggregations,
+            ListOfRowsOverColumnsAggregations,
+        ],
         drop_original: bool = False,
         verbose: bool = False,
     ) -> None:
@@ -79,22 +103,6 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         self.aggregations = aggregations
 
         self.set_drop_original_column(drop_original)
-
-    @beartype
-    def create_new_col_names(self, prefix: str) -> list[str]:
-        """Automatically generate new column names based on the aggregation type.
-
-        Parameters
-        ----------
-        prefix : str
-            Prefix to use for generating new column names.
-
-        Returns
-        -------
-        list[str]
-            List of new column names with the specified prefix and aggregation type.
-        """
-        return [f"{prefix}_{agg}" for agg in self.aggregations]
 
     @beartype
     def transform(
@@ -146,7 +154,7 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         return _return_narwhals_or_native_dataframe(X, return_native=return_native)
 
 
-class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
+class AggregateRowsOverColumnTransformer(BaseAggregationTransformer):
     """Transformer that aggregates rows over specified columns.
 
     This transformer aggregates data within specified columns, grouping by a key column,
@@ -170,7 +178,7 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
     def __init__(
         self,
         columns: list[str],
-        aggregations: ListOfAggregations,
+        aggregations: ListOfRowsOverColumnsAggregations,
         key: str,
         drop_original: bool = False,
         verbose: bool = False,
@@ -238,7 +246,7 @@ class AggregateRowOverColumnsTransformer(BaseAggregationTransformer):
         return _return_narwhals_or_native_dataframe(X, self.return_native)
 
 
-class AggregateColumnsTransformer(BaseAggregationTransformer):
+class AggregateColumnsOverRowTransformer(BaseAggregationTransformer):
     """Transformer that aggregates over specified columns.
 
     This transformer aggregates data within specified columns
@@ -262,7 +270,7 @@ class AggregateColumnsTransformer(BaseAggregationTransformer):
     def __init__(
         self,
         columns: list[str],
-        aggregations: ListOfAggregations,
+        aggregations: ListOfColumnsOverRowAggregations,
         drop_original: bool = False,
         verbose: bool = False,
     ) -> None:
@@ -304,10 +312,9 @@ class AggregateColumnsTransformer(BaseAggregationTransformer):
         }
 
         transform_dict = {
-            col + "_" + aggregation: expr_map[aggregation].alias(
-                col + "_" + aggregation,
+            "_".join(self.columns) + "_" + aggregation: expr_map[aggregation].alias(
+                "_".join(self.columns) + "_" + aggregation,
             )
-            for col in self.columns
             for aggregation in self.aggregations
         }
 
