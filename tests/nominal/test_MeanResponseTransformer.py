@@ -6,6 +6,7 @@ import pytest
 
 from tests.base_tests import (
     ColumnStrListInitTests,
+    DummyWeightColumnMixinTests,
     GenericFitTests,
     GenericTransformTests,
     OtherBaseBehaviourTests,
@@ -331,7 +332,7 @@ class TestPriorRegularisation:
         ), f"output of _prior_regularisation not as expected, expected {expected} but got {output}"
 
 
-class TestFit(GenericFitTests, WeightColumnFitMixinTests):
+class TestFit(GenericFitTests, WeightColumnFitMixinTests, DummyWeightColumnMixinTests):
     @classmethod
     def setup_class(cls):
         cls.transformer_name = "MeanResponseTransformer"

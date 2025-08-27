@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+import warnings
+from copy import copy
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import narwhals as nw
 import narwhals.selectors as ncs
@@ -171,6 +173,75 @@ class WeightColumnMixin:
     def classname(self) -> str:
         """Method that returns the name of the current class when called."""
         return type(self).__name__
+
+    @staticmethod
+    @beartype
+    def _create_dummy_weights_column(
+        X: DataFrame,
+        backend: Literal["pandas", "polars"],
+        return_native: bool = True,
+    ) -> DataFrame:
+        """Create dummy weights column. Useful to streamline logic and just treat all
+        cases as weighted, avoids branches for weights/non-weights.
+
+        Args:
+        ----
+            X: DataFrame
+                pandas, polars, or narwhals df
+
+            backend: Literal['pandas', 'polars']
+                backed of original df
+
+        """
+
+        X = _convert_dataframe_to_narwhals(X)
+
+        original_dummy_weights_column = "dummy_weights_column"
+        final_dummy_weights_column = copy(original_dummy_weights_column)
+
+        # first search for existing dummy weights column
+        continue_search = True
+        i = 0
+        while continue_search is True:
+            # prevent infinite loop
+            if i > 5:
+                msg = "Taking too long to find unused name for dummy weights column, consider renaming columns like 'dummy_weights_column' in X"
+                raise RuntimeError(
+                    msg,
+                )
+
+            if final_dummy_weights_column in X.columns:
+                all_one = len(X.filter(nw.col(final_dummy_weights_column) == 1)) == len(
+                    X,
+                )
+                # if exists already and is valid, return
+                if all_one:
+                    return _return_narwhals_or_native_dataframe(X, return_native)
+
+                # if exists and not valid, search for alternative name
+                previous_dummy_weights_column = final_dummy_weights_column
+                final_dummy_weights_column = (
+                    original_dummy_weights_column + "_" + str(i)
+                )
+                warnings.warn(
+                    f"{previous_dummy_weights_column} already exists in X but is not all 1, attempting to add {final_dummy_weights_column}",
+                    stacklevel=2,
+                )
+                i = i + 1
+
+            else:
+                continue_search = False
+
+        # finally create dummy weights column if valid option not found
+        X = X.with_columns(
+            nw.new_series(
+                name=final_dummy_weights_column,
+                values=[1] * len(X),
+                backend=backend,
+            ),
+        )
+
+        return _return_narwhals_or_native_dataframe(X, return_native)
 
     @nw.narwhalify
     def check_weights_column(self, X: FrameT, weights_column: str) -> None:
