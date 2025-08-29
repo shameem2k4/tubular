@@ -69,7 +69,7 @@ class TestAggregateRowOverColumnsTransformerTransform(
     @pytest.mark.parametrize(
         "aggregations, expected_data",
         [
-            # Test cases for "min", "max", "mean", "median",  and "count"
+            # Test cases for "min", "max", "mean", "median", "sum", and "count"
             (
                 ["min", "max", "mean", "median", "count", "sum"],
                 {
