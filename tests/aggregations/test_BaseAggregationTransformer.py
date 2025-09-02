@@ -7,7 +7,6 @@ from tests.base_tests import (
     GenericTransformTests,
 )
 from tests.utils import dataframe_init_dispatch
-from tubular.aggregations import BaseAggregationTransformer
 
 
 class TestBaseAggregationTransformerInit(
@@ -46,6 +45,7 @@ class TestBaseAggregationTransformerInit(
             BeartypeCallHintParamViolation,
         ):  # Adjust to expect BeartypeCallHintParamViolation
             uninitialized_transformers[self.transformer_name](**args)
+
 
 class TestBaseAggregationTransformerTransform(GenericTransformTests):
     "tests for BaseAggregationTransformer.transform"
