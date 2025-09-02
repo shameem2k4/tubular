@@ -25,6 +25,7 @@ Changed
 - feat: optimisations for MeanResponseTransformer, further optimisations for  MappingTransformer `#451 <https://github.com/azukds/tubular/issues/451>_`
 - feat: optimisation chnages to DatetimeSinusoidCalculator, added 'return_native_override' argument to DatetimeSinusoidCalculator, reduced with_columns being called many times. https://github.com/azukds/tubular/issues/465
 - chore: refactored dummy weight handling into method of WeightColumnMixin, tightened up handling
+- feat: optimisation changes to AggregateRowOverColumnsTransformer, BaseAggregationTransformer
 - placeholder
 - placeholder
 
