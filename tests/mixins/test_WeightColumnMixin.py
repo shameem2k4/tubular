@@ -155,8 +155,6 @@ class TestCreateDummyWeightsColumn:
 
         assert_frame_equal_dispatch(expected, output)
 
-        print(dummy_weights_column)
-        print(i)
         assert (
             dummy_weights_column == f"dummy_weights_column_{i - 1}"
             if i != 0
