@@ -183,6 +183,17 @@ class WeightColumnMixin:
         """Create dummy weights column. Useful to streamline logic and just treat all
         cases as weighted, avoids branches for weights/non-weights.
 
+        Function will check:
+        - does 'dummy_weights_column' already exist in data? (unlikely but
+        check to be thorough)
+        - if it does not, create unit weight 'dummy_weights_column'
+        - if it does, is it valid for our purposes? i.e. all unit weights
+        - if it is, then just reuse this existing column
+        - if not, repeat process for 'dummy_weights_column_1'
+
+        Algorithm terminates and errors after 5 attempts to create a suitable column.
+        Again, unlikely to ever happen, but wanted to cover/handle this eventuality.
+
         Args:
         ----
             X: DataFrame
@@ -201,7 +212,7 @@ class WeightColumnMixin:
         # first search for existing dummy weights column
         continue_search = True
         i = 0
-        while continue_search is True:
+        while continue_search:
             # prevent infinite loop
             if i > 5:
                 msg = "Taking too long to find unused name for dummy weights column, consider renaming columns like 'dummy_weights_column' in X"
@@ -232,6 +243,7 @@ class WeightColumnMixin:
                 i = i + 1
 
             else:
+                # exit search if appropriate column name found
                 continue_search = False
 
         # finally create dummy weights column if valid option not found
