@@ -778,6 +778,13 @@ class DummyWeightColumnMixinTests:
         df_dict = {}
 
         bad_weight_values = [2] + [1] * (len(df) - 1)
+
+        # cases are:
+        # -2 -> no dummy_weights_column exists
+        # -1 -> dummy_weights_column exists but has bad values
+        # 0 -> dummy_weights_column, dummy_weights_column_0 exist with
+        # bad values
+        # ...
         for j in range(-2, i):
             if j == -2:
                 pass
@@ -845,6 +852,12 @@ class DummyWeightColumnMixinTests:
         df_dict = {}
 
         bad_weight_values = [2] + [1] * (len(df) - 1)
+        # cases are:
+        # -2 -> no dummy_weights_column exists
+        # -1 -> dummy_weights_column exists but has bad values
+        # 0 -> dummy_weights_column, dummy_weights_column_0 exist with
+        # bad values
+        # ...
         for j in range(-2, 5):
             if j == -2:
                 pass
