@@ -52,7 +52,7 @@ class TestCreateUnitWeightsColumn:
         self,
         library,
     ):
-        """Test unit weights column created as expected"""
+        """Test existing unit weights column used if possible"""
 
         obj = WeightColumnMixin()
 

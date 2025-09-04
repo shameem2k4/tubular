@@ -757,13 +757,14 @@ class DummyWeightColumnMixinTests:
         ["pandas", "polars"],
         indirect=True,
     )
-    def test_errors_if_too_many_failed_attempts(
+    def test_errors_raised_if_unit_weights_column_exists_but_not_all_one(
         self,
         minimal_attribute_dict,
         minimal_dataframe_lookup,
         uninitialized_transformers,
     ):
-        """Test that error is raised if suitable column name not found quickly"""
+        """Test that error is raised if 'unit_weights_column' already
+        exists in data, but is not all one"""
 
         args = minimal_attribute_dict[self.transformer_name].copy()
         args["weights_column"] = None
