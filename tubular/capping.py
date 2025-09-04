@@ -20,7 +20,7 @@ from tubular._utils import (
     _convert_dataframe_to_narwhals,
     _return_narwhals_or_native_dataframe,
 )
-from tubular.types import DataFrame
+from tubular.types import DataFrame, Series
 
 
 class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
@@ -173,8 +173,9 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
                 msg = f"{self.classname()}: both values are None for key {k}"
                 raise ValueError(msg)
 
+    @beartype
     @nw.narwhalify
-    def fit(self, X: FrameT, y: None = None) -> BaseCappingTransformer:
+    def fit(self, X: DataFrame, y: Optional[Series] = None) -> BaseCappingTransformer:
         """Learn capping values from input data X.
 
         Calculates the quantiles to cap at given the quantiles dictionary supplied
@@ -183,37 +184,31 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
 
         Parameters
         ----------
-        X : pd/pl.DataFrame
+        X : pd/pl/nw.DataFrame
             A dataframe with required columns to be capped.
 
         y : None
             Required for pipeline.
 
         """
-        if self.weights_column:
-            WeightColumnMixin.check_weights_column(self, X, self.weights_column)
 
         super().fit(X, y)
 
-        self.quantile_capping_values = {}
+        backend = nw.get_native_namespace(X)
 
-        native_backend = nw.get_native_namespace(X)
+        weights_column = self.weights_column
+        if self.weights_column is None:
+            X, weights_column = WeightColumnMixin._create_unit_weights_column(
+                X,
+                backend=backend.__name__,
+                return_native=False,
+            )
+        WeightColumnMixin.check_weights_column(self, X, weights_column)
+
+        self.quantile_capping_values = {}
 
         if self.quantiles is not None:
             for col in self.columns:
-                if self.weights_column is None:
-                    weights_column = "dummy_weights_column"
-                    X = X.with_columns(
-                        nw.new_series(
-                            name="dummy_weights_column",
-                            values=[1] * len(X),
-                            backend=native_backend,
-                        ),
-                    )
-
-                else:
-                    weights_column = self.weights_column
-
                 cap_values = self.prepare_quantiles(
                     X,
                     self.quantiles[col],
@@ -693,8 +688,20 @@ class OutOfRangeNullTransformer(BaseCappingTransformer):
         """
         super().fit(X=X, y=y)
 
-        if self.weights_column:
-            WeightColumnMixin.check_weights_column(self, X, self.weights_column)
+        backend = nw.get_native_namespace(X)
+
+        weights_column = self.weights_column
+        if self.weights_column is None:
+            X, weights_column = WeightColumnMixin._create_unit_weights_column(
+                X,
+                backend=backend.__name__,
+                return_native=False,
+            )
+        WeightColumnMixin.check_weights_column(self, X, weights_column)
+
+        # need to overwrite attr for fit method to work
+        original_weights_column = weights_column
+        self.weights_column = weights_column
 
         if self.quantiles:
             BaseCappingTransformer.fit(self, X=X, y=y)
@@ -708,5 +715,8 @@ class OutOfRangeNullTransformer(BaseCappingTransformer):
                 f"{self.classname()}: quantiles not set so no fitting done in OutOfRangeNullTransformer",
                 stacklevel=2,
             )
+
+        # restore attr
+        self.weights_column = original_weights_column
 
         return self

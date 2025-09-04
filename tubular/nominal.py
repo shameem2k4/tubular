@@ -489,13 +489,10 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         weights_column = self.weights_column
         if self.weights_column is None:
-            weights_column = "dummy_weights_column"
-            X = X.with_columns(
-                nw.new_series(
-                    name=weights_column,
-                    values=[1] * len(X),
-                    backend=native_backend,
-                ),
+            X, weights_column = WeightColumnMixin._create_unit_weights_column(
+                X,
+                backend=native_backend.__name__,
+                return_native=False,
             )
 
         for c in self.columns:
@@ -898,21 +895,17 @@ class MeanResponseTransformer(
         self.mappings = {}
         self.unseen_levels_encoding_dict = {}
 
-        if self.weights_column is not None:
-            weights_column = self.weights_column
-            WeightColumnMixin.check_weights_column(self, X, self.weights_column)
+        native_backend = nw.get_native_namespace(X)
 
-        else:
-            native_backend = nw.get_native_namespace(X)
-
-            weights_column = "dummy_weights_column"
-            X = X.with_columns(
-                nw.new_series(
-                    name=weights_column,
-                    values=[1] * len(X),
-                    backend=native_backend.__name__,
-                ),
+        weights_column = self.weights_column
+        if self.weights_column is None:
+            X, weights_column = WeightColumnMixin._create_unit_weights_column(
+                X,
+                backend=native_backend.__name__,
+                return_native=False,
             )
+
+        WeightColumnMixin.check_weights_column(self, X, weights_column)
 
         response_null_count = y.is_null().sum()
 

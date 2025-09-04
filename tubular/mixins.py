@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import narwhals as nw
 import narwhals.selectors as ncs
@@ -171,6 +171,68 @@ class WeightColumnMixin:
     def classname(self) -> str:
         """Method that returns the name of the current class when called."""
         return type(self).__name__
+
+    @staticmethod
+    def _create_unit_weights_column(
+        X: DataFrame,
+        backend: Literal["pandas", "polars"],
+        return_native: bool = True,
+    ) -> tuple[DataFrame, str]:
+        """Create unit weights column. Useful to streamline logic and just treat all
+        cases as weighted, avoids branches for weights/non-weights.
+
+        Function will check:
+        - does 'unit_weights_column' already exist in data? (unlikely but
+        check to be thorough)
+        - if it does not, create unit weight 'unit_weights_column'
+        - if it does, is it valid for our purposes? i.e. all unit weights
+        - if it is, then just reuse this existing column
+        - if is not, throw error
+
+        Args:
+        ----
+            X: DataFrame
+                pandas, polars, or narwhals df
+
+            backend: Literal['pandas', 'polars']
+                backed of original df
+
+        """
+
+        X = _convert_dataframe_to_narwhals(X)
+
+        unit_weights_column = "unit_weights_column"
+
+        if unit_weights_column in X.columns:
+            all_one = len(X.filter(nw.col(unit_weights_column) == 1)) == len(
+                X,
+            )
+            # if exists already and is valid, return
+            if all_one:
+                return _return_narwhals_or_native_dataframe(
+                    X,
+                    return_native,
+                ), unit_weights_column
+
+            # error if column already exists but is not suitable
+            msg = "Attempting to insert column of unit weights named 'unit_weights_column', but an existing column shares this name and is not all 1, please rename existing column"
+            raise RuntimeError(
+                msg,
+            )
+
+        # finally create dummy weights column if valid option not found
+        X = X.with_columns(
+            nw.new_series(
+                name=unit_weights_column,
+                values=[1] * len(X),
+                backend=backend,
+            ),
+        )
+
+        return _return_narwhals_or_native_dataframe(
+            X,
+            return_native,
+        ), unit_weights_column
 
     @nw.narwhalify
     def check_weights_column(self, X: FrameT, weights_column: str) -> None:
