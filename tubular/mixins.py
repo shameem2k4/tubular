@@ -243,7 +243,9 @@ class WeightColumnMixin:
                 i = i + 1
 
             else:
-                # exit search if appropriate column name found
+                # exit search if no existing candidate found,
+                # and suitable name for newly created column
+                # identified
                 continue_search = False
 
         # finally create dummy weights column if valid option not found
