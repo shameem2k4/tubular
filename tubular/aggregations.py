@@ -286,12 +286,12 @@ class AggregateColumnsOverRowTransformer(BaseAggregationTransformer):
         self,
         X: DataFrame,
     ) -> DataFrame:
-        """Transforms the dataframe by aggregating rows over specified columns.
+        """Transforms the dataframe by aggregating columns across groups of rows
 
         Parameters
         ----------
         X : pd.DataFrame or pl.DataFrame
-            DataFrame to transform by aggregating specified columns.
+            DataFrame to transform by aggregating specified columns across groups of rows
 
         Returns
         -------
