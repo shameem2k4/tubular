@@ -757,82 +757,6 @@ class DummyWeightColumnMixinTests:
         ["pandas", "polars"],
         indirect=True,
     )
-    @pytest.mark.parametrize("i", [0, 1, 2, 3, 4])
-    def test_warnings_raised_for_existing_dummy_weight_columns(
-        self,
-        i,
-        minimal_attribute_dict,
-        minimal_dataframe_lookup,
-        uninitialized_transformers,
-    ):
-        """Test warnings are raised when dummy weights columns already exist"""
-
-        args = minimal_attribute_dict[self.transformer_name].copy()
-        args["weights_column"] = None
-
-        df = minimal_dataframe_lookup[self.transformer_name]
-        uninitialized_transformer = uninitialized_transformers[self.transformer_name]
-
-        transformer = uninitialized_transformer(**args)
-
-        df_dict = {}
-
-        bad_weight_values = [2] + [1] * (len(df) - 1)
-
-        # cases are:
-        # -2 -> no dummy_weights_column exists
-        # -1 -> dummy_weights_column exists but has bad values
-        # 0 -> dummy_weights_column, dummy_weights_column_0 exist with
-        # bad values
-        # ...
-        for j in range(-2, i):
-            if j == -2:
-                pass
-            elif j == -1:
-                df_dict["dummy_weights_column"] = bad_weight_values
-            else:
-                df_dict[f"dummy_weights_column_{j}"] = bad_weight_values
-
-        df = nw.from_native(df)
-        backend = nw.get_native_namespace(df)
-        new_cols = [
-            nw.new_series(name=name, values=df_dict[name], backend=backend).alias(name)
-            for name in df_dict
-        ]
-        df = df.with_columns(
-            new_cols,
-        )
-        df = df.to_native()
-
-        with pytest.warns(
-            UserWarning,
-        ) as record:
-            transformer.fit(df, df["a"])
-
-        previous_dummy_weights_columns = [
-            "dummy_weights_column",
-            *[f"dummy_weights_column_{i}" for i in range(i)],
-        ]
-        final_dummy_weights_columns = [
-            f"dummy_weights_column_{i}" for i in range(i + 1)
-        ]
-
-        for j, msg in enumerate(
-            [
-                f"{previous_dummy_weights_column} already exists in X but is not all 1, attempting to add {final_dummy_weights_column}"
-                for previous_dummy_weights_column, final_dummy_weights_column in zip(
-                    previous_dummy_weights_columns,
-                    final_dummy_weights_columns,
-                )
-            ],
-        ):
-            assert msg in str(record[j].message)
-
-    @pytest.mark.parametrize(
-        "minimal_dataframe_lookup",
-        ["pandas", "polars"],
-        indirect=True,
-    )
     def test_errors_if_too_many_failed_attempts(
         self,
         minimal_attribute_dict,
@@ -852,19 +776,8 @@ class DummyWeightColumnMixinTests:
         df_dict = {}
 
         bad_weight_values = [2] + [1] * (len(df) - 1)
-        # cases are:
-        # -2 -> no dummy_weights_column exists
-        # -1 -> dummy_weights_column exists but has bad values
-        # 0 -> dummy_weights_column, dummy_weights_column_0 exist with
-        # bad values
-        # ...
-        for j in range(-2, 5):
-            if j == -2:
-                pass
-            elif j == -1:
-                df_dict["dummy_weights_column"] = bad_weight_values
-            else:
-                df_dict[f"dummy_weights_column_{j}"] = bad_weight_values
+
+        df_dict["unit_weights_column"] = bad_weight_values
 
         df = nw.from_native(df)
         backend = nw.get_native_namespace(df)
@@ -877,7 +790,7 @@ class DummyWeightColumnMixinTests:
         )
         df = df.to_native()
 
-        msg = "Taking too long to find unused name for dummy weights column, consider renaming columns like 'dummy_weights_column' in X"
+        msg = "Attempting to insert column of unit weights named 'unit_weights_column', but an existing column shares this name and is not all 1, please rename existing column"
         with pytest.raises(
             RuntimeError,
             match=msg,
