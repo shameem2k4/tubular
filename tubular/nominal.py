@@ -489,7 +489,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         weights_column = self.weights_column
         if self.weights_column is None:
-            X, weights_column = WeightColumnMixin._create_dummy_weights_column(
+            X, weights_column = WeightColumnMixin._create_unit_weights_column(
                 X,
                 backend=native_backend.__name__,
                 return_native=False,
@@ -899,7 +899,7 @@ class MeanResponseTransformer(
 
         weights_column = self.weights_column
         if self.weights_column is None:
-            X, weights_column = WeightColumnMixin._create_dummy_weights_column(
+            X, weights_column = WeightColumnMixin._create_unit_weights_column(
                 X,
                 backend=native_backend.__name__,
                 return_native=False,
