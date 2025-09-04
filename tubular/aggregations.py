@@ -220,18 +220,13 @@ class AggregateRowsOverColumnTransformer(BaseAggregationTransformer):
             msg = f"{self.classname()}: key '{self.key}' not found in dataframe columns"
             raise ValueError(msg)
 
-        aggregation_dict = {col: self.aggregations for col in self.columns}
+        expr_dict = {
+            f"{col}_{agg}": getattr(nw.col(col), agg)().over(self.key)
+            for col in self.columns
+            for agg in self.aggregations
+        }
 
-        grouped_X = X.group_by(self.key).agg(
-            *(
-                getattr(nw.col(col_name), agg)().alias(f"{col_name}_{agg}")
-                for col_name, aggs in aggregation_dict.items()
-                for agg in aggs
-            ),
-        )
-
-        # Merge the aggregated results back with the original DataFrame
-        X = X.join(grouped_X, on=self.key, how="left")
+        X = X.with_columns(**expr_dict)
 
         X = self.drop_original_column(
             X,
