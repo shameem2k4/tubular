@@ -155,10 +155,8 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
 
 
 class AggregateRowsOverColumnTransformer(BaseAggregationTransformer):
-    """Transformer that aggregates rows over specified columns.
-
-    This transformer aggregates data within specified columns, grouping by a key column,
-    and can optionally drop the original columns post-transformation.
+    """Transformer that aggregates rows over specified columns, where rows are grouped
+    by provided key column.
 
     Attributes
     ----------
@@ -247,7 +245,7 @@ class AggregateRowsOverColumnTransformer(BaseAggregationTransformer):
 
 
 class AggregateColumnsOverRowTransformer(BaseAggregationTransformer):
-    """Transformer that aggregates over specified columns.
+    """Transformer that aggregates provided columns over each row
 
     This transformer aggregates data within specified columns
     and can optionally drop the original columns post-transformation.
@@ -286,12 +284,12 @@ class AggregateColumnsOverRowTransformer(BaseAggregationTransformer):
         self,
         X: DataFrame,
     ) -> DataFrame:
-        """Transforms the dataframe by aggregating columns across groups of rows
+        """Transforms the dataframe by aggregating provided columns over each row
 
         Parameters
         ----------
         X : pd.DataFrame or pl.DataFrame
-            DataFrame to transform by aggregating specified columns across groups of rows
+            DataFrame to transform by aggregating provided columns over each row
 
         Returns
         -------
