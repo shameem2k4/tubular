@@ -12,12 +12,12 @@ from tests.aggregations.test_BaseAggregationTransformer import (
 from tests.test_data import create_aggregate_over_rows_test_df
 
 
-class TestAggregateRowOverColumnsTransformerInit(TestBaseAggregationTransformerInit):
-    """Tests for init method in AggregateRowOverColumnsTransformer."""
+class TestAggregateRowsOverColumnTransformerInit(TestBaseAggregationTransformerInit):
+    """Tests for init method in AggregateRowsOverColumnTransformer."""
 
     @classmethod
     def setup_class(cls):
-        cls.transformer_name = "AggregateRowOverColumnsTransformer"
+        cls.transformer_name = "AggregateRowsOverColumnTransformer"
 
     @pytest.mark.parametrize("key", (0, ["a"], {"a": 10}, None))
     def test_key_arg_errors(
@@ -34,14 +34,14 @@ class TestAggregateRowOverColumnsTransformerInit(TestBaseAggregationTransformerI
             uninitialized_transformers[self.transformer_name](**args)
 
 
-class TestAggregateRowOverColumnsTransformerTransform(
+class TestAggregateRowsOverColumnTransformerTransform(
     TestBaseAggregationTransformerTransform,
 ):
-    """Tests for transform method in AggregateRowOverColumnsTransformer."""
+    """Tests for transform method in AggregateRowsOverColumnTransformer."""
 
     @classmethod
     def setup_class(cls):
-        cls.transformer_name = "AggregateRowOverColumnsTransformer"
+        cls.transformer_name = "AggregateRowsOverColumnTransformer"
 
     @pytest.mark.parametrize("library", ["pandas", "polars"])
     def test_invalid_key_error(
