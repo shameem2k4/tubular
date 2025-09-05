@@ -1,4 +1,4 @@
-"""This module contains a transformer that applies capping to numeric columns."""
+"""This module contains transformers for working with date columns"""
 
 from __future__ import annotations
 
