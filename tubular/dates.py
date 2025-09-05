@@ -1256,54 +1256,14 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         """
         X = super().transform(X, return_native_override=False)
 
-        # we need to materialise this in order to pull out unique values,
-        # so may as well do it once up front rather than both for checks and
-        # in the transform expression
-        X = X.with_columns(
-            getattr(
-                nw.col(col).alias(col + "_" + include_option).dt,
-                self.DATETIME_ATTR[include_option],
-            )()
-            for col in self.columns
-            for include_option in self.include
-        )
-
-        present_values = {
-            col + "_" + include_option: {
-                val
-                for val in X.get_column(col + "_" + include_option).unique()
-                if not pd.isna(val)
-            }
-            for col in self.columns
-            for include_option in self.include
-        }
-
-        # set up list of paired condition/outcome tuples for mapping
-        conditions_and_outcomes = {
-            col + "_" + include_option: [
-                self.mapping_transformer._create_mapping_conditions_and_outcomes(
-                    # .dt info has been extracted int a new col named output_col
-                    # so for this transformer input_col=output_col
-                    col + "_" + include_option,
-                    key,
-                    self.mapping_transformer.mappings,
-                )
-                for key in self.mapping_transformer.mappings[col + "_" + include_option]
-                if key in present_values[col + "_" + include_option]
-            ]
-            for col in self.columns
-            for include_option in self.include
-        }
-
-        # apply mapping using functools reduce to build expression
         transform_dict = {
-            col
-            + "_"
-            + include_option: self.mapping_transformer._combine_mappings_into_expression(
-                # .dt info has been extracted int a new col named output_col
-                # so for this transformer input_col=output_col
-                col + "_" + include_option,
-                conditions_and_outcomes,
+            col + "_" + include_option: (
+                getattr(
+                    nw.col(col).dt,
+                    self.DATETIME_ATTR[include_option],
+                )().replace_strict(
+                    self.mapping_transformer.mappings[col + "_" + include_option],
+                )
             )
             for col in self.columns
             for include_option in self.include
