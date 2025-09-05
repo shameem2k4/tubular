@@ -1049,9 +1049,9 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         Optional argument to define custom mappings for datetime values.
         Keys of the dictionary must be contained in `include`
         All possible values of each feature must be included in the mappings,
-        ie, a mapping for `dayofweek` must include all values 0-6;
-        datetime_mappings = {"dayofweek": {"week": [0, 1, 2, 3, 4],
-                                           "weekend": [5, 6]}}
+        ie, a mapping for `dayofweek` must include all values 1-7;
+        datetime_mappings = {"dayofweek": {"week": [1, 2, 4, 4, 5],
+                                           "weekend": [6, 7]}}
         The values for the mapping array must be iterable;
         datetime_mappings = {"timeofday": {"am": range(0, 12),
                                            "pm": range(12, 24)}}
@@ -1059,7 +1059,7 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
             timeofday: 0-23
             timeofmonth: 1-31
             timeofyear: 1-12
-            dayofweek: 0-6
+            dayofweek: 1-7
 
         If in include but no mappings provided default values will be used as follows:
            timeofday_mapping = {
@@ -1080,13 +1080,13 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
                 "winter": [12, 1, 2],  # Dec, Jan, Feb
             }
             dayofweek_mapping = {
-                "monday": [0],
-                "tuesday": [1],
-                "wednesday": [2],
-                "thursday": [3],
-                "friday": [4],
-                "saturday": [5],
-                "sunday": [6],
+                "monday": [1],
+                "tuesday": [2],
+                "wednesday": [3],
+                "thursday": [4],
+                "friday": [5],
+                "saturday": [6],
+                "sunday": [7],
             }
 
     drop_original: str
