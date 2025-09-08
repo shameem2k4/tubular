@@ -1047,47 +1047,25 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
 
     datetime_mappings : dict, default = {}
         Optional argument to define custom mappings for datetime values.
-        Keys of the dictionary must be contained in `include`
+        Keys of the dictionary must be contained in `include`.
         All possible values of each feature must be included in the mappings,
         ie, a mapping for `dayofweek` must include all values 1-7;
-        datetime_mappings = {"dayofweek": {"week": [1, 2, 4, 4, 5],
-                                           "weekend": [6, 7]}}
-        The values for the mapping array must be iterable;
-        datetime_mappings = {"timeofday": {"am": range(0, 12),
-                                           "pm": range(12, 24)}}
+        datetime_mappings = {
+                             "dayofweek": {
+                                           **{i: "week" for i in range(1,6)},
+                                           **{i: "week" for i in range(6,8)}
+                                           }
+                            }
+
         The required ranges for each mapping are:
             timeofday: 0-23
             timeofmonth: 1-31
             timeofyear: 1-12
             dayofweek: 1-7
 
-        If in include but no mappings provided default values will be used as follows:
-           timeofday_mapping = {
-                "night": range(0, 6),  # Midnight - 6am
-                "morning": range(6, 12),  # 6am - Noon
-                "afternoon": range(12, 18),  # Noon - 6pm
-                "evening": range(18, 24),  # 6pm - Midnight
-            }
-            timeofmonth_mapping = {
-                "start": range(0, 11),
-                "middle": range(11, 21),
-                "end": range(21, 32),
-            }
-            timeofyear_mapping = {
-                "spring": range(3, 6),  # Mar, Apr, May
-                "summer": range(6, 9),  # Jun, Jul, Aug
-                "autumn": range(9, 12),  # Sep, Oct, Nov
-                "winter": [12, 1, 2],  # Dec, Jan, Feb
-            }
-            dayofweek_mapping = {
-                "monday": [1],
-                "tuesday": [2],
-                "wednesday": [3],
-                "thursday": [4],
-                "friday": [5],
-                "saturday": [6],
-                "sunday": [7],
-            }
+        If an option is present in 'include' but no mappings are provided,
+        then default values from cls.DEFAULT_MAPPINGS will be used for this
+        option.
 
     drop_original: str
         indicates whether to drop provided columns post transform
