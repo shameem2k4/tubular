@@ -15,7 +15,7 @@ from tests.base_tests import (
 from tests.dates.test_BaseDatetimeTransformer import (
     DatetimeMixinTransformTests,
 )
-from tests.utils import assert_frame_equal_dispatch
+from tests.utils import assert_frame_equal_dispatch, dataframe_init_dispatch
 from tubular.dates import DatetimeInfoExtractor, DatetimeInfoOptions
 
 
@@ -562,6 +562,188 @@ class TestTransform(
                 ],
                 backend=backend,
                 dtype=nw.Enum(["end", "middle", "start"]),
+            ),
+        )
+
+        assert_frame_equal_dispatch(transformed, expected.to_native())
+
+        # also test single row
+        df = nw.from_native(df)
+        for i in range(len(df)):
+            df_transformed_row = transformer.transform(df[[i]].to_native())
+            df_expected_row = expected[[i]].to_native()
+
+            assert_frame_equal_dispatch(
+                df_transformed_row,
+                df_expected_row,
+            )
+
+    @pytest.mark.parametrize(
+        "library",
+        ["pandas", "polars"],
+    )
+    def test_custom_mappings_can_be_used(self, library):
+        "test output when custom mappings provided"
+
+        df_dict = {
+            "b": [
+                None,
+                datetime.datetime(
+                    2017,
+                    11,
+                    2,
+                    9,
+                    0,
+                    0,
+                    tzinfo=datetime.timezone.utc,
+                ),
+                datetime.datetime(
+                    2015,
+                    4,
+                    11,
+                    19,
+                    0,
+                    0,
+                    tzinfo=datetime.timezone.utc,
+                ),
+            ],
+            "a": [
+                datetime.datetime(
+                    2006,
+                    10,
+                    4,
+                    10,
+                    0,
+                    0,
+                    tzinfo=datetime.timezone.utc,
+                ),
+                datetime.datetime(
+                    2011,
+                    7,
+                    12,
+                    20,
+                    1,
+                    0,
+                    tzinfo=datetime.timezone.utc,
+                ),
+                datetime.datetime(
+                    2003,
+                    10,
+                    22,
+                    6,
+                    6,
+                    0,
+                    tzinfo=datetime.timezone.utc,
+                ),
+            ],
+        }
+
+        df = dataframe_init_dispatch(df_dict, library)
+        backend = library
+
+        transformer = DatetimeInfoExtractor(
+            columns=["a", "b"],
+            datetime_mappings={
+                "dayofweek": {
+                    **{i: "weekday" for i in [1, 2, 3, 4, 5]},
+                    **{i: "weekend" for i in [6, 7]},
+                },
+                "timeofmonth": {
+                    **{i: "start" for i in range(1, 16)},
+                    **{i: "end" for i in range(16, 32)},
+                },
+                "timeofyear": {
+                    **{i: "start" for i in range(1, 7)},
+                    **{i: "end" for i in range(7, 13)},
+                },
+                "timeofday": {
+                    **{i: "start" for i in range(12)},
+                    **{i: "end" for i in range(12, 24)},
+                },
+            },
+        )
+        transformed = transformer.transform(df)
+        expected = nw.from_native(df).clone()
+        expected = expected.with_columns(
+            nw.new_series(
+                name="a_timeofday",
+                values=[
+                    "start",
+                    "end",
+                    "start",
+                ],
+                backend=backend,
+                dtype=nw.Enum(["end", "start"]),
+            ),
+            nw.new_series(
+                name="a_timeofmonth",
+                values=[
+                    "start",
+                    "start",
+                    "end",
+                ],
+                backend=backend,
+                dtype=nw.Enum(["end", "start"]),
+            ),
+            nw.new_series(
+                name="a_timeofyear",
+                values=[
+                    "end",
+                    "end",
+                    "end",
+                ],
+                backend=backend,
+                dtype=nw.Enum(["end", "start"]),
+            ),
+            nw.new_series(
+                name="a_dayofweek",
+                values=[
+                    "weekday",
+                    "weekday",
+                    "weekday",
+                ],
+                backend=backend,
+                dtype=nw.Enum(["weekday", "weekend"]),
+            ),
+            nw.new_series(
+                name="b_timeofday",
+                values=[
+                    None,
+                    "start",
+                    "end",
+                ],
+                backend=backend,
+                dtype=nw.Enum(["end", "start"]),
+            ),
+            nw.new_series(
+                name="b_timeofmonth",
+                values=[
+                    None,
+                    "start",
+                    "start",
+                ],
+                backend=backend,
+                dtype=nw.Enum(["end", "start"]),
+            ),
+            nw.new_series(
+                name="b_timeofyear",
+                values=[
+                    None,
+                    "end",
+                    "start",
+                ],
+                backend=backend,
+                dtype=nw.Enum(["end", "start"]),
+            ),
+            nw.new_series(
+                name="b_dayofweek",
+                values=[
+                    None,
+                    "weekday",
+                    "weekend",
+                ],
+                backend=backend,
+                dtype=nw.Enum(["weekday", "weekend"]),
             ),
         )
 
