@@ -12,6 +12,7 @@ from tests.base_tests import (
     GenericTransformTests,
     NewColumnNameInitMixintests,
     OtherBaseBehaviourTests,
+    ReturnNativeTests,
     TwoColumnListInitTests,
 )
 from tests.dates.test_BaseGenericDateTransformer import (
@@ -358,6 +359,7 @@ class TestTransform(
     GenericTransformTests,
     GenericDatesMixinTransformTests,
     DropOriginalTransformMixinTests,
+    ReturnNativeTests,
 ):
     """Tests for DateDifferenceTransformer.transform()."""
 

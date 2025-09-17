@@ -19,6 +19,20 @@ Series = Union[
     nw.Series,
 ]
 
+NumericTypes = [
+    nw.Int8,
+    nw.Int16,
+    nw.Int32,
+    nw.Int64,
+    nw.Float64,
+    nw.Float32,
+    nw.UInt8,
+    nw.UInt16,
+    nw.UInt32,
+    nw.UInt64,
+    nw.UInt128,
+]
+
 # needed as by default beartype will just randomly sample to type check elements
 # and we want consistency
 ListOfStrs = Annotated[
@@ -37,7 +51,7 @@ ListOfTwoStrs = Annotated[
 ]
 
 PositiveNumber = Annotated[
-    Union[int, float],
+    NumericTypes,
     Is[lambda v: v > 0],
 ]
 

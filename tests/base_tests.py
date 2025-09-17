@@ -750,6 +750,54 @@ class WeightColumnFitMixinTests:
             transformer.fit(df, df["a"])
 
 
+class DummyWeightColumnMixinTests:
+    @pytest.mark.parametrize(
+        "minimal_dataframe_lookup",
+        ["pandas", "polars"],
+        indirect=True,
+    )
+    def test_errors_raised_if_unit_weights_column_exists_but_not_all_one(
+        self,
+        minimal_attribute_dict,
+        minimal_dataframe_lookup,
+        uninitialized_transformers,
+    ):
+        """Test that error is raised if 'unit_weights_column' already
+        exists in data, but is not all one"""
+
+        args = minimal_attribute_dict[self.transformer_name].copy()
+        args["weights_column"] = None
+
+        df = minimal_dataframe_lookup[self.transformer_name]
+        uninitialized_transformer = uninitialized_transformers[self.transformer_name]
+
+        transformer = uninitialized_transformer(**args)
+
+        df_dict = {}
+
+        bad_weight_values = [2] + [1] * (len(df) - 1)
+
+        df_dict["unit_weights_column"] = bad_weight_values
+
+        df = nw.from_native(df)
+        backend = nw.get_native_namespace(df)
+        new_cols = [
+            nw.new_series(name=name, values=df_dict[name], backend=backend).alias(name)
+            for name in df_dict
+        ]
+        df = df.with_columns(
+            new_cols,
+        )
+        df = df.to_native()
+
+        msg = "Attempting to insert column of unit weights named 'unit_weights_column', but an existing column shares this name and is not all 1, please rename existing column"
+        with pytest.raises(
+            RuntimeError,
+            match=msg,
+        ):
+            transformer.fit(df, df["a"])
+
+
 class GenericTransformTests:
     """
     Generic tests for transformer.transform().
