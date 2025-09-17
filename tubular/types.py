@@ -51,7 +51,7 @@ ListOfTwoStrs = Annotated[
 ]
 
 PositiveNumber = Annotated[
-    NumericTypes,
+    Union[int, float],
     Is[lambda v: v > 0],
 ]
 
