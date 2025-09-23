@@ -5,7 +5,6 @@ import tests.test_data as d
 from tests import utils as u
 from tests.base_tests import (
     ColumnStrListInitTests,
-    FromJsonTests,
     GenericTransformTests,
     OtherBaseBehaviourTests,
     ReturnNativeTests,
@@ -88,7 +87,7 @@ class TestTransform(GenericTransformTests, ReturnNativeTests):
         )
 
 
-class TestOtherBaseBehaviour(OtherBaseBehaviourTests, FromJsonTests):
+class TestOtherBaseBehaviour(OtherBaseBehaviourTests):
     """
     Class to run tests for BaseTransformerBehaviour outside the three standard methods.
 
