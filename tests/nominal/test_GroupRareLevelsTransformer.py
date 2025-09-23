@@ -371,9 +371,7 @@ class TestTransform(GenericNominalTransformTests):
 
         output_df = x.transform(df)
 
-        output_categories = (
-            nw.from_native(output_df)[column].cat.get_categories().to_list()
-        )
+        output_categories = output_df[column].unique()
 
         for cat in expected_removed_cats:
             assert (
