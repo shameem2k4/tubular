@@ -596,7 +596,9 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         }
 
         transform_expressions = {
-            c: transform_expressions[c].cast(schema[c])
+            c: transform_expressions[c].cast(
+                nw.Enum(self.non_rare_levels[c] + [self.rare_level_name]),
+            )
             if (schema[c] in [nw.Categorical, nw.Enum])
             else transform_expressions[c]
             for c in self.columns
