@@ -13,7 +13,13 @@ from tubular.dates import (
     DatetimeSinusoidCalculator,
     ToDatetimeTransformer,
 )
-from tubular.imputers import ArbitraryImputer, MeanImputer, MedianImputer, ModeImputer
+from tubular.imputers import (
+    ArbitraryImputer,
+    MeanImputer,
+    MedianImputer,
+    ModeImputer,
+    NullIndicator,
+)
 from tubular.mapping import MappingTransformer
 from tubular.misc import SetValueTransformer
 from tubular.nominal import (
@@ -37,6 +43,7 @@ __all__ = [
     "MeanImputer",
     "ModeImputer",
     "MedianImputer",
+    "NullIndicator",
     "MappingTransformer",
     "SetValueTransformer",
     "GroupRareLevelsTransformer",
