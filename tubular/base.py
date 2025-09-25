@@ -11,6 +11,7 @@ import pandas as pd
 from beartype import beartype
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
+from typing_extensions import deprecated
 
 from tubular._utils import (
     _convert_dataframe_to_narwhals,
@@ -271,6 +272,15 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
             )
 
 
+# DEPRECATED TRANSFORMERS
+@deprecated(
+    """This transformer has been deprecated in favour of more specialised transformers.
+    See the aggregations module for aggregation type functionality formerly covered by
+    this transformer.
+    If other functionality was being used from this transformer, then please submit an
+    issue for it to be redeveloped!
+    """,
+)
 class DataFrameMethodTransformer(DropOriginalMixin, BaseTransformer):
 
     """Tranformer that applies a pandas.DataFrame method.
