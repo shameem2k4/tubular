@@ -351,6 +351,7 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
             )
 
 
+# DEPRECATED TRANSFORMERS
 @deprecated(
     """This transformer has been deprecated in favour of more specialised transformers.
     See the aggregations module for aggregation type functionality formerly covered by
