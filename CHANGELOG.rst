@@ -27,6 +27,7 @@ Each individual change should have a link to the pull request after the descript
 - chore: deprecated DataFrameMethodTransformer
 - chore: added doctest examples for BaseTransfomer
 - chore: deleted stale example notebooks for BaseTransfomer (replaced by doctest) and DataFrameMethodTransformer (deprecated)
+- bugfix: updated minimum narwhals version to 1.42.1 in toml, to avoid import issues for IntoDtype
 
 
 1.4.8 (03/09/25)
