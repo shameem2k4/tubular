@@ -139,6 +139,7 @@ class BaseNumericTransformer(BaseTransformer, CheckNumericMixin):
 
         >>> test_df = pl.DataFrame({'a': [1,2], 'b': [3,4]})
 
+        >>> # base class has no effect on datag
         >>> transformer.transform(test_df)
         shape: (2, 2)
         ┌─────┬─────┐
