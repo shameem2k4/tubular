@@ -529,7 +529,6 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         ... },
         ... )
 
-        >>> # base transform has no effect on data
         >>> transformer.transform(test_df)
         shape: (2, 3)
         ┌────────────┬────────────┬───────────┐
