@@ -48,9 +48,10 @@ class TestInit(
     def setup_class(cls):
         cls.transformer_name = "DatetimeInfoExtractor"
 
-    @pytest.mark.parametrize("incorrect_type_include", [2, 3.0, "invalid", "dayofweek"])
-    def test_error_when_include_not_list(self, incorrect_type_include):
-        """Test that an exception is raised when value include variable is not a list."""
+    @pytest.mark.parametrize("incorrect_type_include", [2, 3.0, "invalid"])
+    def test_error_for_bad_include_type(self, incorrect_type_include):
+        """Test that an exception is raised when value include variable
+        is incorrect type."""
         with pytest.raises(
             BeartypeCallHintParamViolation,
         ):
