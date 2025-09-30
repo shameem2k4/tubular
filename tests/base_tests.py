@@ -1,7 +1,6 @@
 # tests to apply to all columns str or list transformers
 import copy
 import re
-from copy import deepcopy
 
 import joblib
 import narwhals as nw
@@ -12,7 +11,7 @@ import pytest
 import sklearn.base as b
 from beartype.roar import BeartypeCallHintParamViolation
 
-from tests.utils import assert_frame_equal_dispatch
+from tests.utils import _handle_from_json, assert_frame_equal_dispatch
 
 
 class GenericInitTests:
@@ -800,35 +799,13 @@ class DummyWeightColumnMixinTests:
             transformer.fit(df, df["a"])
 
 
-class FromJsonTests:
-    @pytest.mark.parametrize(
-        "minimal_dataframe_lookup",
-        ["pandas", "polars"],
-        indirect=True,
-    )
-    def test_from_json_output_matches_original(
-        self,
-        minimal_dataframe_lookup,
-        initialized_transformers,
-    ):
-        df = minimal_dataframe_lookup[self.transformer_name]
-        x = initialized_transformers[self.transformer_name]
-
-        x = x.fit(df, df["a"])
-
-        json_dict = x.to_json()
-
-        x_from_json = deepcopy(x).from_json(json_dict)
-
-        assert x == x_from_json
-
-
 class GenericTransformTests:
     """
     Generic tests for transformer.transform().
     Note this deliberately avoids starting with "Tests" so that the tests are not run on import.
     """
 
+    @pytest.mark.parametrize("from_json", [True, False])
     @pytest.mark.parametrize(
         "minimal_dataframe_lookup",
         ["pandas", "polars"],
@@ -840,6 +817,7 @@ class GenericTransformTests:
         non_df,
         initialized_transformers,
         minimal_dataframe_lookup,
+        from_json,
     ):
         """Test that an error is raised in transform is X is not a pd/pl.DataFrame."""
 
@@ -850,13 +828,16 @@ class GenericTransformTests:
         if not x.polars_compatible and isinstance(df, pl.DataFrame):
             return
 
-        x_fitted = x.fit(df, df["a"])
+        x = x.fit(df, df["a"])
+
+        x = _handle_from_json(x, from_json)
 
         with pytest.raises(
             BeartypeCallHintParamViolation,
         ):
-            x_fitted.transform(X=non_df)
+            x.transform(X=non_df)
 
+    @pytest.mark.parametrize("from_json", [True, False])
     @pytest.mark.parametrize(
         "minimal_dataframe_lookup",
         ["pandas", "polars"],
@@ -866,6 +847,7 @@ class GenericTransformTests:
         self,
         initialized_transformers,
         minimal_dataframe_lookup,
+        from_json,
     ):
         """Test an error is raised if X has no rows."""
 
@@ -878,6 +860,8 @@ class GenericTransformTests:
 
         x = x.fit(df, df["a"])
 
+        x = _handle_from_json(x, from_json)
+
         df = df.head(0)
 
         with pytest.raises(
@@ -886,6 +870,7 @@ class GenericTransformTests:
         ):
             x.transform(df)
 
+    @pytest.mark.parametrize("from_json", [True, False])
     @pytest.mark.parametrize(
         "minimal_dataframe_lookup",
         ["pandas", "polars"],
@@ -895,6 +880,7 @@ class GenericTransformTests:
         self,
         initialized_transformers,
         minimal_dataframe_lookup,
+        from_json,
     ):
         """Test that the original dataframe is not transformed when transform method used
         and copy attr True"""
@@ -911,10 +897,13 @@ class GenericTransformTests:
 
         x = x.fit(df, df["a"])
 
+        x = _handle_from_json(x, from_json)
+
         _ = x.transform(df)
 
         assert_frame_equal_dispatch(df, original_df)
 
+    @pytest.mark.parametrize("from_json", [True, False])
     @pytest.mark.parametrize(
         "minimal_dataframe_lookup",
         ["pandas"],
@@ -924,6 +913,7 @@ class GenericTransformTests:
         self,
         initialized_transformers,
         minimal_dataframe_lookup,
+        from_json,
     ):
         """Test that the original (pandas) dataframe index is not transformed when transform method used."""
 
@@ -936,6 +926,8 @@ class GenericTransformTests:
         original_df = copy.deepcopy(df)
 
         x = x.fit(df, df["a"])
+
+        x = _handle_from_json(x, from_json)
 
         _ = x.transform(df)
 

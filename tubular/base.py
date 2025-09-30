@@ -76,6 +76,10 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
     polars_compatible = True
 
+    jsonable = True
+
+    FITS = True
+
     def classname(self) -> str:
         """Method that returns the name of the current class when called."""
         return type(self).__name__
@@ -107,16 +111,16 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         self.copy = copy
         self.return_native = return_native
 
-    @beartype
-    def __eq__(self, other: BaseTransformer) -> bool:
-        return (
-            (self.columns == other.columns)
-            & (self.copy == other.copy)
-            & (self.verbose == other.verbose)
-            & (self.return_native == other.return_native)
-        )
-
     def to_json(self) -> dict[str, dict[str, Any]]:
+        """dump transformer to json dict
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]:
+            jsonified transformer. Nested dict containing levels for attributes
+            set at init and fit.
+
+        """
         return {
             "init": {
                 "columns": self.columns,
@@ -128,6 +132,18 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         }
 
     def from_json(cls, json: dict[str, Any]) -> BaseTransformer:
+        """rebuild transformer from json dict, readyfor transform
+
+        Parameters
+        ----------
+        json_dict: dict[str, dict[str, Any]]
+            json-ified transformer
+
+        Returns
+        -------
+        BaseTransformer:
+            reconstructed transformer class, ready for transform
+        """
         cls.__init__(**json["init"])
 
         for attr in json["fit"]:
@@ -441,6 +457,10 @@ class DataFrameMethodTransformer(DropOriginalMixin, BaseTransformer):
     """
 
     polars_compatible = False
+
+    FITS = False
+
+    jsonable = False
 
     def __init__(
         self,
