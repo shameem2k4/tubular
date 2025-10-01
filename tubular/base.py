@@ -16,6 +16,7 @@ from typing_extensions import deprecated
 from tubular._utils import (
     _convert_dataframe_to_narwhals,
     _convert_series_to_narwhals,
+    _get_version,
     _return_narwhals_or_native_dataframe,
 )
 from tubular.mixins import DropOriginalMixin
@@ -80,6 +81,8 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
     FITS = True
 
+    _version = _get_version()
+
     def classname(self) -> str:
         """Method that returns the name of the current class when called."""
         return type(self).__name__
@@ -122,6 +125,7 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
         """
         return {
+            "tubular_version": self._version,
             "init": {
                 "columns": self.columns,
                 "copy": self.copy,
