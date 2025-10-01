@@ -156,6 +156,13 @@ class ArbitraryImputer(BaseImputer):
 
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
+
+    Example:
+    --------
+    >>> ArbitraryImputer(
+    ... columns=["a", "b"], impute_value= 5
+    ... )
+    ArbitraryImputer(columns=['a', 'b'], impute_value=5)
     """
 
     polars_compatible = True
@@ -457,6 +464,12 @@ class MedianImputer(BaseImputer, WeightColumnMixin):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    Example:
+    --------
+    >>> MedianImputer(
+    ... columns=["a", "b"],
+    ... )
+    MedianImputer(columns=['a', 'b'])
     """
 
     polars_compatible = True
@@ -571,6 +584,12 @@ class MeanImputer(WeightColumnMixin, BaseImputer):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    Example:
+    --------
+    >>> MeanImputer(
+    ... columns=["a", "b"],
+    ... )
+    MeanImputer(columns=['a', 'b'])
     """
 
     polars_compatible = True
@@ -680,6 +699,12 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    Example:
+    --------
+    >>> ModeImputer(
+    ... columns=["a", "b"],
+    ... )
+    ModeImputer(columns=['a', 'b'])
     """
 
     polars_compatible = True
@@ -804,6 +829,13 @@ class NullIndicator(BaseTransformer):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+
+    Example:
+    --------
+    >>> NullIndicator(
+    ... columns=["a", "b"],
+    ... )
+    NullIndicator(columns=['a', 'b'])
     """
 
     polars_compatible = True
