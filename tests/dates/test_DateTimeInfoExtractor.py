@@ -48,7 +48,10 @@ class TestInit(
     def setup_class(cls):
         cls.transformer_name = "DatetimeInfoExtractor"
 
-    @pytest.mark.parametrize("incorrect_type_include", [2, 3.0, "invalid"])
+    @pytest.mark.parametrize(
+        "incorrect_type_include",
+        [2, 3.0, "invalid", ["invalid", "timeofday"]],
+    )
     def test_error_for_bad_include_type(self, incorrect_type_include):
         """Test that an exception is raised when value include variable
         is incorrect type."""

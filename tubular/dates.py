@@ -518,7 +518,7 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
 
         >>> transformer=DateDifferenceTransformer(
         ... columns=["a",  "b"],
-        ... new_column_name='bla',
+        ... new_column_name='a_b_difference_years',
         ... units='common_year',
         ...    )
 
@@ -531,14 +531,14 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
 
         >>> transformer.transform(test_df)
         shape: (2, 3)
-        ┌────────────┬────────────┬───────────┐
-        │ a          ┆ b          ┆ bla       │
-        │ ---        ┆ ---        ┆ ---       │
-        │ date       ┆ date       ┆ f64       │
-        ╞════════════╪════════════╪═══════════╡
-        │ 1993-09-27 ┆ 1991-05-22 ┆ -2.353425 │
-        │ 2005-10-07 ┆ 2001-12-10 ┆ -3.827397 │
-        └────────────┴────────────┴───────────┘
+        ┌────────────┬────────────┬──────────────────────┐
+        │ a          ┆ b          ┆ a_b_difference_years │
+        │ ---        ┆ ---        ┆ ---                  │
+        │ date       ┆ date       ┆ f64                  │
+        ╞════════════╪════════════╪══════════════════════╡
+        │ 1993-09-27 ┆ 1991-05-22 ┆ -2.353425            │
+        │ 2005-10-07 ┆ 2001-12-10 ┆ -3.827397            │
+        └────────────┴────────────┴──────────────────────┘
         """
 
         X = _convert_dataframe_to_narwhals(X)
