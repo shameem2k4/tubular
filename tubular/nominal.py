@@ -21,7 +21,7 @@ from tubular.base import BaseTransformer
 from tubular.imputers import MeanImputer, MedianImputer
 from tubular.mapping import BaseMappingTransformer, BaseMappingTransformMixin
 from tubular.mixins import DropOriginalMixin, SeparatorColumnMixin, WeightColumnMixin
-from tubular.types import DataFrame, ListOfStrs, Series
+from tubular.types import DataFrame, FloatBetweenZeroOne, ListOfStrs, Series
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT
@@ -265,45 +265,26 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
     FITS = True
 
+    @beartype
     def __init__(
         self,
-        columns: str | list[str] | None = None,
-        cut_off_percent: float = 0.01,
-        weights_column: str | None = None,
-        rare_level_name: str | list[str] | None = "rare",
+        columns: Optional[Union[str, ListOfStrs]] = None,
+        cut_off_percent: FloatBetweenZeroOne = 0.01,
+        weights_column: Optional[str] = None,
+        rare_level_name: Union[str, ListOfStrs] = "rare",
         record_rare_levels: bool = True,
         unseen_levels_to_rare: bool = True,
-        **kwargs: dict[str, bool],
+        **kwargs: bool,
     ) -> None:
         super().__init__(columns=columns, **kwargs)
-
-        if not isinstance(cut_off_percent, float):
-            msg = f"{self.classname()}: cut_off_percent must be a float"
-            raise ValueError(msg)
-
-        if not ((cut_off_percent > 0) & (cut_off_percent < 1)):
-            msg = f"{self.classname()}: cut_off_percent must be > 0 and < 1"
-            raise ValueError(msg)
 
         self.cut_off_percent = cut_off_percent
 
         WeightColumnMixin.check_and_set_weight(self, weights_column)
 
-        if not isinstance(rare_level_name, str):
-            msg = f"{self.classname()}: rare_level_name must be a str"
-            raise ValueError(msg)
-
         self.rare_level_name = rare_level_name
 
-        if not isinstance(record_rare_levels, bool):
-            msg = f"{self.classname()}: record_rare_levels must be a bool"
-            raise ValueError(msg)
-
         self.record_rare_levels = record_rare_levels
-
-        if not isinstance(unseen_levels_to_rare, bool):
-            msg = f"{self.classname()}: unseen_levels_to_rare must be a bool"
-            raise ValueError(msg)
 
         self.unseen_levels_to_rare = unseen_levels_to_rare
 
@@ -1144,7 +1125,29 @@ class MeanResponseTransformer(
         Example:
         --------
         >>> import polars as pl
+        >>> # example with no prior
+        >>> transformer=MeanResponseTransformer(
+        ... columns='a',
+        ... prior=0,
+        ... unseen_level_handling='mean',
+        ...    )
 
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2], 'target': [0,1]})
+
+        >>> _ = transformer.fit(test_df, test_df['target'])
+
+        >>> transformer.transform(test_df)
+        shape: (2, 3)
+        ┌─────┬─────┬────────┐
+        │ a   ┆ b   ┆ target │
+        │ --- ┆ --- ┆ ---    │
+        │ f32 ┆ i64 ┆ i64    │
+        ╞═════╪═════╪════════╡
+        │ 0.0 ┆ 1   ┆ 0      │
+        │ 1.0 ┆ 2   ┆ 1      │
+        └─────┴─────┴────────┘
+
+        # example with prior
         >>> transformer=MeanResponseTransformer(
         ... columns='a',
         ... prior=1,
