@@ -795,7 +795,7 @@ class MeanResponseTransformer(
         regularised : nw.Series
             Series of regularised encoding values
 
-        # not adding doctests yet as this method will change in an upcoming PR
+        # TODO not adding doctests yet as this method will change in an upcoming PR
         """
         self.check_is_fitted(["global_mean"])
 
@@ -846,7 +846,7 @@ class MeanResponseTransformer(
         response_column: str
             name of response column
 
-        # not adding doctests yet as this method will change in an upcoming PR
+        # TODO not adding doctests yet as this method will change in an upcoming PR
         """
         # reuse mean imputer logic to calculate global mean
         mean_imputer = MeanImputer(
@@ -1044,7 +1044,7 @@ class MeanResponseTransformer(
         weights_column : str
             name of weights column
 
-        # not adding doctests yet as this method will change in an upcoming PR
+        # TODO not adding doctests yet as this method will change in an upcoming PR
 
         """
 
