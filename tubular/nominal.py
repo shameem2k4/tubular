@@ -327,10 +327,20 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         ... rare_level_name='rare_level',
         ...    )
 
+        >>> # non erroring example
         >>> test_df=pl.DataFrame({'a': ['w','x'], 'b': ['y','z']})
         >>> schema=nw.from_native(test_df).schema
 
         >>> transformer._check_str_like_columns(schema)
+
+        >>> # erroring example
+        >>> test_df=pl.DataFrame({'a': [1,2], 'b': ['y','z']})
+        >>> schema=nw.from_native(test_df).schema
+
+        >>> transformer._check_str_like_columns(schema)
+        Traceback (most recent call last):
+        ...
+        TypeError: ...
         """
 
         str_like_columns = [
@@ -377,10 +387,18 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         ... rare_level_name='rare_level',
         ...    )
 
+        >>>  # non erroring example
         >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': ['w', 'z']})
 
         >>> transformer._check_for_nulls(test_df)
 
+        >>> # erroring  example
+        >>> test_df=pl.DataFrame({'a': [None, 'y'], 'b': ['w', 'z']})
+
+        >>> transformer._check_for_nulls(test_df)
+        Traceback (most recent call last):
+        ...
+        ValueError: ...
         """
 
         X = _convert_dataframe_to_narwhals(X)
@@ -1350,10 +1368,18 @@ class OneHotEncodingTransformer(
         ... columns='a',
         ...    )
 
+        >>> # non erroring example
         >>> present_levels={'a': ['a', 'b']}
 
         >>> transformer._check_for_nulls(present_levels)
 
+        >>> # erroring example
+        >>> present_levels={'a': [None, 'b']}
+
+        >>> transformer._check_for_nulls(present_levels)
+        Traceback (most recent call last):
+        ...
+        ValueError: ...
         """
         columns_with_nulls = []
 
