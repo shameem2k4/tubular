@@ -18,7 +18,7 @@ Tubular pre-processing for machine learning!
 
 The transformers are compatible with [scikit-learn](https://scikit-learn.org/) [Pipelines](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html). Each has a `transform` method to apply the pre-processing step to data and a `fit` method to learn the relevant information from the data, if applicable.
 
-The transformers in `tubular` work with data in [pandas](https://pandas.pydata.org/) [DataFrames](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html).
+The transformers in `tubular` are written in narwhals [narwhals](https://narwhals-dev.github.io/narwhals/), so are agnostic between [pandas](https://pandas.pydata.org/) and [polars](https://pola.rs/) dataframes, and will utilise the chosen (pandas/polars) API under the hood.
 
 There are a variety of transformers to assist with;
 
@@ -32,19 +32,27 @@ There are a variety of transformers to assist with;
 Here is a simple example of applying capping to two columns;
 
 ```python
-from tubular.capping import CappingTransformer
-import pandas as pd
-from sklearn.datasets import fetch_california_housing
+import polars as pl
 
-# load the california housing dataset
-cali = fetch_california_housing()
-X = pd.DataFrame(cali['data'], columns=cali['feature_names'])
+transformer=CappingTransformer(
+capping_values={'a': [10, 20], 'b': [1,3]},
+  )
 
-# initialise a capping transformer for 2 columns
-capper = CappingTransformer(capping_values = {'AveOccup': [0, 10], 'HouseAge': [0, 50]})
+test_df=pl.DataFrame({'a': [1,15,18,25], 'b': [6,2,7,1], 'c':[1,2,3,4]})
 
-# transform the data
-X_capped = capper.transform(X)
+transformer.transform(test_df)
+# ->
+# shape: (4, 3)
+# ┌─────┬─────┬─────┐
+# │ a   ┆ b   ┆ c   │
+# │ --- ┆ --- ┆ --- │
+# │ i64 ┆ i64 ┆ i64 │
+# ╞═════╪═════╪═════╡
+# │ 10  ┆ 3   ┆ 1   │
+# │ 15  ┆ 2   ┆ 2   │
+# │ 18  ┆ 3   ┆ 3   │
+# │ 20  ┆ 1   ┆ 4   │
+# └─────┴─────┴─────┘
 ```
 
 ## Installation
