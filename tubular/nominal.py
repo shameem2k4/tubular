@@ -82,9 +82,9 @@ class BaseNominalTransformer(BaseTransformer):
         ... columns='a',
         ...    )
 
-        >>> transformer.mappings={'a': {'a': 0, 'b': 1}}
+        >>> transformer.mappings={'a': {'x': 0, 'y': 1}}
 
-        >>> test_df = pl.DataFrame({'a': ['a', 'b'], 'b':[3, 4]})
+        >>> test_df = pl.DataFrame({'a': ['x', 'y'], 'b':[3, 4]})
 
         >>> transformer.check_mappable_rows(test_df)
         """
@@ -147,9 +147,9 @@ class BaseNominalTransformer(BaseTransformer):
         ... columns='a',
         ...    )
 
-        >>> transformer.mappings={'a': {1: 0, 2: 1}}
+        >>> transformer.mappings={'a': {'x': 0, 'y': 1}}
 
-        >>> test_df = pl.DataFrame({'a': [1,2], 'b':[3,4]})
+        >>> test_df = pl.DataFrame({'a': ['x', 'y'], 'b':['w', 'z']})
 
         >>> # base transform has no effect on data
         >>> transformer.transform(test_df)
@@ -157,10 +157,10 @@ class BaseNominalTransformer(BaseTransformer):
         ┌─────┬─────┐
         │ a   ┆ b   │
         │ --- ┆ --- │
-        │ i64 ┆ i64 │
+        │ str ┆ str │
         ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 4   │
+        │ x   ┆ w   │
+        │ y   ┆ z   │
         └─────┴─────┘
         """
 
@@ -327,7 +327,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         ... rare_level_name='rare_level',
         ...    )
 
-        >>> test_df=pl.DataFrame({'a': ['a','b'], 'b': ['c','d']})
+        >>> test_df=pl.DataFrame({'a': ['w','x'], 'b': ['y','z']})
         >>> schema=nw.from_native(test_df).schema
 
         >>> transformer._check_str_like_columns(schema)
@@ -377,7 +377,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         ... rare_level_name='rare_level',
         ...    )
 
-        >>> test_df=pl.DataFrame({'a': ['a','b'], 'b': ['c','d']})
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': ['w', 'z']})
 
         >>> transformer._check_for_nulls(test_df)
 
@@ -431,7 +431,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         ... rare_level_name='rare_level',
         ...    )
 
-        >>> test_df=pl.DataFrame({'a': ['a','b'], 'b': ['c','d']})
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': ['w', 'z']})
 
         >>> transformer.fit(test_df)
         GroupRareLevelsTransformer(columns=['a'], cut_off_percent=0.02,
@@ -535,7 +535,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         ... rare_level_name='rare_level',
         ...    )
 
-        >>> test_df=pl.DataFrame({'a': ['a', 'a', 'b'], 'b': ['c', 'd', 'e']})
+        >>> test_df=pl.DataFrame({'a': ['x', 'x', 'y'], 'b': ['w', 'z', 'z']})
 
         >>> _=transformer.fit(test_df)
 
@@ -546,9 +546,9 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         │ ---        ┆ --- │
         │ str        ┆ str │
         ╞════════════╪═════╡
-        │ a          ┆ c   │
-        │ a          ┆ d   │
-        │ rare_level ┆ e   │
+        │ x          ┆ w   │
+        │ x          ┆ z   │
+        │ rare_level ┆ z   │
         └────────────┴─────┘
 
         """
@@ -912,7 +912,7 @@ class MeanResponseTransformer(
         ... unseen_level_handling='mean',
         ...    )
 
-        >>> test_df=pl.DataFrame({'a': ['a', 'b'], 'b': [1,2], 'target': [0,1]})
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2], 'target': [0,1]})
 
         >>> transformer.fit(test_df, test_df['target'])
         MeanResponseTransformer(columns=['a'], prior=1, unseen_level_handling='mean')
@@ -1133,7 +1133,7 @@ class MeanResponseTransformer(
         ... unseen_level_handling='mean',
         ...    )
 
-        >>> test_df=pl.DataFrame({'a': ['a', 'b'], 'b': [1,2], 'target': [0,1]})
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2], 'target': [0,1]})
 
         >>> _ = transformer.fit(test_df, test_df['target'])
 
@@ -1390,7 +1390,7 @@ class OneHotEncodingTransformer(
         ... columns='a',
         ...    )
 
-        >>> test_df=pl.DataFrame({'a': ['a', 'b'], 'b': [1,2]})
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2]})
 
         >>> transformer.fit(test_df)
         OneHotEncodingTransformer(columns=['a'])
@@ -1471,12 +1471,12 @@ class OneHotEncodingTransformer(
         ... columns='a',
         ...    )
 
-        >>> test_df=pl.DataFrame({'a': ['a', 'b'], 'b': [1,2]})
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2]})
 
         >>> _ = transformer.fit(test_df)
 
         >>> transformer._warn_missing_levels(
-        ... present_levels=['a', 'b'],
+        ... present_levels=['x', 'y'],
         ... c='a',
         ... missing_levels={}
         ... )
@@ -1512,12 +1512,12 @@ class OneHotEncodingTransformer(
         ... columns='a',
         ...    )
 
-        >>> test_df=pl.DataFrame({'a': ['a', 'b'], 'b': [1,2]})
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2]})
 
         >>> _ = transformer.fit(test_df)
 
         >>> transformer._get_feature_names('a')
-        ['a_a', 'a_b']
+        ['a_x', 'a_y']
 
         """
 
@@ -1557,19 +1557,19 @@ class OneHotEncodingTransformer(
         ... columns='a',
         ...    )
 
-        >>> test_df=pl.DataFrame({'a': ['a', 'b'], 'b': [1,2]})
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2]})
 
         >>> _ = transformer.fit(test_df)
 
         >>> transformer.transform(test_df)
         shape: (2, 4)
         ┌─────┬─────┬───────┬───────┐
-        │ a   ┆ b   ┆ a_a   ┆ a_b   │
+        │ a   ┆ b   ┆ a_x   ┆ a_y   │
         │ --- ┆ --- ┆ ---   ┆ ---   │
         │ str ┆ i64 ┆ bool  ┆ bool  │
         ╞═════╪═════╪═══════╪═══════╡
-        │ a   ┆ 1   ┆ true  ┆ false │
-        │ b   ┆ 2   ┆ false ┆ true  │
+        │ x   ┆ 1   ┆ true  ┆ false │
+        │ y   ┆ 2   ┆ false ┆ true  │
         └─────┴─────┴───────┴───────┘
         """
         return_native = self._process_return_native(return_native_override)
