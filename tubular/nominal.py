@@ -21,7 +21,7 @@ from tubular.base import BaseTransformer
 from tubular.imputers import MeanImputer, MedianImputer
 from tubular.mapping import BaseMappingTransformer, BaseMappingTransformMixin
 from tubular.mixins import DropOriginalMixin, SeparatorColumnMixin, WeightColumnMixin
-from tubular.types import DataFrame, ListOfStrs, Series
+from tubular.types import DataFrame, FloatBetweenZeroOne, ListOfStrs, Series
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT
@@ -36,6 +36,13 @@ class BaseNominalTransformer(BaseTransformer):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    Example:
+    --------
+    >>> BaseNominalTransformer(
+    ... columns='a',
+    ...    )
+    BaseNominalTransformer(columns=['a'])
 
     """
 
@@ -67,6 +74,19 @@ class BaseNominalTransformer(BaseTransformer):
             If any of the rows in a column (c) to be mapped, could not be mapped according to
             the mapping dict in mappings[c].
 
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer = BaseNominalTransformer(
+        ... columns='a',
+        ...    )
+
+        >>> transformer.mappings={'a': {'x': 0, 'y': 1}}
+
+        >>> test_df = pl.DataFrame({'a': ['x', 'y'], 'b':[3, 4]})
+
+        >>> transformer.check_mappable_rows(test_df)
         """
         self.check_is_fitted(["mappings"])
 
@@ -119,6 +139,29 @@ class BaseNominalTransformer(BaseTransformer):
         X : DataFrame
             Input X.
 
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer = BaseNominalTransformer(
+        ... columns='a',
+        ...    )
+
+        >>> transformer.mappings={'a': {'x': 0, 'y': 1}}
+
+        >>> test_df = pl.DataFrame({'a': ['x', 'y'], 'b':['w', 'z']})
+
+        >>> # base transform has no effect on data
+        >>> transformer.transform(test_df)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ str ┆ str │
+        ╞═════╪═════╡
+        │ x   ┆ w   │
+        │ y   ┆ z   │
+        └─────┴─────┘
         """
 
         return_native = self._process_return_native(return_native_override)
@@ -207,51 +250,41 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
+    Example:
+    --------
+    >>> GroupRareLevelsTransformer(
+    ... columns='a',
+    ... cut_off_percent=0.02,
+    ... rare_level_name='rare_level',
+    ...    )
+    GroupRareLevelsTransformer(columns=['a'], cut_off_percent=0.02,
+                               rare_level_name='rare_level')
     """
 
     polars_compatible = True
 
     FITS = True
 
+    @beartype
     def __init__(
         self,
-        columns: str | list[str] | None = None,
-        cut_off_percent: float = 0.01,
-        weights_column: str | None = None,
-        rare_level_name: str | list[str] | None = "rare",
+        columns: Optional[Union[str, ListOfStrs]] = None,
+        cut_off_percent: FloatBetweenZeroOne = 0.01,
+        weights_column: Optional[str] = None,
+        rare_level_name: Union[str, ListOfStrs] = "rare",
         record_rare_levels: bool = True,
         unseen_levels_to_rare: bool = True,
-        **kwargs: dict[str, bool],
+        **kwargs: bool,
     ) -> None:
         super().__init__(columns=columns, **kwargs)
-
-        if not isinstance(cut_off_percent, float):
-            msg = f"{self.classname()}: cut_off_percent must be a float"
-            raise ValueError(msg)
-
-        if not ((cut_off_percent > 0) & (cut_off_percent < 1)):
-            msg = f"{self.classname()}: cut_off_percent must be > 0 and < 1"
-            raise ValueError(msg)
 
         self.cut_off_percent = cut_off_percent
 
         WeightColumnMixin.check_and_set_weight(self, weights_column)
 
-        if not isinstance(rare_level_name, str):
-            msg = f"{self.classname()}: rare_level_name must be a str"
-            raise ValueError(msg)
-
         self.rare_level_name = rare_level_name
 
-        if not isinstance(record_rare_levels, bool):
-            msg = f"{self.classname()}: record_rare_levels must be a bool"
-            raise ValueError(msg)
-
         self.record_rare_levels = record_rare_levels
-
-        if not isinstance(unseen_levels_to_rare, bool):
-            msg = f"{self.classname()}: unseen_levels_to_rare must be a bool"
-            raise ValueError(msg)
 
         self.unseen_levels_to_rare = unseen_levels_to_rare
 
@@ -264,6 +297,31 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         schema: nw.Schema
             schema of input data
 
+        Example:
+        --------
+        >>> import polars as pl
+        >>> import narwhals as nw
+
+        >>> transformer = GroupRareLevelsTransformer(
+        ... columns='a',
+        ... cut_off_percent=0.02,
+        ... rare_level_name='rare_level',
+        ...    )
+
+        >>> # non erroring example
+        >>> test_df=pl.DataFrame({'a': ['w','x'], 'b': ['y','z']})
+        >>> schema=nw.from_native(test_df).schema
+
+        >>> transformer._check_str_like_columns(schema)
+
+        >>> # erroring example
+        >>> test_df=pl.DataFrame({'a': [1,2], 'b': ['y','z']})
+        >>> schema=nw.from_native(test_df).schema
+
+        >>> transformer._check_str_like_columns(schema)
+        Traceback (most recent call last):
+        ...
+        TypeError: ...
         """
 
         str_like_columns = [
@@ -300,6 +358,28 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         X : pd/pl.DataFrame
             Data to transform
 
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer = GroupRareLevelsTransformer(
+        ... columns='a',
+        ... cut_off_percent=0.02,
+        ... rare_level_name='rare_level',
+        ...    )
+
+        >>>  # non erroring example
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': ['w', 'z']})
+
+        >>> transformer._check_for_nulls(test_df)
+
+        >>> # erroring  example
+        >>> test_df=pl.DataFrame({'a': [None, 'y'], 'b': ['w', 'z']})
+
+        >>> transformer._check_for_nulls(test_df)
+        Traceback (most recent call last):
+        ...
+        ValueError: ...
         """
 
         X = _convert_dataframe_to_narwhals(X)
@@ -340,6 +420,21 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         y : None or or nw.Series, default = None
             Optional argument only required for the transformer to work with sklearn pipelines.
 
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer = GroupRareLevelsTransformer(
+        ... columns='a',
+        ... cut_off_percent=0.02,
+        ... rare_level_name='rare_level',
+        ...    )
+
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': ['w', 'z']})
+
+        >>> transformer.fit(test_df)
+        GroupRareLevelsTransformer(columns=['a'], cut_off_percent=0.02,
+                                   rare_level_name='rare_level')
         """
 
         X = _convert_dataframe_to_narwhals(X)
@@ -428,6 +523,32 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         -------
         X : pd/pl.DataFrame
             Transformed input X with rare levels grouped for into a new rare level.
+
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer = GroupRareLevelsTransformer(
+        ... columns='a',
+        ... cut_off_percent=0.5,
+        ... rare_level_name='rare_level',
+        ...    )
+
+        >>> test_df=pl.DataFrame({'a': ['x', 'x', 'y'], 'b': ['w', 'z', 'z']})
+
+        >>> _=transformer.fit(test_df)
+
+        >>> transformer.transform(test_df)
+        shape: (3, 2)
+        ┌────────────┬─────┐
+        │ a          ┆ b   │
+        │ ---        ┆ --- │
+        │ str        ┆ str │
+        ╞════════════╪═════╡
+        │ x          ┆ w   │
+        │ x          ┆ z   │
+        │ rare_level ┆ z   │
+        └────────────┴─────┘
 
         """
         X = BaseTransformer.transform(self, X, return_native_override=False)
@@ -528,7 +649,7 @@ class MeanResponseTransformer(
         binary response, leave this as None. In the multi-level case, set to 'all' to encode against every
         response level or provide a list of response levels to encode against.
 
-    unseen_level_handling : str("Mean", "Median", "Lowest" or "Highest) or int/float, default = None
+    unseen_level_handling : str("mean", "median", "min", "max") or int/float, default = None
         Parameter to control the logic for handling unseen levels of the categorical features to encode in
         data when using transform method. Default value of None will output error when attempting to use transform
         on data with unseen levels in categorical columns to encode. Set this parameter to one of the options above
@@ -585,6 +706,14 @@ class MeanResponseTransformer(
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
+    Example:
+    --------
+    >>> MeanResponseTransformer(
+    ... columns='a',
+    ... prior=1,
+    ... unseen_level_handling='mean',
+    ...    )
+    MeanResponseTransformer(columns=['a'], prior=1, unseen_level_handling='mean')
     """
 
     polars_compatible = True
@@ -664,6 +793,8 @@ class MeanResponseTransformer(
         -------
         regularised : nw.Series
             Series of regularised encoding values
+
+        # TODO not adding doctests yet as this method will change in an upcoming PR
         """
         self.check_is_fitted(["global_mean"])
 
@@ -713,6 +844,8 @@ class MeanResponseTransformer(
 
         response_column: str
             name of response column
+
+        # TODO not adding doctests yet as this method will change in an upcoming PR
         """
         # reuse mean imputer logic to calculate global mean
         mean_imputer = MeanImputer(
@@ -768,6 +901,20 @@ class MeanResponseTransformer(
         y : pd/pl.Series
             Response variable or target.
 
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer=MeanResponseTransformer(
+        ... columns='a',
+        ... prior=1,
+        ... unseen_level_handling='mean',
+        ...    )
+
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2], 'target': [0,1]})
+
+        >>> transformer.fit(test_df, test_df['target'])
+        MeanResponseTransformer(columns=['a'], prior=1, unseen_level_handling='mean')
         """
         BaseNominalTransformer.fit(self, X, y)
 
@@ -896,6 +1043,8 @@ class MeanResponseTransformer(
         weights_column : str
             name of weights column
 
+        # TODO not adding doctests yet as this method will change in an upcoming PR
+
         """
 
         if isinstance(self.unseen_level_handling, (int, float)):
@@ -973,6 +1122,52 @@ class MeanResponseTransformer(
         X : pd/pl.DataFrame
             Transformed input X with levels mapped accoriding to mappings dict.
 
+        Example:
+        --------
+        >>> import polars as pl
+        >>> # example with no prior
+        >>> transformer=MeanResponseTransformer(
+        ... columns='a',
+        ... prior=0,
+        ... unseen_level_handling='mean',
+        ...    )
+
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2], 'target': [0,1]})
+
+        >>> _ = transformer.fit(test_df, test_df['target'])
+
+        >>> transformer.transform(test_df)
+        shape: (2, 3)
+        ┌─────┬─────┬────────┐
+        │ a   ┆ b   ┆ target │
+        │ --- ┆ --- ┆ ---    │
+        │ f32 ┆ i64 ┆ i64    │
+        ╞═════╪═════╪════════╡
+        │ 0.0 ┆ 1   ┆ 0      │
+        │ 1.0 ┆ 2   ┆ 1      │
+        └─────┴─────┴────────┘
+
+        # example with prior
+        >>> transformer=MeanResponseTransformer(
+        ... columns='a',
+        ... prior=1,
+        ... unseen_level_handling='mean',
+        ...    )
+
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2], 'target': [0,1]})
+
+        >>> _ = transformer.fit(test_df, test_df['target'])
+
+        >>> transformer.transform(test_df)
+        shape: (2, 3)
+        ┌──────┬─────┬────────┐
+        │ a    ┆ b   ┆ target │
+        │ ---  ┆ --- ┆ ---    │
+        │ f32  ┆ i64 ┆ i64    │
+        ╞══════╪═════╪════════╡
+        │ 0.25 ┆ 1   ┆ 0      │
+        │ 0.75 ┆ 2   ┆ 1      │
+        └──────┴─────┴────────┘
         """
 
         self.check_is_fitted(["mappings", "return_dtypes"])
@@ -1117,6 +1312,12 @@ class OneHotEncodingTransformer(
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
+    Example:
+    --------
+    >>> OneHotEncodingTransformer(
+    ... columns='a',
+    ...    )
+    OneHotEncodingTransformer(columns=['a'])
     """
 
     polars_compatible = True
@@ -1164,6 +1365,24 @@ class OneHotEncodingTransformer(
         present_levels: dict[str, Any]
             dict containing present levels per column
 
+        Example:
+        --------
+        >>> transformer=OneHotEncodingTransformer(
+        ... columns='a',
+        ...    )
+
+        >>> # non erroring example
+        >>> present_levels={'a': ['a', 'b']}
+
+        >>> transformer._check_for_nulls(present_levels)
+
+        >>> # erroring example
+        >>> present_levels={'a': [None, 'b']}
+
+        >>> transformer._check_for_nulls(present_levels)
+        Traceback (most recent call last):
+        ...
+        ValueError: ...
         """
         columns_with_nulls = []
 
@@ -1192,6 +1411,18 @@ class OneHotEncodingTransformer(
         y : None
             Ignored. This parameter exists only for compatibility with sklearn.pipeline.Pipeline.
 
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer=OneHotEncodingTransformer(
+        ... columns='a',
+        ...    )
+
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2]})
+
+        >>> transformer.fit(test_df)
+        OneHotEncodingTransformer(columns=['a'])
         """
         X = _convert_dataframe_to_narwhals(X)
         y = _convert_series_to_narwhals(y)
@@ -1261,6 +1492,24 @@ class OneHotEncodingTransformer(
         missing_levels : dict[str, list[str]]
             Dictionary updated to reflect new missing levels for column c
 
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer=OneHotEncodingTransformer(
+        ... columns='a',
+        ...    )
+
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2]})
+
+        >>> _ = transformer.fit(test_df)
+
+        >>> transformer._warn_missing_levels(
+        ... present_levels=['x', 'y'],
+        ... c='a',
+        ... missing_levels={}
+        ... )
+        {'a': []}
         """
         # print warning for missing levels
         missing_levels[c] = sorted(
@@ -1283,6 +1532,21 @@ class OneHotEncodingTransformer(
         ----------
         column: str
             column to get dummy feature names for
+
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer=OneHotEncodingTransformer(
+        ... columns='a',
+        ...    )
+
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2]})
+
+        >>> _ = transformer.fit(test_df)
+
+        >>> transformer._get_feature_names('a')
+        ['a_x', 'a_y']
 
         """
 
@@ -1314,6 +1578,28 @@ class OneHotEncodingTransformer(
             = True then the original categorical columns that the dummies are created from will not be in
             the output X.
 
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer=OneHotEncodingTransformer(
+        ... columns='a',
+        ...    )
+
+        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': [1,2]})
+
+        >>> _ = transformer.fit(test_df)
+
+        >>> transformer.transform(test_df)
+        shape: (2, 4)
+        ┌─────┬─────┬───────┬───────┐
+        │ a   ┆ b   ┆ a_x   ┆ a_y   │
+        │ --- ┆ --- ┆ ---   ┆ ---   │
+        │ str ┆ i64 ┆ bool  ┆ bool  │
+        ╞═════╪═════╪═══════╪═══════╡
+        │ x   ┆ 1   ┆ true  ┆ false │
+        │ y   ┆ 2   ┆ false ┆ true  │
+        └─────┴─────┴───────┴───────┘
         """
         return_native = self._process_return_native(return_native_override)
 
