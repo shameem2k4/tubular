@@ -64,6 +64,13 @@ class BaseGenericDateTransformer(
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    Example:
+    --------
+    >>> BaseGenericDateTransformer(
+    ... columns=['a',  'b'],
+    ... new_column_name='bla',
+    ...    )
+    BaseGenericDateTransformer(columns=['a', 'b'], new_column_name='bla')
     """
 
     polars_compatible = True
@@ -106,6 +113,27 @@ class BaseGenericDateTransformer(
 
         TypeError: if mismatched date/datetime types are found,
         types should be consistent
+
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer=BaseGenericDateTransformer(
+        ... columns=["a",  "b"],
+        ... new_column_name='bla',
+        ...    )
+
+        >>> test_df=pl.DataFrame(
+        ... {
+        ... "a": [datetime.date(1993, 9, 27), datetime.date(2005, 10, 7)],
+        ... "b": [datetime.date(1991, 5, 22), datetime.date(2001, 12, 10)]
+        ... },
+        ... )
+
+        >>> transformer.check_columns_are_date_or_datetime(
+        ... test_df,
+        ... datetime_only=False
+        ... )
 
         """
 
@@ -180,6 +208,34 @@ class BaseGenericDateTransformer(
         X : pd/pl.DataFrame
             Validated data
 
+        Example:
+        --------
+        >>> import polars as pl
+        >>> import datetime
+
+        >>> transformer=BaseGenericDateTransformer(
+        ... columns=["a",  "b"],
+        ... new_column_name='bla',
+        ...    )
+
+        >>> test_df=pl.DataFrame(
+        ... {
+        ... "a": [datetime.date(1993, 9, 27), datetime.date(2005, 10, 7)],
+        ... "b": [datetime.date(1991, 5, 22), datetime.date(2001, 12, 10)]
+        ... },
+        ... )
+
+        >>> # base transform has no effect on data
+        >>> transformer.transform(test_df)
+        shape: (2, 2)
+        ┌────────────┬────────────┐
+        │ a          ┆ b          │
+        │ ---        ┆ ---        │
+        │ date       ┆ date       │
+        ╞════════════╪════════════╡
+        │ 1993-09-27 ┆ 1991-05-22 │
+        │ 2005-10-07 ┆ 2001-12-10 │
+        └────────────┴────────────┘
         """
 
         return_native = self._process_return_native(return_native_override)
@@ -216,6 +272,14 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    Example:
+    --------
+    >>> BaseDatetimeTransformer(
+    ... columns=['a',  'b'],
+    ... new_column_name='bla',
+    ...    )
+    BaseDatetimeTransformer(columns=['a', 'b'], new_column_name='bla')
     """
 
     polars_compatible = True
@@ -255,6 +319,35 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
         -------
         X : pd/pl.DataFrame
             Validated data
+
+        Example:
+        --------
+        >>> import polars as pl
+        >>> import datetime
+
+        >>> transformer=BaseDatetimeTransformer(
+        ... columns=["a",  "b"],
+        ... new_column_name='bla',
+        ...    )
+
+        >>> test_df=pl.DataFrame(
+        ... {
+        ... "a": [datetime.datetime(1993, 9, 27), datetime.datetime(2005, 10, 7)],
+        ... "b": [datetime.datetime(1991, 5, 22), datetime.datetime(2001, 12, 10)]
+        ... },
+        ... )
+
+        >>> # base transform has no effect on data
+        >>> transformer.transform(test_df)
+        shape: (2, 2)
+        ┌─────────────────────┬─────────────────────┐
+        │ a                   ┆ b                   │
+        │ ---                 ┆ ---                 │
+        │ datetime[μs]        ┆ datetime[μs]        │
+        ╞═════════════════════╪═════════════════════╡
+        │ 1993-09-27 00:00:00 ┆ 1991-05-22 00:00:00 │
+        │ 2005-10-07 00:00:00 ┆ 2001-12-10 00:00:00 │
+        └─────────────────────┴─────────────────────┘
 
         """
 
@@ -341,6 +434,16 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    Example:
+    --------
+    >>> DateDifferenceTransformer(
+    ... columns=['a',  'b'],
+    ... new_column_name='bla',
+    ... units='common_year',
+    ...    )
+    DateDifferenceTransformer(columns=['a', 'b'], new_column_name='bla',
+                              units='common_year')
     """
 
     polars_compatible = True
@@ -408,6 +511,34 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         X : pd/pl.DataFrame
             Data containing self.columns
 
+        Example:
+        --------
+        >>> import polars as pl
+        >>> import datetime
+
+        >>> transformer=DateDifferenceTransformer(
+        ... columns=["a",  "b"],
+        ... new_column_name='a_b_difference_years',
+        ... units='common_year',
+        ...    )
+
+        >>> test_df=pl.DataFrame(
+        ... {
+        ... "a": [datetime.date(1993, 9, 27), datetime.date(2005, 10, 7)],
+        ... "b": [datetime.date(1991, 5, 22), datetime.date(2001, 12, 10)]
+        ... },
+        ... )
+
+        >>> transformer.transform(test_df)
+        shape: (2, 3)
+        ┌────────────┬────────────┬──────────────────────┐
+        │ a          ┆ b          ┆ a_b_difference_years │
+        │ ---        ┆ ---        ┆ ---                  │
+        │ date       ┆ date       ┆ f64                  │
+        ╞════════════╪════════════╪══════════════════════╡
+        │ 1993-09-27 ┆ 1991-05-22 ┆ -2.353425            │
+        │ 2005-10-07 ┆ 2001-12-10 ┆ -3.827397            │
+        └────────────┴────────────┴──────────────────────┘
         """
 
         X = _convert_dataframe_to_narwhals(X)
@@ -492,6 +623,13 @@ class ToDatetimeTransformer(BaseGenericDateTransformer):
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
+    Example:
+    --------
+    >>> ToDatetimeTransformer(
+    ... columns='a',
+    ... time_format='%d/%m/%Y',
+    ...    )
+    ToDatetimeTransformer(columns=['a'], time_format='%d/%m/%Y')
     """
 
     polars_compatible = True
@@ -527,6 +665,27 @@ class ToDatetimeTransformer(BaseGenericDateTransformer):
         X : pd/pl.DataFrame
             Data with column to transform.
 
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> transformer=ToDatetimeTransformer(
+        ... columns='a',
+        ... time_format='%d/%m/%Y',
+        ...    )
+
+        >>> test_df = pl.DataFrame({'a': ["01/02/2020", "10/12/1996"], 'b': [1,2]})
+
+        >>> transformer.transform(test_df)
+        shape: (2, 2)
+        ┌─────────────────────┬─────┐
+        │ a                   ┆ b   │
+        │ ---                 ┆ --- │
+        │ datetime[μs]        ┆ i64 │
+        ╞═════════════════════╪═════╡
+        │ 2020-02-01 00:00:00 ┆ 1   │
+        │ 1996-12-10 00:00:00 ┆ 2   │
+        └─────────────────────┴─────┘
         """
         # purposely avoid BaseDateTransformer method, as uniquely for this transformer columns
         # are not yet date/datetime
@@ -598,6 +757,16 @@ class BetweenDatesTransformer(BaseGenericDateTransformer):
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
+    Example:
+    --------
+    >>> BetweenDatesTransformer(
+    ... columns=['a', 'b', 'c'],
+    ... new_column_name='b_between_a_c',
+    ... lower_inclusive=True,
+    ... upper_inclusive=True,
+    ...    )
+    BetweenDatesTransformer(columns=['a', 'b', 'c'],
+                            new_column_name='b_between_a_c')
     """
 
     polars_compatible = True
@@ -657,6 +826,36 @@ class BetweenDatesTransformer(BaseGenericDateTransformer):
             Input X with additional column (self.new_column_name) added. This column is
             boolean and indicates if the middle column is between the other 2.
 
+        Example:
+        --------
+        >>> import polars as pl
+        >>> import datetime
+
+        >>> transformer = BetweenDatesTransformer(
+        ... columns=['a', 'b', 'c'],
+        ... new_column_name='b_between_a_c',
+        ... lower_inclusive=True,
+        ... upper_inclusive=True,
+        ...    )
+
+        >>> test_df=pl.DataFrame(
+        ... {
+        ... "a": [datetime.date(1990, 9, 27), datetime.date(2005, 10, 7)],
+        ... "b": [datetime.date(1991, 5, 22), datetime.date(2001, 12, 10)],
+        ... "c": [datetime.date(1993, 4, 20), datetime.date(2007, 11, 8)],
+        ... },
+        ... )
+
+        >>> transformer.transform(test_df)
+        shape: (2, 4)
+        ┌────────────┬────────────┬────────────┬───────────────┐
+        │ a          ┆ b          ┆ c          ┆ b_between_a_c │
+        │ ---        ┆ ---        ┆ ---        ┆ ---           │
+        │ date       ┆ date       ┆ date       ┆ bool          │
+        ╞════════════╪════════════╪════════════╪═══════════════╡
+        │ 1990-09-27 ┆ 1991-05-22 ┆ 1993-04-20 ┆ true          │
+        │ 2005-10-07 ┆ 2001-12-10 ┆ 2007-11-08 ┆ false         │
+        └────────────┴────────────┴────────────┴───────────────┘
         """
         X = nw.from_native(super().transform(X))
 
@@ -772,6 +971,13 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
+    Example:
+    --------
+    >>> DatetimeInfoExtractor(
+    ... columns='a',
+    ... include='timeofday',
+    ...    )
+    DatetimeInfoExtractor(columns=['a'], include=['timeofday'])
     """
 
     polars_compatible = True
@@ -825,7 +1031,7 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
     def __init__(
         self,
         columns: Union[str, list[str]],
-        include: Optional[DatetimeInfoOptionList] = None,
+        include: Optional[Union[DatetimeInfoOptionList, DatetimeInfoOptionStr]] = None,
         datetime_mappings: Optional[dict[DatetimeInfoOptionStr, dict[int, str]]] = None,
         drop_original: Optional[bool] = False,
         **kwargs: dict[str, bool],
@@ -839,6 +1045,9 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
             new_column_name="dummy",
             **kwargs,
         )
+
+        if isinstance(include, str):
+            include = [include]
 
         self.include = include
         self.datetime_mappings = datetime_mappings
@@ -876,6 +1085,22 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         Returns
         -------
         None
+
+        Example:
+        --------
+        >>> transformer = DatetimeInfoExtractor(
+        ... columns='a',
+        ... include='timeofday',
+        ...    )
+
+        >>> transformer._process_provided_mappings(
+        ... {
+        ... 'timeofday': {
+        ... **{i: 'start' for i in range(0,12)},
+        ... **{i: 'end' for i in range(12,24)},
+        ... }
+        ... }
+        ... )
         """
 
         # initialise mappings attr with defaults,
@@ -913,6 +1138,34 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         -------
         X : pd/pl.DataFrame
             Transformed input X with added columns of extracted information.
+
+        Example:
+        --------
+        >>> import polars as pl
+        >>> import datetime
+
+        >>> transformer = DatetimeInfoExtractor(
+        ... columns='a',
+        ... include='timeofmonth',
+        ...    )
+
+        >>> test_df=pl.DataFrame(
+        ... {
+        ... "a": [datetime.datetime(1993, 9, 27), datetime.datetime(2005, 10, 7)],
+        ... "b": [datetime.datetime(1991, 5, 22), datetime.datetime(2001, 12, 10)]
+        ... },
+        ... )
+
+        >>> transformer.transform(test_df)
+        shape: (2, 3)
+        ┌─────────────────────┬─────────────────────┬───────────────┐
+        │ a                   ┆ b                   ┆ a_timeofmonth │
+        │ ---                 ┆ ---                 ┆ ---           │
+        │ datetime[μs]        ┆ datetime[μs]        ┆ enum          │
+        ╞═════════════════════╪═════════════════════╪═══════════════╡
+        │ 1993-09-27 00:00:00 ┆ 1991-05-22 00:00:00 ┆ end           │
+        │ 2005-10-07 00:00:00 ┆ 2001-12-10 00:00:00 ┆ start         │
+        └─────────────────────┴─────────────────────┴───────────────┘
         """
         X = super().transform(X, return_native_override=False)
 
@@ -995,6 +1248,15 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    Example:
+    --------
+    >>> DatetimeSinusoidCalculator(
+    ... columns='a',
+    ... method='sin',
+    ... units='month',
+    ...    )
+    DatetimeSinusoidCalculator(columns=['a'], method=['sin'], units='month')
     """
 
     polars_compatible = True
@@ -1145,6 +1407,35 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
         -------
         X : pd/pl.DataFrame
             Input X with additional columns added, these are named "<method>_<original_column>"
+
+        Example:
+        --------
+        >>> import polars as pl
+        >>> import datetime
+
+        >>> transformer = DatetimeSinusoidCalculator(
+        ... columns='a',
+        ... method='sin',
+        ... units='month',
+        ...    )
+
+        >>> test_df=pl.DataFrame(
+        ... {
+        ... "a": [datetime.datetime(1993, 9, 27), datetime.datetime(2005, 10, 7)],
+        ... "b": [datetime.datetime(1991, 5, 22), datetime.datetime(2001, 12, 10)]
+        ... },
+        ... )
+
+        >>> transformer.transform(test_df)
+        shape: (2, 3)
+        ┌─────────────────────┬─────────────────────┬───────────────────────────────┐
+        │ a                   ┆ b                   ┆ sin_6.283185307179586_month_a │
+        │ ---                 ┆ ---                 ┆ ---                           │
+        │ datetime[μs]        ┆ datetime[μs]        ┆ f64                           │
+        ╞═════════════════════╪═════════════════════╪═══════════════════════════════╡
+        │ 1993-09-27 00:00:00 ┆ 1991-05-22 00:00:00 ┆ 0.412118                      │
+        │ 2005-10-07 00:00:00 ┆ 2001-12-10 00:00:00 ┆ -0.544021                     │
+        └─────────────────────┴─────────────────────┴───────────────────────────────┘
         """
         X = _convert_dataframe_to_narwhals(X)
         return_native = self._process_return_native(return_native_override)

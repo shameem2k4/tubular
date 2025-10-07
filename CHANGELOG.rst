@@ -35,6 +35,7 @@ Each individual change should have a link to the pull request after the descript
 - chore: doctests for misc module, deleted old/stale example notebooks `#505  <https://github.com/azukds/tubular/issues/505>_`
 - chore: doctests for mapping module, deleted old/stale example notebooks `#504 <https://github.com/azukds/tubular/issues/504>_`
 - chore: doctests for numeric module `#507 <https://github.com/azukds/tubular/issues/507>_`
+- chore: doctests for dates module `#502 <https://github.com/azukds/tubular/issues/502>_`
 - chore: doctests for nominal module `#506 <https://github.com/azukds/tubular/issues/506>_`
 - chore: doctests for imputers module `#503 <https://github.com/azukds/tubular/issues/503>_`
 
