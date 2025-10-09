@@ -57,6 +57,8 @@ PositiveNumber = Annotated[
 
 PositiveInt = Annotated[int, Is[lambda i: i >= 0]]
 
+FloatBetweenZeroOne = Annotated[float, Is[lambda i: (i > 0) & (i < 1)]]
+
 GenericKwargs = Annotated[
     dict,
     Is[

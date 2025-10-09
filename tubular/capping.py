@@ -609,7 +609,7 @@ class CappingTransformer(BaseCappingTransformer):
     --------
     >>> import polars as pl
 
-    >>> transformer=BaseCappingTransformer(
+    >>> transformer=CappingTransformer(
     ... capping_values={'a': [10, 20], 'b': [1,3]},
     ...    )
 
@@ -666,9 +666,8 @@ class CappingTransformer(BaseCappingTransformer):
         ...    )
 
         >>> test_df=pl.DataFrame({'a': [1,15,18,25], 'b': [6,2,7,1], 'c':[1,2,3,4]})
-        >>> test_target=pl.Series(name='target', values=[5,6,7,8])
 
-        >>> transformer.fit(test_df, test_target)
+        >>> transformer.fit(test_df)
         CappingTransformer(quantiles={'a': [0.01, 0.99], 'b': [0.05, 0.95]})
 
         """
@@ -837,9 +836,8 @@ class OutOfRangeNullTransformer(BaseCappingTransformer):
         ...    )
 
         >>> test_df=pl.DataFrame({'a': [1,15,18,25], 'b': [6,2,7,1], 'c':[1,2,3,4]})
-        >>> test_target=pl.Series(name='target', values=[5,6,7,8])
 
-        >>> transformer.fit(test_df, test_target)
+        >>> transformer.fit(test_df)
         OutOfRangeNullTransformer(quantiles={'a': [0.01, 0.99], 'b': [0.05, 0.95]})
 
         """
