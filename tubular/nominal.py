@@ -369,12 +369,12 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         ...    )
 
         >>>  # non erroring example
-        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': ['w', 'z']})
+        >>> test_df={'a': ['x', 'y'], 'b': ['w', 'z']}
 
         >>> transformer._check_for_nulls(test_df)
 
         >>> # erroring  example
-        >>> test_df=pl.DataFrame({'a': [None, 'y'], 'b': ['w', 'z']})
+        >>> test_df={'a': [None, 'y'], 'b': ['w', 'z']}
 
         >>> transformer._check_for_nulls(test_df)
         Traceback (most recent call last):
