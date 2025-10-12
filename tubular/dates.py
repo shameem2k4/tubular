@@ -466,7 +466,7 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
         copy: bool = False,
         verbose: bool = False,
         drop_original: bool = False,
-        custom_days_divider: int | None = None,
+        custom_days_divider: Optional[int] = None,
         **kwargs: dict[str, bool],
     ) -> None:
         accepted_values_units = [
@@ -982,7 +982,7 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
 
     polars_compatible = True
 
-    DEFAULT_MAPPINGS: ClassVar[dict[str, dict]] = {
+    DEFAULT_MAPPINGS: ClassVar[dict[str, dict[int, str]]] = {
         DatetimeInfoOptions.TIME_OF_DAY: {
             **dict.fromkeys(range(6), "night"),  # Midnight - 6am
             **dict.fromkeys(range(6, 12), "morning"),  # 6am - Noon
@@ -1011,9 +1011,9 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
         },
     }
 
-    INCLUDE_OPTIONS: ClassVar[list] = list(DEFAULT_MAPPINGS.keys())
+    INCLUDE_OPTIONS: ClassVar[list[str]] = list(DEFAULT_MAPPINGS.keys())
 
-    RANGE_TO_MAP: ClassVar[dict[str, set]] = {
+    RANGE_TO_MAP: ClassVar[dict[str, set[int]]] = {
         DatetimeInfoOptions.TIME_OF_DAY: set(range(24)),
         DatetimeInfoOptions.TIME_OF_MONTH: set(range(1, 32)),
         DatetimeInfoOptions.TIME_OF_YEAR: set(range(1, 13)),
@@ -1292,11 +1292,10 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             raise TypeError(msg)
 
         if (
-            ((not isinstance(period, int))
+            (not isinstance(period, int))
             and (not isinstance(period, float))
-            and (not isinstance(period, dict)))
-            or (isinstance(period, bool))
-        ):
+            and (not isinstance(period, dict))
+        ) or (isinstance(period, bool)):
             msg = "{}: period must be an int, float or dict but got {}".format(
                 self.classname(),
                 type(period),

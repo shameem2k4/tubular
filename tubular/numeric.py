@@ -789,7 +789,9 @@ class ScalingTransformer(BaseNumericTransformer):
     FITS = True
 
     # Dictionary mapping scaler types to their corresponding sklearn classes
-    scaler_options: ClassVar[dict[str, int]] = {
+    scaler_options: ClassVar[
+        dict[str, Union[MinMaxScaler, MaxAbsScaler, StandardScaler]]
+    ] = {
         "min_max": MinMaxScaler,
         "max_abs": MaxAbsScaler,
         "standard": StandardScaler,

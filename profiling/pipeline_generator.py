@@ -1,4 +1,4 @@
-from __future__ import annotations
+from typing import Optional
 
 from sklearn.pipeline import Pipeline
 
@@ -91,7 +91,7 @@ class TubularPipelineGenerator:
 
     def generate_pipeline(
         self,
-        transformers_to_include: list | None = None,
+        transformers_to_include: Optional[list] = None,
         verbose: bool = False,
     ) -> Pipeline:
         if not transformers_to_include:
