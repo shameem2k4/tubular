@@ -30,9 +30,24 @@ from tubular.mixins import (
     TwoColumnMixin,
 )
 from tubular.types import DataFrame
+from enum import Enum
+from beartype.vale import Is
+from beartype.typing import Annotated
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT, IntoSeriesT
+
+
+class DifferenceOperationOptions(str, Enum):
+    SUBTRACT = "subtract"
+    DIVIDE = "divide"
+
+ListOfDifferenceOperations = Annotated[
+    str,
+    Is[
+        lambda operation: operation in DifferenceOperationOptions._value2member_map_
+    ],
+]
 
 
 class BaseNumericTransformer(BaseTransformer, CheckNumericMixin):
@@ -1230,3 +1245,148 @@ class PCATransformer(BaseNumericTransformer):
         X[self.feature_names_out] = self.pca.transform(X[self.columns])
 
         return X
+
+
+
+class DifferenceTransformer(BaseNumericTransformer, TwoColumnMixin):
+    """Transformer that performs subtraction or division operations between two columns.
+    
+    This transformer allows performing common operations (subtraction or division) between
+    two columns in a DataFrame and stores the result in a new column. It's designed to 
+    replace the TwoColumnOperatorTransformer with a more focused implementation.
+    
+    Attributes
+    ----------
+    columns : list[str]
+        List of two column names to operate on. First column is the minuend/numerator,
+        second column is the subtrahend/denominator.
+    operation : ListOfDifferenceOperations
+        Operation to perform between columns. Must be either 'subtract' or 'divide'.
+    new_column_name : str
+        Name of the column to store the result. If None, a default name will be generated.
+    drop_original : bool
+        Whether to drop the original columns after transformation.
+    verbose : bool
+        Whether to print verbose output during transformation.
+    
+    Example
+    -------
+    >>> transformer = DifferenceTransformer(
+    ... columns=['a', 'b'],
+    ... operation='subtract',
+    ... new_column_name='c',
+    ... drop_original=False,
+    ... )
+    DifferenceTransformer(columns=['a', 'b'], operation='subtract',
+                          new_column_name='c', drop_original=False)
+    """
+    
+    polars_compatible = True
+    FITS = False
+    
+    @beartype
+    def __init__(
+        self,
+        columns: list[str],
+        operation: ListOfDifferenceOperations,
+        drop_original: bool = False,
+        new_column_name: Optional[str] = None,
+        verbose: bool = False,
+    ) -> None:
+        """Initialize the DifferenceTransformer.
+        
+        Parameters
+        ----------
+        columns : list[str]
+            List of two column names to operate on. First column is the minuend/numerator,
+            second column is the subtrahend/denominator.
+        operation : ListOfDifferenceOperations
+            Operation to perform between columns. Must be either 'subtract' or 'divide'.
+        drop_original : bool, default=False
+            Whether to drop the original columns after transformation.
+        new_column_name : Optional[str], default=None
+            Name of the column to store the result. If None, a default name will be generated.
+        verbose : bool, default=False
+            Whether to print verbose output during transformation.
+        """
+        super().__init__(columns=columns, verbose=verbose)
+        
+        # Validate columns
+        if len(columns) != 2:
+            msg = f"{self.classname()}: columns must be a list of exactly two column names"
+            raise ValueError(msg)
+            
+        self.columns = columns
+        self.column1 = columns[0]
+        self.column2 = columns[1]
+        
+            
+        self.operation = operation
+        self.drop_original = drop_original
+        
+        # Set new_column_name or generate a default one
+        if new_column_name is None:
+            operation_word = 'minus' if operation == DifferenceOperationOptions.SUBTRACT else 'divided_by'
+            new_column_name = f"{self.column1}_{operation_word}_{self.column2}"
+        
+        self.new_column_name = new_column_name
+    
+    @beartype
+    def transform(
+        self,
+        X: DataFrame,
+    ) -> DataFrame:
+        """Transform the DataFrame by applying the operation between two columns.
+        
+        Parameters
+        ----------
+        X : pd.DataFrame or pl.DataFrame
+            DataFrame containing the columns to operate on.
+            
+        Returns
+        -------
+        pd.DataFrame or pl.DataFrame
+            Transformed DataFrame with the new column containing the operation results.
+            
+        Raises
+        ------
+        ValueError
+            If either column is not found in the DataFrame.
+            
+        Example:
+        --------
+        >>> import polars as pl
+        >>> transformer = DifferenceTransformer(
+        ... columns=['a', 'b'],
+        ... operation='subtract',
+        ... new_column_name='profit',
+        ... )
+        >>> test_df = pl.DataFrame({'a': [100, 200, 300], 'b': [80, 150, 200]})
+        >>> transformer.transform(test_df)
+        shape: (3, 3)
+        ┌───────┬──────┬────────┐
+        │ a     ┆ b    ┆ c      │
+        │ ---   ┆ ---  ┆ ---    │
+        │ i64   ┆ i64  ┆ i64    │
+        ╞═══════╪══════╪════════╡
+        │ 100   ┆ 80   ┆ 20     │
+        │ 200   ┆ 150  ┆ 50     │
+        │ 300   ┆ 200  ┆ 100    │
+        └───────┴──────┴────────┘
+        """
+        X = _convert_dataframe_to_narwhals(X)
+
+        X = super().transform(X, return_native_override=False)
+        
+        
+        # Create the expression based on operation
+        if self.operation == 'subtract':
+            expr = nw.col(self.column1) - nw.col(self.column2)
+        else:  # divide
+            expr = nw.col(self.column1) / nw.col(self.column2)
+            
+        # Add the new column
+        X = X.with_columns(**{self.new_column_name: expr})
+        
+        return _return_narwhals_or_native_dataframe(X, self.return_native)
+    
