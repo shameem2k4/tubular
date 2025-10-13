@@ -38,6 +38,11 @@ class BaseImputer(BaseTransformer):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    Example:
+    --------
+    >>> BaseImputer(columns=["a", "b"])
+    BaseImputer(columns=['a', 'b'])
+
     """
 
     polars_compatible = True
@@ -139,6 +144,27 @@ class BaseImputer(BaseTransformer):
         X : FrameT
             Transformed input X with nulls imputed with the median value for the specified columns.
 
+        Example:
+        --------
+        >>> import polars as pl
+
+        >>> imputer = BaseImputer(columns=["a", "b"])
+
+        >>> imputer.impute_values_= {"a":2, "b":3.5}
+
+        >>> test_df = pl.DataFrame({'a': [1, None, 2], 'b': [3, None, 4]})
+
+        >>> imputer.transform(test_df)
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ f64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3.0 │
+        │ 2   ┆ 3.5 │
+        │ 2   ┆ 4.0 │
+        └─────┴─────┘
         """
         self.check_is_fitted("impute_values_")
 
@@ -181,6 +207,13 @@ class ArbitraryImputer(BaseImputer):
 
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
+
+    Example:
+    --------
+    >>> ArbitraryImputer(
+    ... columns=["a", "b"], impute_value= 5
+    ... )
+    ArbitraryImputer(columns=['a', 'b'], impute_value=5)
     """
 
     polars_compatible = True
@@ -221,7 +254,7 @@ class ArbitraryImputer(BaseImputer):
 
         """
 
-        return expr.cast(nw.Enum(set(categories + [self.impute_value])))
+        return expr.cast(nw.Enum({*categories, self.impute_value}))
 
     def _check_impute_value_type_works_with_columns(
         self,
@@ -375,6 +408,25 @@ class ArbitraryImputer(BaseImputer):
         -------
         X : FrameT
             Transformed input X with nulls imputed with the specified impute_value, for the specified columns.
+
+        Example:
+        --------
+        >>> import polars as pl
+        >>> test_df = pl.DataFrame({'a': [1, None, 2], 'b': [3, None, 4]})
+        >>> imputer = ArbitraryImputer(columns=["a", "b"], impute_value= 5)
+        >>> imputer= imputer.fit(test_df)
+        >>> imputer.transform(test_df)
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3   │
+        │ 5   ┆ 5   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+
         """
 
         X = _convert_dataframe_to_narwhals(X)
@@ -466,6 +518,12 @@ class MedianImputer(BaseImputer, WeightColumnMixin):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    Example:
+    --------
+    >>> MedianImputer(
+    ... columns=["a", "b"],
+    ... )
+    MedianImputer(columns=['a', 'b'])
     """
 
     polars_compatible = True
@@ -496,6 +554,23 @@ class MedianImputer(BaseImputer, WeightColumnMixin):
         y : None or pd/pl.Series, default = None
             Not required.
 
+        Example:
+        --------
+        >>> import polars as pl
+        >>> test_df = pl.DataFrame({'a': [1, None, 2], 'b': [3, None, 4]})
+        >>> imputer = MedianImputer(columns=["a", "b"])
+        >>> imputer= imputer.fit(test_df)
+        >>> imputer.transform(test_df)
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ f64 ┆ f64 │
+        ╞═════╪═════╡
+        │ 1.0 ┆ 3.0 │
+        │ 1.5 ┆ 3.5 │
+        │ 2.0 ┆ 4.0 │
+        └─────┴─────┘
         """
 
         X = _convert_dataframe_to_narwhals(X)
@@ -565,6 +640,12 @@ class MeanImputer(WeightColumnMixin, BaseImputer):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    Example:
+    --------
+    >>> MeanImputer(
+    ... columns=["a", "b"],
+    ... )
+    MeanImputer(columns=['a', 'b'])
     """
 
     polars_compatible = True
@@ -595,6 +676,23 @@ class MeanImputer(WeightColumnMixin, BaseImputer):
         y : None or pd.DataFrame or pd.Series, default = None
             Not required.
 
+        Example:
+        --------
+        >>> import polars as pl
+        >>> test_df = pl.DataFrame({'a': [1, None, 2], 'b': [3, None, 4]})
+        >>> imputer = MeanImputer(columns=["a", "b"])
+        >>> imputer= imputer.fit(test_df)
+        >>> imputer.transform(test_df)
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ f64 ┆ f64 │
+        ╞═════╪═════╡
+        │ 1.0 ┆ 3.0 │
+        │ 1.5 ┆ 3.5 │
+        │ 2.0 ┆ 4.0 │
+        └─────┴─────┘
         """
 
         X = _convert_dataframe_to_narwhals(X)
@@ -659,6 +757,12 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    Example:
+    --------
+    >>> ModeImputer(
+    ... columns=["a", "b"],
+    ... )
+    ModeImputer(columns=['a', 'b'])
     """
 
     polars_compatible = True
@@ -690,6 +794,23 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
         y : None or pd/pl.DataFrame or pd/pl.Series, default = None
             Not required.
 
+        Example:
+        --------
+        >>> import polars as pl
+        >>> test_df = pl.DataFrame({'a': [1, None, 2], 'b': [3, None, 4]})
+        >>> imputer = ModeImputer(columns=["a", "b"])
+        >>> imputer= imputer.fit(test_df)
+        >>> imputer.transform(test_df)
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3   │
+        │ 2   ┆ 4   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
         """
 
         X = _convert_dataframe_to_narwhals(X)
@@ -768,6 +889,13 @@ class NullIndicator(BaseTransformer):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+
+    Example:
+    --------
+    >>> NullIndicator(
+    ... columns=["a", "b"],
+    ... )
+    NullIndicator(columns=['a', 'b'])
     """
 
     polars_compatible = True
@@ -792,6 +920,22 @@ class NullIndicator(BaseTransformer):
         X : FrameT
             Data to add indicators to.
 
+        Example:
+        --------
+        >>> import polars as pl
+        >>> test_df = pl.DataFrame({'a': [1, None, 2], 'b': [3, None, 4]})
+        >>> imputer = NullIndicator(columns=["a", "b"])
+        >>> imputer.transform(test_df)
+        shape: (3, 4)
+        ┌──────┬──────┬─────────┬─────────┐
+        │ a    ┆ b    ┆ a_nulls ┆ b_nulls │
+        │ ---  ┆ ---  ┆ ---     ┆ ---     │
+        │ i64  ┆ i64  ┆ bool    ┆ bool    │
+        ╞══════╪══════╪═════════╪═════════╡
+        │ 1    ┆ 3    ┆ false   ┆ false   │
+        │ null ┆ null ┆ true    ┆ true    │
+        │ 2    ┆ 4    ┆ false   ┆ false   │
+        └──────┴──────┴─────────┴─────────┘
         """
         super().transform(X)
 

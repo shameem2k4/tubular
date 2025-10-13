@@ -318,7 +318,7 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
                 weights_column=weights_column,
             )
 
-            results = [None] + results_no_none
+            results = [None, *results_no_none]
 
         elif quantiles[1] is None:
             quantiles = np.array([quantiles[0]])
@@ -330,7 +330,7 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
                 weights_column=weights_column,
             )
 
-            results = results_no_none + [None]
+            results = [*results_no_none, None]
 
         else:
             results = self.weighted_quantile(
@@ -498,12 +498,12 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
 
             capping_values_for_transform = self.quantile_capping_values
 
-            dict_attrs = dict_attrs + ["quantile_capping_values"]
+            dict_attrs = [*dict_attrs, "quantile_capping_values"]
 
         else:
             capping_values_for_transform = self.capping_values
 
-            dict_attrs = dict_attrs + ["capping_values"]
+            dict_attrs = [*dict_attrs, "capping_values"]
 
         for attr_name in dict_attrs:
             if getattr(self, attr_name) == {}:
@@ -613,7 +613,7 @@ class CappingTransformer(BaseCappingTransformer):
     --------
     >>> import polars as pl
 
-    >>> transformer=BaseCappingTransformer(
+    >>> transformer=CappingTransformer(
     ... capping_values={'a': [10, 20], 'b': [1,3]},
     ...    )
 
@@ -674,9 +674,8 @@ class CappingTransformer(BaseCappingTransformer):
         ...    )
 
         >>> test_df=pl.DataFrame({'a': [1,15,18,25], 'b': [6,2,7,1], 'c':[1,2,3,4]})
-        >>> test_target=pl.Series(name='target', values=[5,6,7,8])
 
-        >>> transformer.fit(test_df, test_target)
+        >>> transformer.fit(test_df)
         CappingTransformer(quantiles={'a': [0.01, 0.99], 'b': [0.05, 0.95]})
 
         """
@@ -849,9 +848,8 @@ class OutOfRangeNullTransformer(BaseCappingTransformer):
         ...    )
 
         >>> test_df=pl.DataFrame({'a': [1,15,18,25], 'b': [6,2,7,1], 'c':[1,2,3,4]})
-        >>> test_target=pl.Series(name='target', values=[5,6,7,8])
 
-        >>> transformer.fit(test_df, test_target)
+        >>> transformer.fit(test_df)
         OutOfRangeNullTransformer(quantiles={'a': [0.01, 0.99], 'b': [0.05, 0.95]})
 
         """
