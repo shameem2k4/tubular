@@ -128,8 +128,9 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
         >>> transformer=BaseTransformer(columns=['a', 'b'])
 
+        >>> # version will vary for local vs CI, so use ... as generic match
         >>> transformer.to_json()
-        {'tubular_version': 'dev', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True}, 'fit': {}}
+        {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True}, 'fit': {}}
         """
         return {
             "tubular_version": self._version,

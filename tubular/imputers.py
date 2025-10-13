@@ -65,8 +65,9 @@ class BaseImputer(BaseTransformer):
 
         >>> arbitrary_imputer=ArbitraryImputer(columns=['a', 'b'], impute_value=1)
 
+        >>> # version will vary for local vs CI, so use ... as generic match
         >>> arbitrary_imputer.to_json()
-        {'tubular_version': 'dev', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'impute_value': 1}, 'fit': {'impute_values_': {'a': 1, 'b': 1}}}
+        {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'impute_value': 1}, 'fit': {'impute_values_': {'a': 1, 'b': 1}}}
 
         >>> mean_imputer=MeanImputer(columns=['a', 'b'])
 
@@ -75,7 +76,7 @@ class BaseImputer(BaseTransformer):
         >>> _ = mean_imputer.fit(test_df)
 
         >>> mean_imputer.to_json()
-        {'tubular_version': 'dev', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 1.0, 'b': 2.0}}}
+        {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 1.0, 'b': 2.0}}}
 
         """
         self.check_is_fitted("impute_values_")
