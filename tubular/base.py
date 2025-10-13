@@ -123,6 +123,13 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
             jsonified transformer. Nested dict containing levels for attributes
             set at init and fit.
 
+        Examples
+        --------
+
+        >>> transformer=BaseTransformer(columns=['a', 'b'])
+
+        >>> transformer.to_json()
+        {'tubular_version': 'dev', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True}, 'fit': {}}
         """
         return {
             "tubular_version": self._version,
@@ -135,6 +142,7 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
             "fit": {},
         }
 
+    @classmethod
     def from_json(cls, json: dict[str, Any]) -> BaseTransformer:
         """rebuild transformer from json dict, readyfor transform
 
@@ -147,13 +155,27 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         -------
         BaseTransformer:
             reconstructed transformer class, ready for transform
+
+        Examples
+        --------
+
+        >>> json_dict={
+        ... 'init': {
+        ...         'columns' :['a','b']
+        ...         },
+        ... 'fit': {}
+        ... }
+
+        >>> BaseTransformer.from_json(json=json_dict)
+        BaseTransformer(columns=['a', 'b'])
         """
-        cls.__init__(**json["init"])
+
+        instance = cls(**json["init"])
 
         for attr in json["fit"]:
-            setattr(cls, attr, json["fit"][attr])
+            setattr(instance, attr, json["fit"][attr])
 
-        return cls
+        return instance
 
     @beartype
     def fit(self, X: DataFrame, y: Optional[Series] = None) -> BaseTransformer:
