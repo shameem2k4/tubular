@@ -369,14 +369,14 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         ...    )
 
         >>>  # non erroring example
-        >>> test_df={'a': ['x', 'y'], 'b': ['w', 'z']}
+        >>> test_dict={'a': ['x', 'y'], 'b': ['w', 'z']}
 
-        >>> transformer._check_for_nulls(test_df)
+        >>> transformer._check_for_nulls(test_dict)
 
         >>> # erroring  example
-        >>> test_df={'a': [None, 'y'], 'b': ['w', 'z']}
+        >>> test_dict={'a': [None, 'y'], 'b': ['w', 'z']}
 
-        >>> transformer._check_for_nulls(test_df)
+        >>> transformer._check_for_nulls(test_dict)
         Traceback (most recent call last):
         ...
         ValueError: ...
@@ -546,6 +546,14 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         │ rare_level ┆ z   │
         └────────────┴─────┘
 
+        >>> # erroring example (with nulls)
+        >>> test_df = pl.DataFrame({'a': ['x', 'x', None], 'b': ['w', 'z', 'z']})
+
+        >>> transformer.transform(test_df)
+        Traceback (most recent call last):
+        ...
+        ValueError: ...
+
         """
         X = BaseTransformer.transform(self, X, return_native_override=False)
         X = _convert_dataframe_to_narwhals(X)
@@ -560,11 +568,12 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         # change the transformer state
         non_rare_levels = copy.deepcopy(self.non_rare_levels)
 
-        present_levels = {
-            c: sorted(set(X.get_column(c).unique())) for c in self.columns
-        }
+        present_levels = {c: list(set(X.get_column(c).unique())) for c in self.columns}
 
         self._check_for_nulls(present_levels)
+
+        # sort once nulls removed
+        present_levels = {c: sorted(present_levels[c]) for c in self.columns}
 
         if not self.unseen_levels_to_rare:
             for c in self.columns:
