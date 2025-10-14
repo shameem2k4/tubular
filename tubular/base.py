@@ -67,6 +67,12 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
+
     Example:
     --------
     >>> BaseTransformer(
@@ -480,6 +486,12 @@ class DataFrameMethodTransformer(DropOriginalMixin, BaseTransformer):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     """
 

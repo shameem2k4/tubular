@@ -77,12 +77,24 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
     ----------
     columns : Union[str, list[str]]
         Columns to apply the transformations to.
+
     aggregations : list[str]
         Aggregation methods to apply.
+
     drop_original : bool
         Indicator for dropping original columns.
+
     verbose : bool
         Indicator for verbose output.
+
+    polars_compatible: bool
+        Indicates if transformer will work with polars frames
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -94,6 +106,8 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
     """
 
     polars_compatible = True
+
+    FITS = False
 
     jsonable = False
 
@@ -195,12 +209,24 @@ class AggregateRowsOverColumnTransformer(BaseAggregationTransformer):
     ----------
     columns : Union[str, list[str]]
         List of column names to apply the aggregation transformations to.
+
     aggregations : list[str]
         List of aggregation methods to apply.
+
     key : str
         Column name to group by for aggregation.
+
     drop_original : bool, optional
         Whether to drop the original columns after transformation. Default is False.
+
+    polars_compatible: bool
+        Indicates if transformer will work with polars frames
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -214,6 +240,8 @@ class AggregateRowsOverColumnTransformer(BaseAggregationTransformer):
     """
 
     polars_compatible = True
+
+    FITS = False
 
     jsonable = False
 
@@ -318,12 +346,24 @@ class AggregateColumnsOverRowTransformer(BaseAggregationTransformer):
     ----------
     columns : Union[str,list[str]]
         List of column names to apply the aggregation transformations to.
+
     aggregations : list[str]
         List of aggregation methods to apply.
+
     drop_original : bool, optional
         Whether to drop the original columns after transformation. Default is False.
+
     verbose : bool, optional
         Indicator for verbose output.
+
+    polars_compatible: bool
+        Indicates if transformer will work with polars frames
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -336,6 +376,8 @@ class AggregateColumnsOverRowTransformer(BaseAggregationTransformer):
     """
 
     polars_compatible = True
+
+    FITS = False
 
     jsonable = False
 

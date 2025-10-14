@@ -86,7 +86,13 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
             Replacement values when capping is applied. Will be a copy of capping_values.
 
         polars_compatible : bool
-        class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+            class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+        jsonable: bool
+            class attribute, indicates if transformer supports to/from_json methods
+
+        FITS: bool
+            class attribute, indicates whether transform requires fit to be run first
 
         Example:
         --------
@@ -609,6 +615,12 @@ class CappingTransformer(BaseCappingTransformer):
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
+
     Example:
     --------
     >>> import polars as pl
@@ -738,6 +750,12 @@ class OutOfRangeNullTransformer(BaseCappingTransformer):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------

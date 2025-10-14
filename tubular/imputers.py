@@ -38,6 +38,12 @@ class BaseImputer(BaseTransformer):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
+
     Example:
     --------
     >>> BaseImputer(columns=["a", "b"])
@@ -208,6 +214,12 @@ class ArbitraryImputer(BaseImputer):
 
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Examples:
     --------
@@ -528,6 +540,12 @@ class MedianImputer(BaseImputer, WeightColumnMixin):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
+
     Example:
     --------
     >>> median_imputer = MedianImputer(
@@ -664,6 +682,12 @@ class MeanImputer(WeightColumnMixin, BaseImputer):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
+
     Example:
     --------
     >>> mean_imputer = MeanImputer(
@@ -794,6 +818,12 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
 
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -941,6 +971,11 @@ class NullIndicator(BaseTransformer):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -1038,6 +1073,12 @@ class NearestMeanResponseImputer(BaseImputer):
 
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     """
 

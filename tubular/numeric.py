@@ -54,8 +54,12 @@ class BaseNumericTransformer(BaseTransformer, CheckNumericMixin):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     Example:
     --------
@@ -201,8 +205,12 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     Example:
     --------
@@ -440,8 +448,12 @@ class LogTransformer(BaseNumericTransformer, DropOriginalMixin):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     """
 
@@ -562,8 +574,12 @@ class CutTransformer(BaseNumericTransformer):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     """
 
@@ -686,8 +702,12 @@ class TwoColumnOperatorTransformer(
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     """
 
@@ -789,8 +809,12 @@ class ScalingTransformer(BaseNumericTransformer):
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     """
 
@@ -918,21 +942,31 @@ class InteractionTransformer(BaseNumericTransformer):
     ----------
         min_degree : int
             minimum degree of interaction features to be considered
+
         max_degree : int
             maximum degree of interaction features to be considered
+
         nb_features_to_interact : int
             number of selected columns from which interactions should be computed. (=len(columns))
+
         nb_combinations : int
             number of new interaction features
+
         interaction_colname : list
             names of each new interaction feature. The name of an interaction feature is the combinations of previous
             column names joined with a whitespace. Interaction feature of ["col1","col2","col3] would be "col1 col2 col3".
+
         nb_feature_out : int
             number of total columns of transformed dataset, including new interaction features
+
         polars_compatible : bool
             class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
         FITS: bool
-        class attribute, indicates whether transform requires fit to be run first
+            class attribute, indicates whether transform requires fit to be run first
+
+        jsonable: bool
+            class attribute, indicates if transformer supports to/from_json methods
 
     """
 
@@ -1108,19 +1142,25 @@ class PCATransformer(BaseNumericTransformer):
     Attributes
     ----------
     pca : PCA class from sklearn.decomposition
+
     n_components_ : int
         The estimated number of components. When n_components is set
         to 'mle' or a number between 0 and 1 (with svd_solver == 'full') this
         number is estimated from input data. Otherwise it equals the parameter
         n_components, or the lesser value of n_features and n_samples
         if n_components is None.
+
     feature_names_out: list or None
         list of feature name representing the new dimensions.
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
 
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     """
 
