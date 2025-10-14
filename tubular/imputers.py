@@ -209,11 +209,20 @@ class ArbitraryImputer(BaseImputer):
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
 
-    Example:
+    Examples:
     --------
-    >>> ArbitraryImputer(
+    >>> arbitrary_imputer = ArbitraryImputer(
     ... columns=["a", "b"], impute_value= 5
     ... )
+    >>> arbitrary_imputer
+    ArbitraryImputer(columns=['a', 'b'], impute_value=5)
+
+    >>> # transformer can also be dumped to json and reinitialised
+    >>> json_dump=arbitrary_imputer.to_json()
+    >>> json_dump
+    {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'impute_value': 5}, 'fit': {'impute_values_': {'a': 5, 'b': 5}}}
+
+    >>> ArbitraryImputer.from_json(json_dump)
     ArbitraryImputer(columns=['a', 'b'], impute_value=5)
     """
 
@@ -521,9 +530,23 @@ class MedianImputer(BaseImputer, WeightColumnMixin):
 
     Example:
     --------
-    >>> MedianImputer(
+    >>> median_imputer = MedianImputer(
     ... columns=["a", "b"],
     ... )
+    >>> median_imputer
+    MedianImputer(columns=['a', 'b'])
+
+    >>> # once fit, transformer can also be dumped to json and reinitialised
+
+    >>> test_df=pl.DataFrame({'a': [0, None], 'b': [None, 1]})
+
+    >>> _ = median_imputer.fit(test_df)
+
+    >>> json_dump=median_imputer.to_json()
+    >>> json_dump
+    {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 0.0, 'b': 1.0}}}
+
+    >>> MedianImputer.from_json(json_dump)
     MedianImputer(columns=['a', 'b'])
     """
 
@@ -643,9 +666,23 @@ class MeanImputer(WeightColumnMixin, BaseImputer):
 
     Example:
     --------
-    >>> MeanImputer(
+    >>> mean_imputer = MeanImputer(
     ... columns=["a", "b"],
     ... )
+    >>> mean_imputer
+    MeanImputer(columns=['a', 'b'])
+
+    >>> # once fit, transformer can also be dumped to json and reinitialised
+
+    >>> test_df=pl.DataFrame({'a': [0, None], 'b': [None, 1]})
+
+    >>> _ = mean_imputer.fit(test_df)
+
+    >>> json_dump=mean_imputer.to_json()
+    >>> json_dump
+    {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 0.0, 'b': 1.0}}}
+
+    >>> MeanImputer.from_json(json_dump)
     MeanImputer(columns=['a', 'b'])
     """
 
@@ -760,9 +797,23 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
 
     Example:
     --------
-    >>> ModeImputer(
+    >>> mode_imputer = ModeImputer(
     ... columns=["a", "b"],
     ... )
+    >>> mode_imputer
+    ModeImputer(columns=['a', 'b'])
+
+    >>> # once fit, transformer can also be dumped to json and reinitialised
+
+    >>> test_df=pl.DataFrame({'a': [0, None], 'b': [None, 1]})
+
+    >>> _ = mode_imputer.fit(test_df)
+
+    >>> json_dump=mode_imputer.to_json()
+    >>> json_dump
+    {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 0, 'b': 1}}}
+
+    >>> ModeImputer.from_json(json_dump)
     ModeImputer(columns=['a', 'b'])
     """
 
@@ -893,9 +944,18 @@ class NullIndicator(BaseTransformer):
 
     Example:
     --------
-    >>> NullIndicator(
+    >>> null_indicator = NullIndicator(
     ... columns=["a", "b"],
     ... )
+    >>> null_indicator
+    NullIndicator(columns=['a', 'b'])
+
+    >>> # transformer can also be dumped to json and reinitialised
+    >>> json_dump=null_indicator.to_json()
+    >>> json_dump
+    {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True}, 'fit': {}}
+
+    >>> NullIndicator.from_json(json_dump)
     NullIndicator(columns=['a', 'b'])
     """
 
