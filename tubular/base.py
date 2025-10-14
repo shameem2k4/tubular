@@ -107,6 +107,30 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         self.copy = copy
         self.return_native = return_native
 
+    def get_feature_names_out(self) -> list[str]:
+        """list features modified/created by the transformer.
+
+        Child classes will need to overload this method if their behaviour is
+        more complex than just returning the input columns.
+
+        Returns
+        -------
+        list[str]:
+            list of features modified/created by the transformer
+
+        Examples
+        --------
+
+        >>> transformer  = BaseTransformer(
+        ... columns='a',
+        ...    )
+
+        >>> transformer.get_feature_names_out()
+        ['a']
+        """
+
+        return self.columns
+
     @beartype
     def fit(self, X: DataFrame, y: Optional[Series] = None) -> BaseTransformer:
         """Base transformer fit method, checks X and y types. Currently only pandas DataFrames are allowed for X
