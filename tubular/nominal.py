@@ -821,7 +821,7 @@ class MeanResponseTransformer(
         >>> _ = transformer.fit(test_df, test_df['b'])
 
         >>> transformer.get_feature_names_out()
-        ['a_dog', 'a_rat', 'a_cat']
+        ['a_cat', 'a_dog', 'a_rat']
         """
 
         # if level is specified as 'all', this function
@@ -1078,6 +1078,7 @@ class MeanResponseTransformer(
             for column in self.columns
             for value in self.column_to_encoded_columns[column]
         ]
+        self.encoded_columns.sort()
 
         # set this attr up for BaseMappingTransformerMixin
         # this is used to cast the narwhals mapping df, so uses narwhals types

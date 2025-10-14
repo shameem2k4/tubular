@@ -691,7 +691,7 @@ class ToDatetimeTransformer(BaseTransformer):
         --------
         >>> import polars as pl
 
-        >>> transformer=ToDatetimeTransformer(
+        >>> transformer = ToDatetimeTransformer(
         ... columns='a',
         ... time_format='%d/%m/%Y',
         ...    )
@@ -709,7 +709,7 @@ class ToDatetimeTransformer(BaseTransformer):
         │ 1996-12-10 00:00:00 ┆ 2   │
         └─────────────────────┴─────┘
         """
-        X = nw.from_native(super().transform(self, X))
+        X = nw.from_native(super().transform(X))
 
         return X.with_columns(
             nw.col(col).str.to_datetime(format=self.time_format) for col in self.columns
