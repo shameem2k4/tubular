@@ -307,9 +307,9 @@ class GenericFitTests:
 
         x_fitted = x.fit(df, df["a"])
 
-        assert (
-            x_fitted is x
-        ), f"Returned value from {self.transformer_name}.fit not as expected."
+        assert x_fitted is x, (
+            f"Returned value from {self.transformer_name}.fit not as expected."
+        )
 
     @pytest.mark.parametrize(
         "minimal_dataframe_lookup",
@@ -523,9 +523,9 @@ class WeightColumnFitMixinTests:
 
         x_fitted = transformer.fit(df, df["a"])
 
-        assert (
-            x_fitted is transformer
-        ), f"Returned value from {self.transformer_name}.fit not as expected."
+        assert x_fitted is transformer, (
+            f"Returned value from {self.transformer_name}.fit not as expected."
+        )
 
     @pytest.mark.parametrize(
         "minimal_dataframe_lookup",
