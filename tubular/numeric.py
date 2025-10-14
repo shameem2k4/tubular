@@ -29,7 +29,7 @@ from tubular.mixins import (
     NewColumnNameMixin,
     TwoColumnMixin,
 )
-from tubular.types import DataFrame
+from tubular.types import DataFrame, ListOfTwoStrs
 from enum import Enum
 from beartype.vale import Is
 from beartype.typing import Annotated
@@ -1287,11 +1287,10 @@ class DifferenceTransformer(BaseNumericTransformer, TwoColumnMixin):
     @beartype
     def __init__(
         self,
-        columns: list[str],
+        columns: ListOfTwoStrs,
         operation: ListOfDifferenceOperations,
         drop_original: bool = False,
-        new_column_name: Optional[str] = None,
-        verbose: bool = False,
+        **kwargs: Optional[bool],
     ) -> None:
         """Initialize the DifferenceTransformer.
         
@@ -1309,27 +1308,16 @@ class DifferenceTransformer(BaseNumericTransformer, TwoColumnMixin):
         verbose : bool, default=False
             Whether to print verbose output during transformation.
         """
-        super().__init__(columns=columns, verbose=verbose)
-        
-        # Validate columns
-        if len(columns) != 2:
-            msg = f"{self.classname()}: columns must be a list of exactly two column names"
-            raise ValueError(msg)
+        super().__init__(columns=columns, **kwargs)
             
-        self.columns = columns
-        self.column1 = columns[0]
-        self.column2 = columns[1]
-        
-            
+           
         self.operation = operation
         self.drop_original = drop_original
         
-        # Set new_column_name or generate a default one
-        if new_column_name is None:
-            operation_word = 'minus' if operation == DifferenceOperationOptions.SUBTRACT else 'divided_by'
-            new_column_name = f"{self.column1}_{operation_word}_{self.column2}"
-        
-        self.new_column_name = new_column_name
+        # Set new_column_name or generate a default one 
+        operation_word = 'minus' if operation == DifferenceOperationOptions.SUBTRACT else 'divided_by'
+        self.new_column_name = f"{columns[0]}_{operation_word}_{columns[1]}"
+
     
     @beartype
     def transform(
@@ -1380,13 +1368,15 @@ class DifferenceTransformer(BaseNumericTransformer, TwoColumnMixin):
         
         
         # Create the expression based on operation
-        if self.operation == 'subtract':
-            expr = nw.col(self.column1) - nw.col(self.column2)
-        else:  # divide
-            expr = nw.col(self.column1) / nw.col(self.column2)
+        expr = (
+        (nw.col(self.columns[0]) - nw.col(self.columns[1]))
+        if self.operation == 'subtract'
+        else nw.when(nw.col(self.columns[1]) != 0)
+             .then(nw.col(self.columns[0]) / nw.col(self.columns[1]))
+             .otherwise(None))
             
         # Add the new column
-        X = X.with_columns(**{self.new_column_name: expr})
+        X = X.with_columns(expr.alias(self.new_column_name))
         
         return _return_narwhals_or_native_dataframe(X, self.return_native)
     

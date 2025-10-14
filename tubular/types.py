@@ -41,3 +41,8 @@ ListOfStrs = Annotated[
 ]
 
 FloatBetweenZeroOne = Annotated[float, Is[lambda i: (i > 0) & (i < 1)]]
+
+ListOfTwoStrs = Annotated[
+    list[str],
+    Is[lambda list_arg: len(list_arg) == 2],
+]
