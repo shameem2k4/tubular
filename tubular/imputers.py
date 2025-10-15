@@ -81,7 +81,7 @@ class BaseImputer(BaseTransformer):
 
         >>> # version will vary for local vs CI, so use ... as generic match
         >>> arbitrary_imputer.to_json()
-        {'tubular_version': ..., 'classname': 'ArbitraryImputer' 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'impute_value': 1}, 'fit': {'impute_values_': {'a': 1, 'b': 1}}}
+        {'tubular_version': ..., 'classname': 'ArbitraryImputer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'impute_value': 1}, 'fit': {'impute_values_': {'a': 1, 'b': 1}}}
 
         >>> mean_imputer=MeanImputer(columns=['a', 'b'])
 
