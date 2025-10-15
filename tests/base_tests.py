@@ -483,7 +483,7 @@ class GenericFitTests:
 
         with pytest.raises(
             RuntimeError,
-            match="Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method",
+            match=r"Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method",
         ):
             transformer.fit(df, df["a"])
 
@@ -1280,7 +1280,7 @@ class CombineXYTests:
 
         with pytest.raises(
             RuntimeError,
-            match="Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method",
+            match=r"Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method",
         ):
             transformer._combine_X_y(df, df["a"])
 
@@ -1320,7 +1320,7 @@ class ToJsonTests:
 
         with pytest.raises(
             RuntimeError,
-            match="Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method",
+            match=r"Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method",
         ):
             transformer.to_json()
 
