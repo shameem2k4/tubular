@@ -38,6 +38,7 @@ Each individual change should have a link to the pull request after the descript
 - feat: added to/from json functionality for BaseTransfomer and imputers file. 
 - feat: introduced `jsonable` class attribute across package to control whether json tests run for given class
 - feat: introduced _version class attribute that stores package version
+- feat: introduced block_from_json decorator to block non-transform related methods for transformers which have been rebuilt from json
 - chore: doctests for dates module `#502 <https://github.com/azukds/tubular/issues/502>_`
 - chore: doctests for nominal module `#506 <https://github.com/azukds/tubular/issues/506>_`
 - chore: doctests for imputers module `#503 <https://github.com/azukds/tubular/issues/503>_`

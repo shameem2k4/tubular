@@ -1,4 +1,5 @@
 from contextlib import suppress
+from functools import wraps
 from importlib.metadata import version
 from typing import Literal, Optional
 
@@ -182,3 +183,21 @@ def _get_version() -> str:
         return version("tubular")
 
     return "dev"
+
+
+def block_from_json(method):  # noqa: ANN202, ANN001,  no annotations for generic decorator
+    """decorator that will intercept method and raise a runtime error if the transformer
+    has been initialised from_json (i.e. if the built_from_json attr is True)
+    """
+
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003, ANN202, no annotations for generic decorator
+        if self.built_from_json:
+            msg = "Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method"
+            raise RuntimeError(
+                msg,
+            )
+
+        return method(self, *args, **kwargs)
+
+    return wrapper

@@ -34,6 +34,10 @@ class BaseNominalTransformer(BaseTransformer):
     Attributes
     ----------
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
@@ -254,6 +258,10 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
     training_data_levels : dict[set]
         Dictionary containing the set of values present in the training data for each column in self.columns. It
         will only exist in if unseen_levels_to_rare is set to False.
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
@@ -718,6 +726,10 @@ class MeanResponseTransformer(
 
     cast_method: Literal[np.float32, np,float64]
         Store the casting method associated to return_type
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
@@ -1333,6 +1345,10 @@ class OneHotEncodingTransformer(
     drop_original : bool
         Should original columns be dropped after creating dummy fields?
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
@@ -1738,6 +1754,10 @@ class OrdinalEncoderTransformer(
         Created in fit. Dict of key (column names) value (mapping of categorical levels to numeric,
         ordinal encoded response values) pairs.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
@@ -1920,6 +1940,10 @@ class NominalToIntegerTransformer(BaseNominalTransformer, BaseMappingTransformMi
     mappings : dict
         Created in fit. A dict of key (column names) value (mappings between levels and integers for given
         column) pairs.
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework

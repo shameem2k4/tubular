@@ -52,6 +52,10 @@ class BaseNumericTransformer(BaseTransformer, CheckNumericMixin):
     columns : List[str]
         List of columns to be operated on
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
@@ -202,6 +206,10 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
 
     Attributes
     ----------
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
@@ -446,6 +454,10 @@ class LogTransformer(BaseNumericTransformer, DropOriginalMixin):
     suffix : str
         The suffix to add onto the end of column names for new columns.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
@@ -571,6 +583,10 @@ class CutTransformer(BaseNumericTransformer):
 
     Attributes
     ----------
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
@@ -700,6 +716,10 @@ class TwoColumnOperatorTransformer(
     pd_method_kwargs : dict
         Dictionary of method kwargs to be passed to pandas.DataFrame method.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
@@ -806,6 +826,10 @@ class ScalingTransformer(BaseNumericTransformer):
 
     Attributes
     ----------
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
@@ -958,6 +982,10 @@ class InteractionTransformer(BaseNumericTransformer):
 
         nb_feature_out : int
             number of total columns of transformed dataset, including new interaction features
+
+        built_from_json: bool
+            indicates if transformer was reconstructed from json, which limits it's supported
+            functionality to .transform
 
         polars_compatible : bool
             class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
@@ -1152,6 +1180,10 @@ class PCATransformer(BaseNumericTransformer):
 
     feature_names_out: list or None
         list of feature name representing the new dimensions.
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework

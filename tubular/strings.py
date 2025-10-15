@@ -57,6 +57,10 @@ class SeriesStrMethodTransformer(NewColumnNameMixin, BaseTransformer):
     pd_method_name : str
         The name of the pd.Series.str method to call.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
@@ -164,6 +168,11 @@ class StringConcatenator(NewColumnNameMixin, SeparatorColumnMixin, BaseTransform
 
     Attributes
     ----------
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 

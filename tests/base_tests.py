@@ -456,6 +456,37 @@ class GenericFitTests:
                 **minimal_attribute_dict[self.transformer_name],
             )
 
+    @pytest.mark.parametrize(
+        "minimal_dataframe_lookup",
+        ["pandas", "polars"],
+        indirect=True,
+    )
+    def test_blocked_for_from_json_transformer(
+        self,
+        initialized_transformers,
+        minimal_dataframe_lookup,
+    ):
+        "test that method is blocked once transformer has been through to/from json"
+
+        transformer = initialized_transformers[self.transformer_name]
+
+        df = minimal_dataframe_lookup[self.transformer_name]
+
+        # skip test if transformer not yet jsonable
+        if not transformer.jsonable:
+            return
+
+        if transformer.FITS:
+            transformer.fit(df, df["a"])
+
+        transformer = transformer.from_json(transformer.to_json())
+
+        with pytest.raises(
+            RuntimeError,
+            match="Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method",
+        ):
+            transformer.fit(df, df["a"])
+
 
 class CheckNumericFitMixinTests:
     """
@@ -1222,10 +1253,82 @@ class CombineXYTests:
 
         pd.testing.assert_frame_equal(result, expected_output)
 
+    @pytest.mark.parametrize(
+        "minimal_dataframe_lookup",
+        ["pandas", "polars"],
+        indirect=True,
+    )
+    def test_blocked_for_from_json_transformer(
+        self,
+        initialized_transformers,
+        minimal_dataframe_lookup,
+    ):
+        "test that method is blocked once transformer has been through to/from json"
+
+        transformer = initialized_transformers[self.transformer_name]
+
+        df = minimal_dataframe_lookup[self.transformer_name]
+
+        # skip test if transformer not yet jsonable
+        if not transformer.jsonable:
+            return
+
+        if transformer.FITS:
+            transformer.fit(df, df["a"])
+
+        transformer = transformer.from_json(transformer.to_json())
+
+        with pytest.raises(
+            RuntimeError,
+            match="Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method",
+        ):
+            transformer._combine_X_y(df, df["a"])
+
+
+class ToJsonTests:
+    """
+    Tests for the BaseTransformer.to_json method
+
+    This method is mainly tested by the integratation of to/from json into our
+    transform tests, so specific tests are limited.
+    """
+
+    @pytest.mark.parametrize(
+        "minimal_dataframe_lookup",
+        ["pandas", "polars"],
+        indirect=True,
+    )
+    def test_blocked_for_from_json_transformer(
+        self,
+        initialized_transformers,
+        minimal_dataframe_lookup,
+    ):
+        "test that method is blocked once transformer has been through to/from json"
+
+        transformer = initialized_transformers[self.transformer_name]
+
+        df = minimal_dataframe_lookup[self.transformer_name]
+
+        # skip test if transformer not yet jsonable
+        if not transformer.jsonable:
+            return
+
+        if transformer.FITS:
+            transformer.fit(df, df["a"])
+
+        transformer = transformer.from_json(transformer.to_json())
+
+        with pytest.raises(
+            RuntimeError,
+            match="Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method",
+        ):
+            transformer.to_json()
+
 
 class OtherBaseBehaviourTests(
     ColumnsCheckTests,
     CombineXYTests,
+    ToJsonTests,
 ):
     """
     Class to collect and hold tests for BaseTransformerBehaviour outside the three standard methods.

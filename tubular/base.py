@@ -18,6 +18,7 @@ from tubular._utils import (
     _convert_series_to_narwhals,
     _get_version,
     _return_narwhals_or_native_dataframe,
+    block_from_json,
 )
 from tubular.mixins import DropOriginalMixin
 from tubular.types import DataFrame, Series
@@ -60,6 +61,10 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
     verbose : bool
         Print statements to show which methods are being run or not.
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
@@ -120,6 +125,9 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         self.copy = copy
         self.return_native = return_native
 
+        self.built_from_json = False
+
+    @block_from_json
     def to_json(self) -> dict[str, dict[str, Any]]:
         """dump transformer to json dict
 
@@ -182,8 +190,11 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         for attr in json["fit"]:
             setattr(instance, attr, json["fit"][attr])
 
+        instance.built_from_json = True
+
         return instance
 
+    @block_from_json
     @beartype
     def fit(self, X: DataFrame, y: Optional[Series] = None) -> BaseTransformer:
         """Base transformer fit method, checks X and y types. Currently only pandas DataFrames are allowed for X
@@ -227,6 +238,7 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
         return self
 
+    @block_from_json
     @nw.narwhalify
     def _combine_X_y(self, X: FrameT, y: nw.Series) -> FrameT:
         """Combine X and y by adding a new column with the values of y to a copy of X.
@@ -483,6 +495,10 @@ class DataFrameMethodTransformer(DropOriginalMixin, BaseTransformer):
 
     pd_method_name : str
         The name of the pandas.DataFrame method to call.
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework

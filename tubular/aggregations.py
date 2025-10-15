@@ -87,6 +87,10 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
     verbose : bool
         Indicator for verbose output.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible: bool
         Indicates if transformer will work with polars frames
 
@@ -218,6 +222,10 @@ class AggregateRowsOverColumnTransformer(BaseAggregationTransformer):
 
     drop_original : bool, optional
         Whether to drop the original columns after transformation. Default is False.
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible: bool
         Indicates if transformer will work with polars frames
@@ -355,6 +363,10 @@ class AggregateColumnsOverRowTransformer(BaseAggregationTransformer):
 
     verbose : bool, optional
         Indicator for verbose output.
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
 
     polars_compatible: bool
         Indicates if transformer will work with polars frames
