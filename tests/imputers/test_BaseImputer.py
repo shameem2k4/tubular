@@ -122,9 +122,9 @@ class GenericImputerTransformTests:
 
         transformer.transform(df1)
 
-        assert (
-            transformer.impute_values_ == impute_values
-        ), "impute_values_ changed in transform"
+        assert transformer.impute_values_ == impute_values, (
+            "impute_values_ changed in transform"
+        )
 
     @pytest.mark.parametrize("from_json", [True, False])
     @pytest.mark.parametrize(
@@ -450,9 +450,9 @@ class GenericImputerTransformTestsWeight:
         transformer2.transform(df)
 
         # Check if the impute_values_ are the same
-        assert (
-            transformer1.impute_values_ == transformer2.impute_values_
-        ), f"Impute values changed in transform for {self.transformer_name}"
+        assert transformer1.impute_values_ == transformer2.impute_values_, (
+            f"Impute values changed in transform for {self.transformer_name}"
+        )
 
 
 class TestInit(ColumnStrListInitTests):

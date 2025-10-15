@@ -1,4 +1,5 @@
 """This module contains transformers that apply encodings to nominal columns."""
+
 from __future__ import annotations
 
 import copy
@@ -187,7 +188,6 @@ class BaseNominalTransformer(BaseTransformer):
 
 
 class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
-
     """Transformer to group together rare levels of nominal variables into a new level,
     labelled 'rare' (by default).
 
@@ -365,7 +365,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
             raise TypeError(msg)
 
     @beartype
-    def _check_for_nulls(self, X: DataFrame) -> None:
+    def _check_for_nulls(self, present_levels: dict[str, list[Any]]) -> None:
         """check that transformer being called on only non-null columns.
 
         Note, found including nulls to be quite complicated due to:
@@ -379,8 +379,8 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         Parameters
         ----------
-        X : pd/pl.DataFrame
-            Data to transform
+        present_levels : dict[str, list[Any]]
+            dict of format column:levels present in column
 
         Example:
         --------
@@ -393,29 +393,21 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         ...    )
 
         >>>  # non erroring example
-        >>> test_df=pl.DataFrame({'a': ['x', 'y'], 'b': ['w', 'z']})
+        >>> test_dict={'a': ['x', 'y'], 'b': ['w', 'z']}
 
-        >>> transformer._check_for_nulls(test_df)
+        >>> transformer._check_for_nulls(test_dict)
 
         >>> # erroring  example
-        >>> test_df=pl.DataFrame({'a': [None, 'y'], 'b': ['w', 'z']})
+        >>> test_dict={'a': [None, 'y'], 'b': ['w', 'z']}
 
-        >>> transformer._check_for_nulls(test_df)
+        >>> transformer._check_for_nulls(test_dict)
         Traceback (most recent call last):
         ...
         ValueError: ...
         """
 
-        X = _convert_dataframe_to_narwhals(X)
-
-        null_check_expressions = {
-            col: nw.col(col).is_null().sum().alias(col) for col in self.columns
-        }
-
-        null_counts = X.select(**null_check_expressions)
-
         columns_with_nulls = [
-            col for col in self.columns if null_counts[col].item() > 0
+            c for c in present_levels if any(pd.isna(val) for val in present_levels[c])
         ]
 
         if columns_with_nulls:
@@ -474,52 +466,56 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         self._check_str_like_columns(schema)
 
-        self._check_for_nulls(X)
+        present_levels = {
+            c: sorted(set(X.get_column(c).unique())) for c in self.columns
+        }
+
+        self._check_for_nulls(present_levels)
 
         self.non_rare_levels = {}
 
         if self.record_rare_levels:
             self.rare_levels_record_ = {}
 
-        native_backend = nw.get_native_namespace(X)
+        backend = nw.get_native_namespace(X)
 
         weights_column = self.weights_column
         if self.weights_column is None:
             X, weights_column = WeightColumnMixin._create_unit_weights_column(
                 X,
-                backend=native_backend.__name__,
+                backend=backend.__name__,
                 return_native=False,
             )
 
+        level_weights_exprs = {
+            c: (nw.col(weights_column).sum().over(c)) for c in self.columns
+        }
+
+        total_weight_expr = nw.col(weights_column).sum()
+
+        level_weight_perc_exprs = {
+            c: level_weights_exprs[c] / total_weight_expr for c in self.columns
+        }
+
+        non_rare_levels_exprs = {
+            c: nw.when(level_weight_perc_exprs[c] >= self.cut_off_percent)
+            .then(nw.col(c))
+            .otherwise(None)
+            for c in self.columns
+        }
+
+        results_dict = X.select(**non_rare_levels_exprs).to_dict(as_series=True)
+
         for c in self.columns:
-            cols_w_sums = X.group_by(c, drop_null_keys=False).agg(
-                nw.col(weights_column).sum(),
-            )
-
-            total_w = X.select(nw.col(weights_column).sum()).item()
-
-            cols_w_percents = cols_w_sums.select(
-                nw.col(weights_column) / total_w,
-                nw.col(c),
-            )
-
-            self.non_rare_levels[c] = (
-                cols_w_percents.filter(
-                    nw.col(weights_column) >= self.cut_off_percent,
-                )
-                .get_column(c)
-                .to_list()
-            )
+            self.non_rare_levels[c] = [
+                val for val in results_dict[c].unique().to_list() if not pd.isna(val)
+            ]
 
             self.non_rare_levels[c] = sorted(self.non_rare_levels[c], key=str)
 
             if self.record_rare_levels:
-                self.rare_levels_record_[c] = (
-                    cols_w_percents.filter(
-                        nw.col(weights_column) < self.cut_off_percent,
-                    )
-                    .get_column(c)
-                    .to_list()
+                self.rare_levels_record_[c] = sorted(
+                    set(present_levels[c]).difference(self.non_rare_levels[c]),
                 )
 
                 self.rare_levels_record_[c] = sorted(
@@ -530,7 +526,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         if not self.unseen_levels_to_rare:
             self.training_data_levels = {}
             for c in self.columns:
-                self.training_data_levels[c] = set(X.get_column(c).unique().to_list())
+                self.training_data_levels[c] = present_levels[c]
 
         return self
 
@@ -574,6 +570,14 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         │ rare_level ┆ z   │
         └────────────┴─────┘
 
+        >>> # erroring example (with nulls)
+        >>> test_df = pl.DataFrame({'a': ['x', 'x', None], 'b': ['w', 'z', 'z']})
+
+        >>> transformer.transform(test_df)
+        Traceback (most recent call last):
+        ...
+        ValueError: ...
+
         """
         X = BaseTransformer.transform(self, X, return_native_override=False)
         X = _convert_dataframe_to_narwhals(X)
@@ -582,19 +586,22 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         self._check_str_like_columns(schema)
 
-        self._check_for_nulls(X)
-
         self.check_is_fitted(["non_rare_levels"])
 
         # copy non_rare_levels, as unseen values may be added, and transform should not
         # change the transformer state
         non_rare_levels = copy.deepcopy(self.non_rare_levels)
 
+        present_levels = {c: list(set(X.get_column(c).unique())) for c in self.columns}
+
+        self._check_for_nulls(present_levels)
+
+        # sort once nulls removed
+        present_levels = {c: sorted(present_levels[c]) for c in self.columns}
+
         if not self.unseen_levels_to_rare:
             for c in self.columns:
-                unseen_vals = set(
-                    X.get_column(c).unique().to_list(),
-                ).difference(
+                unseen_vals = set(present_levels[c]).difference(
                     set(self.training_data_levels[c]),
                 )
                 non_rare_levels[c].extend(unseen_vals)
@@ -1107,9 +1114,9 @@ class MeanResponseTransformer(
 
                         mean_imputer.fit(group_weights)
 
-                        self.unseen_levels_encoding_dict[
-                            c
-                        ] = mean_imputer.impute_values_[c]
+                        self.unseen_levels_encoding_dict[c] = (
+                            mean_imputer.impute_values_[c]
+                        )
 
                     # else, median
                     else:
@@ -1121,9 +1128,9 @@ class MeanResponseTransformer(
 
                         median_imputer.fit(group_weights)
 
-                        self.unseen_levels_encoding_dict[
-                            c
-                        ] = median_imputer.impute_values_[c]
+                        self.unseen_levels_encoding_dict[c] = (
+                            median_imputer.impute_values_[c]
+                        )
 
                 # else, min or max, which don't care about weights
                 else:
@@ -1434,8 +1441,8 @@ class OneHotEncodingTransformer(
         """
         columns_with_nulls = []
 
-        for c in present_levels:
-            if any(pd.isna(val) for val in present_levels[c]):
+        for c, levels in present_levels.items():
+            if any(pd.isna(val) for val in levels):
                 columns_with_nulls.append(c)
 
             if columns_with_nulls:
@@ -1825,7 +1832,7 @@ class OrdinalEncoderTransformer(
         for c in self.columns:
             if self.weights_column is None:
                 # get the indexes of the sorted target mean-encoded dict
-                _idx_target_mean = list(
+                idx_target_mean = list(
                     X_y.groupby([c])[response_column]
                     .mean()
                     .sort_values(ascending=True, kind="mergesort")
@@ -1836,7 +1843,7 @@ class OrdinalEncoderTransformer(
                 # sorted ascending by their target-mean value
                 # and whose values are ascending ordinal integers
                 ordinal_encoded_dict = {
-                    k: _idx_target_mean.index(k) + 1 for k in _idx_target_mean
+                    k: idx_target_mean.index(k) + 1 for k in idx_target_mean
                 }
 
                 self.mappings[c] = ordinal_encoded_dict
@@ -1847,7 +1854,7 @@ class OrdinalEncoderTransformer(
                 ].sum()
 
                 # get the indexes of the sorted target mean-encoded dict
-                _idx_target_mean = list(
+                idx_target_mean = list(
                     (groupby_sum[response_column] / groupby_sum[self.weights_column])
                     .sort_values(ascending=True, kind="mergesort")
                     .index,
@@ -1857,7 +1864,7 @@ class OrdinalEncoderTransformer(
                 # sorted ascending by their target-mean value
                 # and whose values are ascending ordinal integers
                 ordinal_encoded_dict = {
-                    k: _idx_target_mean.index(k) + 1 for k in _idx_target_mean
+                    k: idx_target_mean.index(k) + 1 for k in idx_target_mean
                 }
 
                 self.mappings[c] = ordinal_encoded_dict
