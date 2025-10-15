@@ -79,7 +79,7 @@ class BaseImputer(BaseTransformer):
 
         >>> # version will vary for local vs CI, so use ... as generic match
         >>> arbitrary_imputer.to_json()
-        {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'impute_value': 1}, 'fit': {'impute_values_': {'a': 1, 'b': 1}}}
+        {'tubular_version': ..., 'classname': 'ArbitraryImputer' 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'impute_value': 1}, 'fit': {'impute_values_': {'a': 1, 'b': 1}}}
 
         >>> mean_imputer=MeanImputer(columns=['a', 'b'])
 
@@ -88,7 +88,7 @@ class BaseImputer(BaseTransformer):
         >>> _ = mean_imputer.fit(test_df)
 
         >>> mean_imputer.to_json()
-        {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 1.0, 'b': 2.0}}}
+        {'tubular_version': ..., 'classname': 'MeanImputer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 1.0, 'b': 2.0}}}
 
         """
         self.check_is_fitted("impute_values_")
@@ -242,7 +242,7 @@ class ArbitraryImputer(BaseImputer):
     >>> # transformer can also be dumped to json and reinitialised
     >>> json_dump=arbitrary_imputer.to_json()
     >>> json_dump
-    {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'impute_value': 5}, 'fit': {'impute_values_': {'a': 5, 'b': 5}}}
+    {'tubular_version': ..., 'classname': 'ArbitraryImputer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'impute_value': 5}, 'fit': {'impute_values_': {'a': 5, 'b': 5}}}
 
     >>> ArbitraryImputer.from_json(json_dump)
     ArbitraryImputer(columns=['a', 'b'], impute_value=5)
@@ -576,7 +576,7 @@ class MedianImputer(BaseImputer, WeightColumnMixin):
 
     >>> json_dump=median_imputer.to_json()
     >>> json_dump
-    {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 0.0, 'b': 1.0}}}
+    {'tubular_version': ..., 'classname': 'MedianImputer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 0.0, 'b': 1.0}}}
 
     >>> MedianImputer.from_json(json_dump)
     MedianImputer(columns=['a', 'b'])
@@ -722,7 +722,7 @@ class MeanImputer(WeightColumnMixin, BaseImputer):
 
     >>> json_dump=mean_imputer.to_json()
     >>> json_dump
-    {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 0.0, 'b': 1.0}}}
+    {'tubular_version': ..., 'classname': 'MeanImputer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 0.0, 'b': 1.0}}}
 
     >>> MeanImputer.from_json(json_dump)
     MeanImputer(columns=['a', 'b'])
@@ -863,7 +863,7 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
 
     >>> json_dump=mode_imputer.to_json()
     >>> json_dump
-    {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 0, 'b': 1}}}
+    {'tubular_version': ..., 'classname': 'ModeImputer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 0, 'b': 1}}}
 
     >>> ModeImputer.from_json(json_dump)
     ModeImputer(columns=['a', 'b'])
@@ -1014,7 +1014,7 @@ class NullIndicator(BaseTransformer):
     >>> # transformer can also be dumped to json and reinitialised
     >>> json_dump=null_indicator.to_json()
     >>> json_dump
-    {'tubular_version': ..., 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True}, 'fit': {}}
+    {'tubular_version': ..., 'classname': 'NullIndicator', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True}, 'fit': {}}
 
     >>> NullIndicator.from_json(json_dump)
     NullIndicator(columns=['a', 'b'])
