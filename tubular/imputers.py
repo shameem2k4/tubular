@@ -15,6 +15,7 @@ from tubular._utils import (
     _convert_dataframe_to_narwhals,
     _convert_series_to_narwhals,
     _return_narwhals_or_native_dataframe,
+    block_from_json,
 )
 from tubular.base import BaseTransformer
 from tubular.mixins import WeightColumnMixin
@@ -63,6 +64,7 @@ class BaseImputer(BaseTransformer):
 
     FITS = False
 
+    @block_from_json
     def to_json(self) -> dict[str, dict[str, Any]]:
         """dump transformer to json dict
 
@@ -598,6 +600,7 @@ class MedianImputer(BaseImputer, WeightColumnMixin):
 
         WeightColumnMixin.check_and_set_weight(self, weights_column)
 
+    @block_from_json
     @beartype
     def fit(self, X: DataFrame, y: Optional[Series] = None) -> MedianImputer:
         """Calculate median values to impute with from X.
@@ -744,6 +747,7 @@ class MeanImputer(WeightColumnMixin, BaseImputer):
 
         WeightColumnMixin.check_and_set_weight(self, weights_column)
 
+    @block_from_json
     @beartype
     def fit(self, X: DataFrame, y: Optional[Series] = None) -> MeanImputer:
         """Calculate mean values to impute with from X.
@@ -885,6 +889,7 @@ class ModeImputer(BaseImputer, WeightColumnMixin):
 
         WeightColumnMixin.check_and_set_weight(self, weights_column)
 
+    @block_from_json
     @beartype
     def fit(self, X: DataFrame, y: Optional[Series] = None) -> ModeImputer:
         """Calculate mode values to impute with from X - in the event of a tie,
