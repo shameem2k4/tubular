@@ -58,11 +58,21 @@ class BaseGenericDateTransformer(
     Attributes
     ----------
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
     return_native: bool, default = True
         Controls whether transformer returns narwhals or native pandas/polars type
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -74,6 +84,10 @@ class BaseGenericDateTransformer(
     """
 
     polars_compatible = True
+
+    FITS = False
+
+    jsonable = False
 
     def __init__(
         self,
@@ -294,8 +308,18 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
     Attributes
     ----------
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -307,6 +331,10 @@ class BaseDatetimeTransformer(BaseGenericDateTransformer):
     """
 
     polars_compatible = True
+
+    FITS = False
+
+    jsonable = False
 
     def __init__(
         self,
@@ -388,7 +416,6 @@ class BaseDateTwoColumnTransformer(
     TwoColumnMixin,
     BaseGenericDateTransformer,
 ):
-
     """Extends BaseDateTransformer for transformers which accept exactly two columns
 
     Parameters
@@ -409,12 +436,26 @@ class BaseDateTwoColumnTransformer(
     Attributes
     ----------
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     """
 
     polars_compatible = True
+
+    FITS = False
+
+    jsonable = False
 
     def __init__(
         self,
@@ -456,8 +497,18 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
     Attributes
     ----------
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -471,6 +522,10 @@ class DateDifferenceTransformer(BaseDateTwoColumnTransformer):
     """
 
     polars_compatible = True
+
+    FITS = False
+
+    jsonable = False
 
     def __init__(
         self,
@@ -644,8 +699,18 @@ class ToDatetimeTransformer(BaseTransformer):
     Attributes
     ----------
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -657,6 +722,10 @@ class ToDatetimeTransformer(BaseTransformer):
     """
 
     polars_compatible = True
+
+    FITS = False
+
+    jsonable = False
 
     @beartype
     def __init__(
@@ -746,6 +815,11 @@ class BetweenDatesTransformer(BaseGenericDateTransformer):
 
     Attributes
     ----------
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     column_lower : str
         Name of date column to subtract. This attribute is not for use in any method,
         use 'columns' instead. Here only as a fix to allow string representation of transformer.
@@ -777,6 +851,12 @@ class BetweenDatesTransformer(BaseGenericDateTransformer):
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
 
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
+
     Example:
     --------
     >>> BetweenDatesTransformer(
@@ -790,6 +870,10 @@ class BetweenDatesTransformer(BaseGenericDateTransformer):
     """
 
     polars_compatible = True
+
+    FITS = False
+
+    jsonable = False
 
     def __init__(
         self,
@@ -988,8 +1072,18 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
     drop_original: str
         indicates whether to drop provided columns post transform
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -1001,6 +1095,10 @@ class DatetimeInfoExtractor(BaseDatetimeTransformer):
     """
 
     polars_compatible = True
+
+    FITS = False
+
+    jsonable = False
 
     DEFAULT_MAPPINGS: ClassVar[dict[str, dict[int, str]]] = {
         DatetimeInfoOptions.TIME_OF_DAY: {
@@ -1292,8 +1390,18 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
         The period of the output in the units specified above. Can be a string or a dict containing key-value pairs of column
         name and units to be used for that column.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -1306,6 +1414,10 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
     """
 
     polars_compatible = True
+
+    FITS = False
+
+    jsonable = False
 
     def __init__(
         self,
@@ -1324,17 +1436,11 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
         )
 
         if not isinstance(method, str) and not isinstance(method, list):
-            msg = "{}: method must be a string or list but got {}".format(
-                self.classname(),
-                type(method),
-            )
+            msg = f"{self.classname()}: method must be a string or list but got {type(method)}"
             raise TypeError(msg)
 
         if not isinstance(units, str) and not isinstance(units, dict):
-            msg = "{}: units must be a string or dict but got {}".format(
-                self.classname(),
-                type(units),
-            )
+            msg = f"{self.classname()}: units must be a string or dict but got {type(units)}"
             raise TypeError(msg)
 
         if (
@@ -1342,21 +1448,14 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             and (not isinstance(period, float))
             and (not isinstance(period, dict))
         ) or (isinstance(period, bool)):
-            msg = "{}: period must be an int, float or dict but got {}".format(
-                self.classname(),
-                type(period),
-            )
+            msg = f"{self.classname()}: period must be an int, float or dict but got {type(period)}"
             raise TypeError(msg)
 
         if isinstance(units, dict) and (
             not all(isinstance(item, str) for item in list(units.keys()))
             or not all(isinstance(item, str) for item in list(units.values()))
         ):
-            msg = "{}: units dictionary key value pair must be strings but got keys: {} and values: {}".format(
-                self.classname(),
-                {type(k) for k in units},
-                {type(v) for v in units.values()},
-            )
+            msg = f"{self.classname()}: units dictionary key value pair must be strings but got keys: { ({type(k) for k in units}) } and values: { ({type(v) for v in units.values()}) }"
             raise TypeError(msg)
 
         if isinstance(period, dict) and (
@@ -1367,11 +1466,7 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
             )
             or any(isinstance(item, bool) for item in list(period.values()))
         ):
-            msg = "{}: period dictionary key value pair must be str:int or str:float but got keys: {} and values: {}".format(
-                self.classname(),
-                {type(k) for k in period},
-                {type(v) for v in period.values()},
-            )
+            msg = f"{self.classname()}: period dictionary key value pair must be str:int or str:float but got keys: { ({type(k) for k in period}) } and values: { ({type(v) for v in period.values()}) }"
             raise TypeError(msg)
 
         valid_method_list = ["sin", "cos"]
@@ -1380,10 +1475,7 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
 
         for method in method_list:
             if method not in valid_method_list:
-                msg = '{}: Invalid method {} supplied, should be "sin", "cos" or a list containing both'.format(
-                    self.classname(),
-                    method,
-                )
+                msg = f'{self.classname()}: Invalid method {method} supplied, should be "sin", "cos" or a list containing both'
                 raise ValueError(msg)
 
         valid_unit_list = [
@@ -1398,17 +1490,10 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
 
         if isinstance(units, dict):
             if not set(units.values()).issubset(valid_unit_list):
-                msg = "{}: units dictionary values must be one of 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond' but got {}".format(
-                    self.classname(),
-                    set(units.values()),
-                )
+                msg = f"{self.classname()}: units dictionary values must be one of 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond' but got {set(units.values())}"
                 raise ValueError(msg)
         elif units not in valid_unit_list:
-            msg = "{}: Invalid units {} supplied, should be in {}".format(
-                self.classname(),
-                units,
-                valid_unit_list,
-            )
+            msg = f"{self.classname()}: Invalid units {units} supplied, should be in {valid_unit_list}"
             raise ValueError(msg)
 
         self.method = method_list
@@ -1416,17 +1501,11 @@ class DatetimeSinusoidCalculator(BaseDatetimeTransformer):
         self.period = period
 
         if isinstance(units, dict) and sorted(units.keys()) != sorted(self.columns):
-            msg = "{}: unit dictionary keys must be the same as columns but got {}".format(
-                self.classname(),
-                set(units.keys()),
-            )
+            msg = f"{self.classname()}: unit dictionary keys must be the same as columns but got {set(units.keys())}"
             raise ValueError(msg)
 
         if isinstance(period, dict) and sorted(period.keys()) != sorted(self.columns):
-            msg = "{}: period dictionary keys must be the same as columns but got {}".format(
-                self.classname(),
-                set(period.keys()),
-            )
+            msg = f"{self.classname()}: period dictionary keys must be the same as columns but got {set(period.keys())}"
             raise ValueError(msg)
 
     def get_feature_names_out(self) -> list[str]:
@@ -1608,12 +1687,26 @@ class DateDiffLeapYearTransformer(BaseDateTwoColumnTransformer):
     drop_original : bool
         Indicator whether to drop old columns during transform method.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     """
 
     polars_compatible = True
+
+    FITS = False
+
+    jsonable = False
 
     def __init__(
         self,
@@ -1781,12 +1874,26 @@ class SeriesDtMethodTransformer(BaseDatetimeTransformer):
     drop_original: bool
         Indicates whether to drop self.column post transform
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     """
 
     polars_compatible = False
+
+    FITS = False
+
+    jsonable = False
 
     def __init__(
         self,
