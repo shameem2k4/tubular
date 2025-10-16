@@ -1340,6 +1340,10 @@ class ToFromJsonTests:
 
         df = minimal_dataframe_lookup[self.transformer_name]
 
+        # skip polars test if not narwhalified
+        if not transformer.polars_compatible and isinstance(df, pl.DataFrame):
+            return
+
         # skip test if transformer is jsonable
         if transformer.jsonable:
             return

@@ -93,6 +93,14 @@ class BaseImputer(BaseTransformer):
         {'tubular_version': ..., 'classname': 'MeanImputer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'weights_column': None}, 'fit': {'impute_values_': {'a': 1.0, 'b': 2.0}}}
 
         """
+        if not self.jsonable:
+            msg = (
+                "This transformer has not yet had to/from json functionality developed"
+            )
+            raise RuntimeError(
+                msg,
+            )
+
         self.check_is_fitted("impute_values_")
 
         json_dict = super().to_json()
