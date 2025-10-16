@@ -1350,9 +1350,7 @@ class DifferenceTransformer(BaseNumericTransformer):
 
     Example
     -------
-    >>> transformer = DifferenceTransformer(
-    ... columns=['a', 'b'],
-    ... )
+    >>> transformer = DifferenceTransformer(columns=['a', 'b'])
     DifferenceTransformer(columns=['a', 'b'])
     """
 
@@ -1402,21 +1400,19 @@ class DifferenceTransformer(BaseNumericTransformer):
         Example:
         --------
         >>> import polars as pl
-        >>> transformer = DifferenceTransformer(
-        ... columns=['a', 'b'],
-        ... )
+        >>> transformer = DifferenceTransformer(columns=['a', 'b'])
         >>> test_df = pl.DataFrame({'a': [100, 200, 300], 'b': [80, 150, 200]})
         >>> transformer.transform(test_df)
         shape: (3, 3)
-        ┌───────┬──────┬──────────┐
-        │ a     ┆ b    ┆ a_minus_b│
-        │ ---   ┆ ---  ┆ ---      │
-        │ i64   ┆ i64  ┆ i64      │
-        ╞═══════╪══════╪══════════╡
-        │ 100   ┆ 80   ┆ 20       │
-        │ 200   ┆ 150  ┆ 50       │
-        │ 300   ┆ 200  ┆ 100      │
-        └───────┴──────┴──────────┘
+        ┌─────┬─────┬───────────┐
+        │ a   ┆ b   ┆ a_minus_b │
+        │ --- ┆ --- ┆ ---       │
+        │ i64 ┆ i64 ┆ i64       │
+        ╞═════╪═════╪═══════════╡
+        │ 100 ┆ 80  ┆ 20        │
+        │ 200 ┆ 150 ┆ 50        │
+        │ 300 ┆ 200 ┆ 100       │
+        └─────┴─────┴───────────┘
         """
         X = _convert_dataframe_to_narwhals(X)
 
@@ -1459,10 +1455,7 @@ class RatioTransformer(BaseNumericTransformer):
 
     Example
     -------
-    >>> transformer = RatioTransformer(
-    ... columns=['a', 'b'],
-    ... return_dtype='Float32'
-    ... )
+    >>> transformer = RatioTransformer(columns=['a', 'b'], return_dtype='Float32')
     RatioTransformer(columns=['a', 'b'], return_dtype='Float32')
     """
 
@@ -1482,7 +1475,7 @@ class RatioTransformer(BaseNumericTransformer):
         --------
         >>> ratio_transformer = RatioTransformer(columns=['a', 'b'], return_dtype='Float32')
         >>> ratio_transformer.to_json()
-        {'tubular_version': ..., 'classname': 'RatioTransformer', 'init': {'columns': ['a', 'b'], 'return_dtype': 'Float32'}}
+        {'tubular_version': ..., 'classname': 'RatioTransformer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'return_dtype': 'Float32'}, 'fit': {}}
         """
         if not self.jsonable:
             error_message = "This transformer does not support JSON serialization."
@@ -1546,21 +1539,19 @@ class RatioTransformer(BaseNumericTransformer):
         Example:
         --------
         >>> import polars as pl
-        >>> transformer = RatioTransformer(
-        ... columns=['a', 'b'],
-        ... )
+        >>> transformer = RatioTransformer(columns=['a', 'b'], return_dtype='Float32')
         >>> test_df = pl.DataFrame({'a': [100, 200, 300], 'b': [80, 150, 200]})
         >>> transformer.transform(test_df)
         shape: (3, 3)
-        ┌───────┬──────┬────────────────┐
-        │ a     ┆ b    ┆ a_divided_by_b │
-        │ ---   ┆ ---  ┆ ---            │
-        │ i64   ┆ i64  ┆ f64            │
-        ╞═══════╪══════╪════════════════╡
-        │ 100   ┆ 80   ┆ 1.25           │
-        │ 200   ┆ 150  ┆ 1.3333         │
-        │ 300   ┆ 200  ┆ 1.5            │
-        └───────┴──────┴────────────────┘
+        ┌─────┬─────┬────────────────┐
+        │ a   ┆ b   ┆ a_divided_by_b │
+        │ --- ┆ --- ┆ ---            │
+        │ i64 ┆ i64 ┆ f32            │
+        ╞═════╪═════╪════════════════╡
+        │ 100 ┆ 80  ┆ 1.25           │
+        │ 200 ┆ 150 ┆ 1.333333       │
+        │ 300 ┆ 200 ┆ 1.5            │
+        └─────┴─────┴────────────────┘
         """
         X = _convert_dataframe_to_narwhals(X)
         X = super().transform(X, return_native_override=False)
