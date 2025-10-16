@@ -1,6 +1,6 @@
 import copy
 
-import polars as pl
+import narwhals as nw
 import pytest
 from beartype.roar import BeartypeCallHintParamViolation
 
@@ -12,6 +12,8 @@ from tests.numeric.test_BaseNumericTransformer import (
 from tests.test_data import (
     create_ratio_test_df,  # Ensure this function generates the correct test data
 )
+
+# from tests.utils import _handle_from_json, assert_frame_equal_dispatch, dataframe_init_dispatch
 
 
 class TestRatioTransformerInit(BaseNumericTransformerInitTests):
@@ -69,7 +71,7 @@ class TestRatioTransformerTransform(BaseNumericTransformerTransformTests):
         args["columns"] = ["a", "b"]
         args["return_dtype"] = return_dtype
 
-        df = create_ratio_test_df(library=library)  # Use the correct test data function
+        df = create_ratio_test_df(library=library)
 
         transformer = uninitialized_transformers[self.transformer_name](**args)
         transformed_df = transformer.transform(df)
@@ -78,23 +80,19 @@ class TestRatioTransformerTransform(BaseNumericTransformerTransformTests):
         expected_data = {
             "a": [100, 200, 300],
             "b": [80, 150, 200],
-            "a_divided_by_b": [1.25, 1.333333, 1.5],  # Ensure consistent precision
+            "a_divided_by_b": [1.25, 1.333333, 1.5],
         }
         expected_df = u.dataframe_init_dispatch(expected_data, library)
 
-        # Cast the expected column to match the return_dtype
-        if library == "pandas":
-            expected_df["a_divided_by_b"] = expected_df["a_divided_by_b"].astype(
-                return_dtype.lower(),
-            )
-            transformed_df = transformed_df[
-                expected_df.columns
-            ]  # Reorder columns using indexing
-        else:  # For polars
-            expected_df = expected_df.with_columns(
-                expected_df["a_divided_by_b"].cast(getattr(pl, return_dtype)),
-            )
-            transformed_df = transformed_df.select(expected_df.columns)
+        # Use Narwhals for casting and column selection
+        expected_df = nw.from_native(expected_df)
+        transformed_df = nw.from_native(transformed_df)
+        expected_df = expected_df.with_columns(
+            nw.col("a_divided_by_b").cast(getattr(nw, return_dtype)),
+        )
+        transformed_df = transformed_df.select(expected_df.columns)
+        expected_df = expected_df.to_native()
+        transformed_df = transformed_df.to_native()
 
         u.assert_frame_equal_dispatch(transformed_df, expected_df)
 
@@ -130,19 +128,15 @@ class TestRatioTransformerTransform(BaseNumericTransformerTransformTests):
         }
         expected_df = u.dataframe_init_dispatch(expected_data, library)
 
-        # Cast the expected column to match the return_dtype
-        if library == "pandas":
-            expected_df["a_divided_by_b"] = expected_df["a_divided_by_b"].astype(
-                return_dtype.lower(),
-            )
-            transformed_df = transformed_df[
-                expected_df.columns
-            ]  # Reorder columns using indexing
-        else:  # For polars
-            expected_df = expected_df.with_columns(
-                expected_df["a_divided_by_b"].cast(getattr(pl, return_dtype)),
-            )
-            transformed_df = transformed_df.select(expected_df.columns)
+        # Use Narwhals for casting and column selection
+        expected_df = nw.from_native(expected_df)
+        transformed_df = nw.from_native(transformed_df)
+        expected_df = expected_df.with_columns(
+            nw.col("a_divided_by_b").cast(getattr(nw, return_dtype)),
+        )
+        transformed_df = transformed_df.select(expected_df.columns)
+        expected_df = expected_df.to_native()
+        transformed_df = transformed_df.to_native()
 
         u.assert_frame_equal_dispatch(transformed_df, expected_df)
 
@@ -178,18 +172,71 @@ class TestRatioTransformerTransform(BaseNumericTransformerTransformTests):
         }
         expected_df = u.dataframe_init_dispatch(expected_data, library)
 
-        # Cast the expected column to match the return_dtype
-        if library == "pandas":
-            expected_df["a_divided_by_b"] = expected_df["a_divided_by_b"].astype(
-                return_dtype.lower(),
-            )
-            transformed_df = transformed_df[
-                expected_df.columns
-            ]  # Reorder columns using indexing
-        else:  # For polars
-            expected_df = expected_df.with_columns(
-                expected_df["a_divided_by_b"].cast(getattr(pl, return_dtype)),
-            )
-            transformed_df = transformed_df.select(expected_df.columns)
+        # Use Narwhals for casting and column selection
+        expected_df = nw.from_native(expected_df)
+        transformed_df = nw.from_native(transformed_df)
+        expected_df = expected_df.with_columns(
+            nw.col("a_divided_by_b").cast(getattr(nw, return_dtype)),
+        )
+        transformed_df = transformed_df.select(expected_df.columns)
+        expected_df = expected_df.to_native()
+        transformed_df = transformed_df.to_native()
+
+        u.assert_frame_equal_dispatch(transformed_df, expected_df)
+
+
+class TestRatioTransformerSerialization:
+    """Tests for RatioTransformer serialization and deserialization."""
+
+    @classmethod
+    def setup_class(cls):
+        cls.transformer_name = "RatioTransformer"
+
+    @pytest.mark.parametrize("from_json", [True, False])
+    @pytest.mark.parametrize("library", ["pandas", "polars"])
+    def test_ratio_transformer_to_from_json(
+        self,
+        library,
+        minimal_attribute_dict,
+        uninitialized_transformers,
+        from_json,
+    ):
+        """Test that RatioTransformer can be serialized to JSON and reconstructed correctly."""
+        # Create a sample DataFrame using the library parameter
+        df_dict = {
+            "a": [100, 200, 300],
+            "b": [80, 150, 200],
+        }
+        df = u.dataframe_init_dispatch(df_dict, library)
+
+        # Initialize the transformer
+        args = minimal_attribute_dict[self.transformer_name].copy()
+        args["columns"] = ["a", "b"]
+        args["return_dtype"] = "Float32"
+        transformer = uninitialized_transformers[self.transformer_name](**args)
+
+        # Handle serialization and deserialization
+        transformer = u._handle_from_json(transformer, from_json)
+
+        # Transform the DataFrame
+        transformed_df = transformer.transform(df)
+
+        # Expected output for basic division
+        expected_data = {
+            "a": [100, 200, 300],
+            "b": [80, 150, 200],
+            "a_divided_by_b": [1.25, 1.333333, 1.5],
+        }
+        expected_df = u.dataframe_init_dispatch(expected_data, library)
+
+        # Use Narwhals for casting and column selection
+        expected_df = nw.from_native(expected_df)
+        transformed_df = nw.from_native(transformed_df)
+        expected_df = expected_df.with_columns(
+            nw.col("a_divided_by_b").cast(nw.Float32),
+        )
+        transformed_df = transformed_df.select(expected_df.columns)
+        expected_df = expected_df.to_native()
+        transformed_df = transformed_df.to_native()
 
         u.assert_frame_equal_dispatch(transformed_df, expected_df)

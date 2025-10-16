@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, ClassVar, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 
 import narwhals as nw
 import numpy as np
@@ -1469,6 +1469,41 @@ class RatioTransformer(BaseNumericTransformer):
     polars_compatible = True
     FITS = False
     jsonable = True
+
+    def to_json(self) -> dict[str, dict[str, Any]]:
+        """Serialize the transformer to a JSON-compatible dictionary.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]:
+            JSON representation of the transformer, including init parameters.
+
+        Examples
+        --------
+        >>> ratio_transformer = RatioTransformer(columns=['a', 'b'], return_dtype='Float32')
+        >>> ratio_transformer.to_json()
+        {'tubular_version': ..., 'classname': 'RatioTransformer', 'init': {'columns': ['a', 'b'], 'return_dtype': 'Float32'}}
+        """
+        if not self.jsonable:
+            error_message = "This transformer does not support JSON serialization."
+            raise RuntimeError(error_message)
+
+        json_dict = {
+            "tubular_version": ...,
+            "classname": self.__class__.__name__,
+            "init": {
+                "columns": self.columns,
+                "return_dtype": self.return_dtype,
+                "copy": self.copy,
+                "verbose": self.verbose,
+                "return_native": self.return_native,
+            },
+        }
+
+        json_dict = super().to_json()
+        json_dict["init"]["return_dtype"] = self.return_dtype
+
+        return json_dict
 
     @beartype
     def __init__(
