@@ -1207,9 +1207,71 @@ class CombineXYTests:
         pd.testing.assert_frame_equal(result, expected_output)
 
 
+class TestGetFeatureNamesOut:
+    """
+    Tests for the BaseTransformer.get_feature_names_out method.
+    Note this deliberately avoids starting with "Tests" so that the tests are not run on import.
+    """
+
+    @pytest.mark.parametrize(
+        "minimal_dataframe_lookup",
+        ["pandas", "polars"],
+        indirect=["minimal_dataframe_lookup"],
+    )
+    def test_get_feature_names_out_matches_new_features(
+        self,
+        minimal_dataframe_lookup,
+        initialized_transformers,
+    ):
+        """Test that the expected newly created features (if any) are indeed contained
+        in the output df"""
+
+        df = minimal_dataframe_lookup[self.transformer_name]
+
+        x = initialized_transformers[self.transformer_name]
+
+        if x.FITS:
+            x.fit(df, df["a"])
+
+        original_columns = set(df.columns)
+
+        output = df.transform(df)
+
+        output_columns = set(output.columns)
+
+        new_columns = output_columns.difference(original_columns)
+
+        expected_new_columns = set(x.get_feature_names_out())
+
+        # determine if there are any genuine new columns,
+        # or if transformer just modifies existing
+        expected_created_columns = expected_new_columns.difference(x.columns)
+
+        # if there are new columns, are they in the data
+        if expected_created_columns:
+            assert (
+                new_columns == expected_new_columns
+            ), "get_feature_names_out does not agree with output of .transform"
+
+        # if there are columns that are just modified, check they remain in data
+        expected_modified_columns = expected_new_columns.intersection(x.columns)
+
+        if expected_modified_columns:
+            assert expected_modified_columns.intersection(
+                output_columns,
+            ), "get_feature_names_out does not agree with output of .transform"
+
+        # it's currently true that transformers have one of these two behaviours,
+        # so check not both as sanity check
+        assert not (
+            expected_modified_columns and expected_created_columns
+        ), "transformers either modify or create columns, but this test has detected both behaviours"
+
+
 class OtherBaseBehaviourTests(
     ColumnsCheckTests,
     CombineXYTests,
+    TestGetFeatureNamesOut,
 ):
     """
     Class to collect and hold tests for BaseTransformerBehaviour outside the three standard methods.
