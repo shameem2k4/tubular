@@ -1345,7 +1345,7 @@ class DifferenceTransformer(BaseNumericTransformer):
     Attributes
     ----------
     columns : ListOfTwoStrs
-        List of exactly two column names to operate on. The first column is the minuend,
+        List of exactly two column names to operate on. The second column is subtracted from the first.
         and the second column is the subtrahend.
 
     Example
@@ -1371,7 +1371,7 @@ class DifferenceTransformer(BaseNumericTransformer):
         Parameters
         ----------
         columns : ListOfTwoStrs
-            List of exactly two column names to operate on. The first column is the minuend/numerator,
+            List of exactly two column names to operate on. The second column is subtracted from the first.
             and the second column is the subtrahend/denominator.
         verbose : bool, default=False
             Whether to print verbose output during transformation.
