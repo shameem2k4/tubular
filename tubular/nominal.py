@@ -1510,7 +1510,7 @@ class OneHotEncodingTransformer(
         ['a_cat', 'a_dog', 'a_rat']
         """
 
-        # if wanted leves is not provided, this function
+        # if wanted values is not provided, this function
         # depends on fit having been called
         if not self.wanted_values:
             self.check_is_fitted("categories_")
