@@ -146,6 +146,14 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         >>> transformer.to_json()
         {'tubular_version': ..., 'classname': 'BaseTransformer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True}, 'fit': {}}
         """
+        if not self.jsonable:
+            msg = (
+                "This transformer has not yet had to/from json functionality developed"
+            )
+            raise RuntimeError(
+                msg,
+            )
+
         return {
             "tubular_version": self._version,
             "classname": self.classname(),
@@ -185,6 +193,14 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         >>> BaseTransformer.from_json(json=json_dict)
         BaseTransformer(columns=['a', 'b'])
         """
+
+        if not cls.jsonable:
+            msg = (
+                "This transformer has not yet had to/from json functionality developed"
+            )
+            raise RuntimeError(
+                msg,
+            )
 
         instance = cls(**json["init"])
 

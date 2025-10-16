@@ -193,7 +193,7 @@ def block_from_json(method):  # noqa: ANN202, ANN001,  no annotations for generi
     @wraps(method)
     def wrapper(self, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003, ANN202, no annotations for generic decorator
         if self.built_from_json:
-            msg = "Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transform to use this method"
+            msg = "Transformers that are reconstructed from json only support .transform functionality, reinitialise a new transformer to use this method"
             raise RuntimeError(
                 msg,
             )
