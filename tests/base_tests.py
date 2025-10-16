@@ -1404,7 +1404,7 @@ class TestGetFeatureNamesOut:
 
         original_columns = set(df.columns)
 
-        output = df.transform(df)
+        output = x.transform(df)
 
         output_columns = set(output.columns)
 
