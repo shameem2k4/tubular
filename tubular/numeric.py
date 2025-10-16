@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, ClassVar, Optional, Union
 
 import narwhals as nw
 import numpy as np
@@ -29,7 +29,7 @@ from tubular.mixins import (
     NewColumnNameMixin,
     TwoColumnMixin,
 )
-from tubular.types import DataFrame, ListOfOneStr, PositiveNumber  # noqa: TCH001
+from tubular.types import DataFrame, ListOfOneStr, PositiveNumber
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT, IntoSeriesT
@@ -52,10 +52,18 @@ class BaseNumericTransformer(BaseTransformer, CheckNumericMixin):
     columns : List[str]
         List of columns to be operated on
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     Example:
     --------
@@ -67,6 +75,8 @@ class BaseNumericTransformer(BaseTransformer, CheckNumericMixin):
     """
 
     polars_compatible = True
+
+    jsonable = False
 
     FITS = False
 
@@ -197,10 +207,18 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
     Attributes
     ----------
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     Example:
     --------
@@ -217,6 +235,8 @@ class OneDKmeansTransformer(BaseNumericTransformer, DropOriginalMixin):
     """
 
     polars_compatible = True
+
+    jsonable = False
 
     FITS = True
 
@@ -433,14 +453,24 @@ class LogTransformer(BaseNumericTransformer, DropOriginalMixin):
     suffix : str
         The suffix to add onto the end of column names for new columns.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     """
 
     polars_compatible = False
+
+    jsonable = False
 
     FITS = False
 
@@ -537,14 +567,24 @@ class CutTransformer(BaseNumericTransformer):
     Attributes
     ----------
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     """
 
     polars_compatible = False
+
+    jsonable = False
 
     FITS = False
 
@@ -659,14 +699,24 @@ class TwoColumnOperatorTransformer(
     pd_method_kwargs : dict
         Dictionary of method kwargs to be passed to pandas.DataFrame method.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     """
 
     polars_compatible = False
+
+    jsonable = False
 
     FITS = False
 
@@ -760,19 +810,31 @@ class ScalingTransformer(BaseNumericTransformer):
     Attributes
     ----------
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     """
 
     polars_compatible = False
 
+    jsonable = False
+
     FITS = True
 
     # Dictionary mapping scaler types to their corresponding sklearn classes
-    scaler_options = {
+    scaler_options: ClassVar[
+        dict[str, Union[MinMaxScaler, MaxAbsScaler, StandardScaler]]
+    ] = {
         "min_max": MinMaxScaler,
         "max_abs": MaxAbsScaler,
         "standard": StandardScaler,
@@ -887,25 +949,41 @@ class InteractionTransformer(BaseNumericTransformer):
     ----------
         min_degree : int
             minimum degree of interaction features to be considered
+
         max_degree : int
             maximum degree of interaction features to be considered
+
         nb_features_to_interact : int
             number of selected columns from which interactions should be computed. (=len(columns))
+
         nb_combinations : int
             number of new interaction features
+
         interaction_colname : list
             names of each new interaction feature. The name of an interaction feature is the combinations of previous
             column names joined with a whitespace. Interaction feature of ["col1","col2","col3] would be "col1 col2 col3".
+
         nb_feature_out : int
             number of total columns of transformed dataset, including new interaction features
+
+        built_from_json: bool
+            indicates if transformer was reconstructed from json, which limits it's supported
+            functionality to .transform
+
         polars_compatible : bool
             class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
         FITS: bool
-        class attribute, indicates whether transform requires fit to be run first
+            class attribute, indicates whether transform requires fit to be run first
+
+        jsonable: bool
+            class attribute, indicates if transformer supports to/from_json methods
 
     """
 
     polars_compatible = False
+
+    jsonable = False
 
     FITS = False
 
@@ -919,12 +997,12 @@ class InteractionTransformer(BaseNumericTransformer):
         super().__init__(columns=columns, **kwargs)
 
         if len(columns) < 2:
-            msg = f"{self.classname()}: number of columns must be equal or greater than 2, got {str(len(columns))} column."
+            msg = f"{self.classname()}: number of columns must be equal or greater than 2, got {len(columns)} column."
             raise ValueError(msg)
 
         if type(min_degree) is int:
             if min_degree < 2:
-                msg = f"{self.classname()}: min_degree must be equal or greater than 2, got {str(min_degree)}"
+                msg = f"{self.classname()}: min_degree must be equal or greater than 2, got {min_degree}"
                 raise ValueError(msg)
             self.min_degree = min_degree
         else:
@@ -1075,23 +1153,35 @@ class PCATransformer(BaseNumericTransformer):
     Attributes
     ----------
     pca : PCA class from sklearn.decomposition
+
     n_components_ : int
         The estimated number of components. When n_components is set
         to 'mle' or a number between 0 and 1 (with svd_solver == 'full') this
         number is estimated from input data. Otherwise it equals the parameter
         n_components, or the lesser value of n_features and n_samples
         if n_components is None.
+
     feature_names_out: list or None
         list of feature name representing the new dimensions.
+
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
     FITS: bool
         class attribute, indicates whether transform requires fit to be run first
 
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
 
     """
 
     polars_compatible = False
+
+    jsonable = False
 
     FITS = True
 
@@ -1108,14 +1198,14 @@ class PCATransformer(BaseNumericTransformer):
 
         if type(n_components) is int:
             if n_components < 1:
-                msg = f"{self.classname()}:n_components must be strictly positive got {str(n_components)}"
+                msg = f"{self.classname()}:n_components must be strictly positive got {n_components}"
                 raise ValueError(msg)
             self.n_components = n_components
         elif type(n_components) is float:
             if 0 < n_components < 1:
                 self.n_components = n_components
             else:
-                msg = f"{self.classname()}:n_components must be strictly positive and must be of type int when greater than or equal to 1. Got {str(n_components)}"
+                msg = f"{self.classname()}:n_components must be strictly positive and must be of type int when greater than or equal to 1. Got {n_components}"
                 raise ValueError(msg)
 
         else:

@@ -26,6 +26,10 @@ from tubular.types import DataFrame, Series
 class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
     polars_compatible = True
 
+    FITS = True
+
+    jsonable = False
+
     def __init__(
         self,
         capping_values: dict[str, list[int | float | None]] | None = None,
@@ -81,8 +85,18 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
         _replacement_values : dict
             Replacement values when capping is applied. Will be a copy of capping_values.
 
+        built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
         polars_compatible : bool
-        class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+            class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+        jsonable: bool
+            class attribute, indicates if transformer supports to/from_json methods
+
+        FITS: bool
+            class attribute, indicates whether transform requires fit to be run first
 
         Example:
         --------
@@ -314,7 +328,7 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
                 weights_column=weights_column,
             )
 
-            results = [None] + results_no_none
+            results = [None, *results_no_none]
 
         elif quantiles[1] is None:
             quantiles = np.array([quantiles[0]])
@@ -326,7 +340,7 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
                 weights_column=weights_column,
             )
 
-            results = results_no_none + [None]
+            results = [*results_no_none, None]
 
         else:
             results = self.weighted_quantile(
@@ -494,12 +508,12 @@ class BaseCappingTransformer(BaseNumericTransformer, WeightColumnMixin):
 
             capping_values_for_transform = self.quantile_capping_values
 
-            dict_attrs = dict_attrs + ["quantile_capping_values"]
+            dict_attrs = [*dict_attrs, "quantile_capping_values"]
 
         else:
             capping_values_for_transform = self.capping_values
 
-            dict_attrs = dict_attrs + ["capping_values"]
+            dict_attrs = [*dict_attrs, "capping_values"]
 
         for attr_name in dict_attrs:
             if getattr(self, attr_name) == {}:
@@ -602,8 +616,18 @@ class CappingTransformer(BaseCappingTransformer):
     _replacement_values : dict
         Replacement values when capping is applied. Will be a copy of capping_values.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -631,6 +655,10 @@ class CappingTransformer(BaseCappingTransformer):
     """
 
     polars_compatible = True
+
+    FITS = True
+
+    jsonable = False
 
     def __init__(
         self,
@@ -728,8 +756,18 @@ class OutOfRangeNullTransformer(BaseCappingTransformer):
     _replacement_values : dict
         Replacement values when capping is applied. This will contain nulls for each column.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     Example:
     --------
@@ -762,6 +800,10 @@ class OutOfRangeNullTransformer(BaseCappingTransformer):
     """
 
     polars_compatible = True
+
+    FITS = True
+
+    jsonable = False
 
     def __init__(
         self,
@@ -799,7 +841,7 @@ class OutOfRangeNullTransformer(BaseCappingTransformer):
         {'a': [None, None], 'b': [False, None]}
         """
 
-        _replacement_values = {}
+        replacement_values = {}
 
         for k, cap_values_list in capping_values.items():
             null_replacements_list = [
@@ -807,9 +849,9 @@ class OutOfRangeNullTransformer(BaseCappingTransformer):
                 for replace_value in cap_values_list
             ]
 
-            _replacement_values[k] = null_replacements_list
+            replacement_values[k] = null_replacements_list
 
-        return _replacement_values
+        return replacement_values
 
     @nw.narwhalify
     def fit(self, X: FrameT, y: None = None) -> OutOfRangeNullTransformer:
