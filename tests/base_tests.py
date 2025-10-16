@@ -1353,11 +1353,6 @@ class ToFromJsonTests:
         ):
             transformer.to_json()
 
-    @pytest.mark.parametrize(
-        "minimal_dataframe_lookup",
-        ["pandas", "polars"],
-        indirect=True,
-    )
     def test_from_json_blocked_for_non_jsonable_transformer(
         self,
         initialized_transformers,
