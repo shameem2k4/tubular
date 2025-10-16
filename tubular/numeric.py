@@ -1351,7 +1351,8 @@ class DifferenceTransformer(BaseNumericTransformer):
     Example
     -------
     >>> transformer = DifferenceTransformer(columns=['a', 'b'])
-    DifferenceTransformer(columns=['a', 'b'])
+    >>> transformer.columns
+    ['a', 'b']
     """
 
     polars_compatible = True
@@ -1456,7 +1457,10 @@ class RatioTransformer(BaseNumericTransformer):
     Example
     -------
     >>> transformer = RatioTransformer(columns=['a', 'b'], return_dtype='Float32')
-    RatioTransformer(columns=['a', 'b'], return_dtype='Float32')
+    >>> transformer.columns
+    ['a', 'b']
+    >>> transformer.return_dtype
+    'Float32'
     """
 
     polars_compatible = True
