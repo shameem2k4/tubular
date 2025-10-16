@@ -112,7 +112,17 @@ class BaseGenericDateTransformer(
         Examples
         --------
 
+        >>> # base classes just return inputs
         >>> transformer  = BaseGenericDateTransformer(
+        ... columns=['a',  'b'],
+        ... new_column_name='bla',
+        ...    )
+
+        >>> transformer.get_feature_names_out()
+        ['a', 'b']
+
+        >>> # other classes return new columns
+        >>> transformer  = DateDifferenceTransformer(
         ... columns=['a',  'b'],
         ... new_column_name='bla',
         ...    )
@@ -121,9 +131,17 @@ class BaseGenericDateTransformer(
         ['bla']
         """
 
-        return [
-            self.new_column_name,
-        ]
+        # base classes just return columns, so need special handling
+        return (
+            [*self.columns]
+            if type(self)
+            in [
+                BaseGenericDateTransformer,
+                BaseDatetimeTransformer,
+                BaseDateTwoColumnTransformer,
+            ]
+            else [self.new_column_name]
+        )
 
     @beartype
     def check_columns_are_date_or_datetime(
