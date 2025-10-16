@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import TYPE_CHECKING, Optional, Union
 
 import narwhals as nw
 import numpy as np
 import pandas as pd
 from beartype import beartype
+from beartype.typing import Annotated
+from beartype.vale import Is
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import (
@@ -30,23 +33,19 @@ from tubular.mixins import (
     TwoColumnMixin,
 )
 from tubular.types import DataFrame, ListOfTwoStrs
-from enum import Enum
-from beartype.vale import Is
-from beartype.typing import Annotated
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT, IntoSeriesT
 
 
-class DifferenceOperationOptions(str, Enum):
-    SUBTRACT = "subtract"
-    DIVIDE = "divide"
+class ReturnDtypeOptions(Enum):
+    Float32 = "Float32"
+    Float64 = "Float64"
 
-ListOfDifferenceOperations = Annotated[
+
+ReturnDtypeAnnotated = Annotated[
     str,
-    Is[
-        lambda operation: operation in DifferenceOperationOptions._value2member_map_
-    ],
+    Is[lambda dtype: dtype in ReturnDtypeOptions._value2member_map_],
 ]
 
 
@@ -1247,7 +1246,6 @@ class PCATransformer(BaseNumericTransformer):
         return X
 
 
-
 class DifferenceTransformer(BaseNumericTransformer):
     """Transformer that performs subtraction operation between two columns.
 
@@ -1259,66 +1257,58 @@ class DifferenceTransformer(BaseNumericTransformer):
     columns : ListOfTwoStrs
         List of exactly two column names to operate on. The first column is the minuend,
         and the second column is the subtrahend.
-    drop_original : bool
-        Whether to drop the original columns after transformation.
 
     Example
     -------
     >>> transformer = DifferenceTransformer(
     ... columns=['a', 'b'],
-    ... drop_original=False,
     ... )
-    DifferenceTransformer(columns=['a', 'b'], drop_original=False)
+    DifferenceTransformer(columns=['a', 'b'])
     """
-    
+
     polars_compatible = True
     FITS = False
-    
+    jsonable = True
+
     @beartype
     def __init__(
         self,
         columns: ListOfTwoStrs,
-        drop_original: bool = False,
         **kwargs: Optional[bool],
     ) -> None:
         """Initialize the DifferenceTransformer.
-        
+
         Parameters
         ----------
         columns : ListOfTwoStrs
             List of exactly two column names to operate on. The first column is the minuend/numerator,
             and the second column is the subtrahend/denominator.
-        drop_original : bool, default=False
-            Whether to drop the original columns after transformation.
         verbose : bool, default=False
             Whether to print verbose output during transformation.
         """
         super().__init__(columns=columns, **kwargs)
-        self.drop_original = drop_original
-        
-        # Set new_column_name or generate a default one 
-        #operation_word = 'minus' if operation == DifferenceOperationOptions.SUBTRACT else 'divided_by'
-        #self.new_column_name = f"{columns[0]}_{operation_word}_{columns[1]}"
 
-    
+        # Set new_column_name or generate a default one
+        self.new_column_name = f"{columns[0]}_minus_{columns[1]}"
+
     @beartype
     def transform(
         self,
         X: DataFrame,
     ) -> DataFrame:
         """Transform the DataFrame by applying the subtraction operation between two columns.
-        
+
         Parameters
         ----------
         X : pd.DataFrame or pl.DataFrame
             DataFrame containing the columns to operate on.
-            
+
         Returns
         -------
         pd.DataFrame or pl.DataFrame
             Transformed DataFrame with the new column containing the subtraction results.
-            
-            
+
+
         Example:
         --------
         >>> import polars as pl
@@ -1341,20 +1331,17 @@ class DifferenceTransformer(BaseNumericTransformer):
         X = _convert_dataframe_to_narwhals(X)
 
         X = super().transform(X, return_native_override=False)
-        
-        
+
         # Create the subtraction expression
         expr = nw.col(self.columns[0]) - nw.col(self.columns[1])
 
-        # Add the new column
-        new_column_name = f"{self.columns[0]}_minus_{self.columns[1]}"
-        X = X.with_columns(expr.alias(new_column_name))
-            
+        X = X.with_columns(expr.alias(self.new_column_name))
+
         # Add the new column
         X = X.with_columns(expr.alias(self.new_column_name))
-        
+
         return _return_narwhals_or_native_dataframe(X, self.return_native)
-    
+
     def get_feature_names_out(self) -> list[str]:
         """Get the names of the output features.
 
@@ -1364,7 +1351,6 @@ class DifferenceTransformer(BaseNumericTransformer):
             List containing the name of the new column created by the transformation.
         """
         return [self.new_column_name]
-    
 
 
 class RatioTransformer(BaseNumericTransformer):
@@ -1378,26 +1364,27 @@ class RatioTransformer(BaseNumericTransformer):
     columns : ListOfTwoStrs
         List of exactly two column names to operate on. The first column is the numerator,
         and the second column is the denominator.
-    drop_original : bool
-        Whether to drop the original columns after transformation.
+    return_dtype : str
+        The dtype of the resulting column, either 'Float32' or 'Float64'.
 
     Example
     -------
     >>> transformer = RatioTransformer(
     ... columns=['a', 'b'],
-    ... drop_original=False,
+    ... return_dtype='Float32'
     ... )
-    RatioTransformer(columns=['a', 'b'], drop_original=False)
+    RatioTransformer(columns=['a', 'b'], return_dtype='Float32')
     """
 
     polars_compatible = True
     FITS = False
+    jsonable = True
 
     @beartype
     def __init__(
         self,
         columns: ListOfTwoStrs,
-        drop_original: bool = False,
+        return_dtype: ReturnDtypeAnnotated = "Float32",
         **kwargs: Optional[bool],
     ) -> None:
         """Initialize the RatioTransformer.
@@ -1407,12 +1394,12 @@ class RatioTransformer(BaseNumericTransformer):
         columns : ListOfTwoStrs
             List of exactly two column names to operate on. The first column is the numerator,
             and the second column is the denominator.
-        drop_original : bool, default=False
-            Whether to drop the original columns after transformation.
+        return_dtype : str, default='Float32'
+            The dtype of the resulting column, either 'Float32' or 'Float64'.
         """
         super().__init__(columns=columns, **kwargs)
 
-        self.drop_original = drop_original
+        self.return_dtype = return_dtype
 
     @beartype
     def transform(
@@ -1454,14 +1441,19 @@ class RatioTransformer(BaseNumericTransformer):
         X = super().transform(X, return_native_override=False)
 
         # Create the division expression
-        expr = nw.when(nw.col(self.columns[1]) != 0).then(nw.col(self.columns[0]) / nw.col(self.columns[1])).otherwise(None)
+        expr = (
+            nw.when(nw.col(self.columns[1]) != 0)
+            .then(nw.col(self.columns[0]) / nw.col(self.columns[1]))
+            .otherwise(None)
+            .cast(getattr(nw, self.return_dtype))
+        )
 
         # Add the new column
         new_column_name = f"{self.columns[0]}_divided_by_{self.columns[1]}"
         X = X.with_columns(expr.alias(new_column_name))
 
         return _return_narwhals_or_native_dataframe(X, self.return_native)
-    
+
     def get_feature_names_out(self) -> list[str]:
         """Get the names of the output features.
 
