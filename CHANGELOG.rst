@@ -27,6 +27,11 @@ We use the tags:
 
 Each individual change should have a link to the pull request after the description of the change.
 
+2.1.0 (unreleased)
+------------------
+
+- feat: - feat: converted DropOriginalMixin and associated transformers to beartype
+
 2.0.0 (16/10/2025)
 ------------------
 
@@ -36,7 +41,6 @@ Each individual change should have a link to the pull request after the descript
 - feat: optimisation changes to GroupRareLevelsTransformer fit method
 - placeholder
 - feat: optimisation changes to DatetimeSinusoidCalculator, added 'return_native_override' argument to DatetimeSinusoidCalculator, reduced with_columns being called many times. `<#465 <https://github.com/azukds/tubular/issues/465>_`
-- feat: - feat: converted DropOriginalMixin and associated transformers to beartype
 - chore: turned on doctest
 - chore: deprecated DataFrameMethodTransformer
 - chore: added doctest examples for BaseTransfomer
