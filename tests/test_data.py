@@ -671,21 +671,3 @@ def expected_date_diff_df_2(library="pandas"):
     }
 
     return u.dataframe_init_dispatch(df_dict, library=library)
-
-
-def create_difference_test_df(library="pandas"):
-    """Create a test dataframe for DifferenceTransformer tests."""
-    df_dict = {
-        "a": [100, 200, 300],
-        "b": [80, 150, 200],
-    }
-    return u.dataframe_init_dispatch(df_dict, library)
-
-
-def create_ratio_test_df(library="pandas"):
-    """Create a test dataframe for RatioTransformer tests."""
-    df_dict = {
-        "a": [100, 200, 300],
-        "b": [80, 150, 200],
-    }
-    return u.dataframe_init_dispatch(df_dict, library)

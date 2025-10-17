@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from enum import Enum
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 
 import narwhals as nw
 import numpy as np
 import pandas as pd
 from beartype import beartype
-from beartype.typing import Annotated
-from beartype.vale import Is
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import (
@@ -24,6 +21,7 @@ from typing_extensions import deprecated
 from tubular._utils import (
     _convert_dataframe_to_narwhals,
     _return_narwhals_or_native_dataframe,
+    block_from_json,
 )
 from tubular.base import BaseTransformer, DataFrameMethodTransformer
 from tubular.mixins import (
@@ -32,21 +30,10 @@ from tubular.mixins import (
     NewColumnNameMixin,
     TwoColumnMixin,
 )
-from tubular.types import DataFrame, ListOfTwoStrs
+from tubular.types import DataFrame, FloatTypeAnnotated, ListOfTwoStrs
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT, IntoSeriesT
-
-
-class ReturnDtypeOptions(Enum):
-    Float32 = "Float32"
-    Float64 = "Float64"
-
-
-ReturnDtypeAnnotated = Annotated[
-    str,
-    Is[lambda dtype: dtype in ReturnDtypeOptions._value2member_map_],
-]
 
 
 class BaseNumericTransformer(BaseTransformer, CheckNumericMixin):
@@ -1424,9 +1411,6 @@ class DifferenceTransformer(BaseNumericTransformer):
 
         X = X.with_columns(expr.alias(self.new_column_name))
 
-        # Add the new column
-        X = X.with_columns(expr.alias(self.new_column_name))
-
         return _return_narwhals_or_native_dataframe(X, self.return_native)
 
     def get_feature_names_out(self) -> list[str]:
@@ -1467,6 +1451,7 @@ class RatioTransformer(BaseNumericTransformer):
     FITS = False
     jsonable = True
 
+    @block_from_json
     def to_json(self) -> dict[str, dict[str, Any]]:
         """Serialize the transformer to a JSON-compatible dictionary.
 
@@ -1481,21 +1466,6 @@ class RatioTransformer(BaseNumericTransformer):
         >>> ratio_transformer.to_json()
         {'tubular_version': ..., 'classname': 'RatioTransformer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True, 'return_dtype': 'Float32'}, 'fit': {}}
         """
-        if not self.jsonable:
-            error_message = "This transformer does not support JSON serialization."
-            raise RuntimeError(error_message)
-
-        json_dict = {
-            "tubular_version": ...,
-            "classname": self.__class__.__name__,
-            "init": {
-                "columns": self.columns,
-                "return_dtype": self.return_dtype,
-                "copy": self.copy,
-                "verbose": self.verbose,
-                "return_native": self.return_native,
-            },
-        }
 
         json_dict = super().to_json()
         json_dict["init"]["return_dtype"] = self.return_dtype
@@ -1506,7 +1476,7 @@ class RatioTransformer(BaseNumericTransformer):
     def __init__(
         self,
         columns: ListOfTwoStrs,
-        return_dtype: ReturnDtypeAnnotated = "Float32",
+        return_dtype: FloatTypeAnnotated = "Float32",
         **kwargs: Optional[bool],
     ) -> None:
         """Initialize the RatioTransformer.

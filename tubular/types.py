@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Annotated, Union
 
 import narwhals as nw
@@ -45,4 +46,15 @@ FloatBetweenZeroOne = Annotated[float, Is[lambda i: (i > 0) & (i < 1)]]
 ListOfTwoStrs = Annotated[
     list[str],
     Is[lambda list_arg: len(list_arg) == 2],
+]
+
+
+class FloatTypeOptions(Enum):
+    Float32 = "Float32"
+    Float64 = "Float64"
+
+
+FloatTypeAnnotated = Annotated[
+    str,
+    Is[lambda dtype: dtype in FloatTypeOptions._value2member_map_],
 ]
