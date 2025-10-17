@@ -112,6 +112,8 @@ class TestRatioTransformerTransform(BaseNumericTransformerTransformTests):
             ([100], [80], [1.25]),
             ([0], [80], [0]),
             ([100], [0], [None]),
+            ([None], [10], [None]),
+            ([10], [None], [None]),
         ],
     )
     def test_single_row(
@@ -137,6 +139,15 @@ class TestRatioTransformerTransform(BaseNumericTransformerTransformTests):
 
         single_row_df = u.dataframe_init_dispatch(single_row_df_dict, library)
 
+        single_row_df = (
+            nw.from_native(single_row_df)
+            .with_columns(
+                nw.col("a").cast(nw.Float64),
+                nw.col("b").cast(nw.Float64),
+            )
+            .to_native()
+        )
+
         transformer = uninitialized_transformers[self.transformer_name](**args)
         transformer = u._handle_from_json(transformer, from_json)
         transformed_df = transformer.transform(single_row_df)
@@ -148,6 +159,16 @@ class TestRatioTransformerTransform(BaseNumericTransformerTransformTests):
             "a_divided_by_b": expected_division,
         }
         expected_df = u.dataframe_init_dispatch(expected_data, library)
+
+        expected_df = (
+            nw.from_native(expected_df)
+            .with_columns(
+                nw.col("a").cast(nw.Float64),
+                nw.col("b").cast(nw.Float64),
+                nw.col("a_divided_by_b").cast(getattr(nw, return_dtype)),
+            )
+            .to_native()
+        )
 
         # Use Narwhals for casting and column selection
         expected_df = nw.from_native(expected_df)

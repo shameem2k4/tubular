@@ -1,5 +1,6 @@
 import copy
 
+import narwhals as nw
 import pytest
 from beartype.roar import BeartypeCallHintParamViolation
 
@@ -85,6 +86,8 @@ class TestDifferenceTransformerTransform(BaseNumericTransformerTransformTests):
             ([100], [80], 20),
             ([0], [80], [-80]),
             ([100], [0], [100]),
+            ([None], [10], [None]),
+            ([10], [None], [None]),
         ],
     )
     def test_single_row(
@@ -108,6 +111,15 @@ class TestDifferenceTransformerTransform(BaseNumericTransformerTransformTests):
 
         single_row_df = u.dataframe_init_dispatch(single_row_df_dict, library)
 
+        single_row_df = (
+            nw.from_native(single_row_df)
+            .with_columns(
+                nw.col("a").cast(nw.Float64),
+                nw.col("b").cast(nw.Float64),
+            )
+            .to_native()
+        )
+
         transformer = uninitialized_transformers[self.transformer_name](**args)
         transformer = u._handle_from_json(transformer, from_json)
         transformed_df = transformer.transform(single_row_df)
@@ -119,6 +131,15 @@ class TestDifferenceTransformerTransform(BaseNumericTransformerTransformTests):
             "a_minus_b": expected_value,
         }
         expected_df = u.dataframe_init_dispatch(expected_data, library)
+        expected_df = (
+            nw.from_native(expected_df)
+            .with_columns(
+                nw.col("a").cast(nw.Float64),
+                nw.col("b").cast(nw.Float64),
+                nw.col("a_minus_b").cast(nw.Float64),
+            )
+            .to_native()
+        )
 
         u.assert_frame_equal_dispatch(transformed_df, expected_df)
 
