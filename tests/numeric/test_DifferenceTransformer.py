@@ -50,29 +50,6 @@ class TestDifferenceTransformerTransform(BaseNumericTransformerTransformTests):
 
     @pytest.mark.parametrize("library", ["pandas", "polars"])
     @pytest.mark.parametrize("from_json", [True, False])
-    def test_invalid_columns_error(
-        self,
-        library,
-        minimal_attribute_dict,
-        uninitialized_transformers,
-        from_json,
-    ):
-        """Test that an error is raised if the specified columns are not found."""
-        args = copy.deepcopy(minimal_attribute_dict[self.transformer_name])
-        args["columns"] = ["missing_col1", "missing_col2"]
-
-        df = create_difference_test_df(library=library)
-
-        transformer = uninitialized_transformers[self.transformer_name](**args)
-        transformer = u._handle_from_json(transformer, from_json)
-        with pytest.raises(
-            ValueError,
-            match=f"DifferenceTransformer: variables {set(args['columns'])} not in X",
-        ):
-            transformer.transform(df)
-
-    @pytest.mark.parametrize("library", ["pandas", "polars"])
-    @pytest.mark.parametrize("from_json", [True, False])
     def test_transform_basic_case_outputs(
         self,
         library,

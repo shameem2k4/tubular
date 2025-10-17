@@ -1421,7 +1421,7 @@ class DifferenceTransformer(BaseNumericTransformer):
         list[str]
             List containing the name of the new column created by the transformation.
         """
-        return [self.new_column_name]
+        return [f"{self.columns[0]}_minus_{self.columns[1]}"]
 
 
 class RatioTransformer(BaseNumericTransformer):
@@ -1552,4 +1552,4 @@ class RatioTransformer(BaseNumericTransformer):
         list[str]
             List containing the name of the new column created by the transformation.
         """
-        return [self.new_column_name]
+        return [f"{self.columns[0]}_divided_by_{self.columns[1]}"]
