@@ -1376,7 +1376,7 @@ class ToFromJsonTests:
             transformer.from_json({})
 
 
-class TestGetFeatureNamesOut:
+class GetFeatureNamesOutTests:
     """
     Tests for the BaseTransformer.get_feature_names_out method.
     Note this deliberately avoids starting with "Tests" so that the tests are not run on import.
@@ -1421,7 +1421,7 @@ class TestGetFeatureNamesOut:
 class OtherBaseBehaviourTests(
     ColumnsCheckTests,
     CombineXYTests,
-    TestGetFeatureNamesOut,
+    GetFeatureNamesOutTests,
     ToFromJsonTests,
 ):
     """
