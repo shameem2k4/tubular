@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
 
+from beartype import beartype
 from typing_extensions import deprecated
 
 from tubular.base import BaseTransformer
@@ -64,17 +65,19 @@ class EqualityChecker(
 
     jsonable = False
 
+    @beartype
     def __init__(
         self,
-        columns: list,
+        columns: Union[list[str], str],
         new_column_name: str,
         drop_original: bool = False,
-        **kwargs: dict[str, bool],
+        **kwargs: Optional[bool],
     ) -> None:
         super().__init__(columns=columns, **kwargs)
 
+        self.drop_original = drop_original
+
         self.check_two_columns(columns)
-        self.set_drop_original_column(drop_original)
         self.check_and_set_new_column_name(new_column_name)
 
     def get_feature_names_out(self) -> list[str]:

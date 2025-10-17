@@ -30,6 +30,7 @@ Each individual change should have a link to the pull request after the descript
 2.1.0 (unreleased)
 ------------------
 
+- feat: - feat: converted DropOriginalMixin and associated transformers to beartype
 - feat: added `get_feature_names_out` method to all transformers, which gives back list of modified/created features. This follows the sklearn API.
 
 2.0.0 (16/10/2025)
