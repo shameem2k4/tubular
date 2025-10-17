@@ -31,6 +31,7 @@ Each individual change should have a link to the pull request after the descript
 ------------------
 
 - feat: - feat: converted DropOriginalMixin and associated transformers to beartype
+- feat: added `get_feature_names_out` method to all transformers, which gives back list of modified/created features. This follows the sklearn API.
 
 2.0.0 (16/10/2025)
 ------------------
@@ -39,7 +40,6 @@ Each individual change should have a link to the pull request after the descript
 - feat: added AggregateColumnsOverRowTransformer `#385 <https://github.com/azukds/tubular/issues/385>_`
 - chore: renamed AggregateRowOverColumnsTransformer to AggregateRowsOverColumnTransformer
 - feat: optimisation changes to GroupRareLevelsTransformer fit method
-- placeholder
 - feat: optimisation changes to DatetimeSinusoidCalculator, added 'return_native_override' argument to DatetimeSinusoidCalculator, reduced with_columns being called many times. `<#465 <https://github.com/azukds/tubular/issues/465>_`
 - chore: turned on doctest
 - chore: deprecated DataFrameMethodTransformer
@@ -60,7 +60,6 @@ Each individual change should have a link to the pull request after the descript
 - chore: doctests for dates module `#502 <https://github.com/azukds/tubular/issues/502>_`
 - chore: doctests for nominal module `#506 <https://github.com/azukds/tubular/issues/506>_`
 - chore: doctests for imputers module `#503 <https://github.com/azukds/tubular/issues/503>_`
-
 
 1.4.8 (03/09/25)
 ----------------
