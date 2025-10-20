@@ -1,3 +1,5 @@
+"""Generic typehints used throughout package."""
+
 from typing import Annotated, Union
 
 import narwhals as nw

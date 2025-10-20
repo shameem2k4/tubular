@@ -157,7 +157,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "dates.py"=["D", "DOC"]
 "comparison.py"=["D", "DOC"]
 "capping.py"=["D", "DOC"]
-"types.py"=["D", "DOC"]
 
 [tool.ruff.lint.pyupgrade]
 keep-runtime-typing=true
