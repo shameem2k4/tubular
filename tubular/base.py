@@ -82,7 +82,13 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
     _version = _get_version()
 
     def classname(self) -> str:
-        """Return the name of the current class when called."""
+        """Return the name of the current class when called.
+
+        Returns
+        -------
+            str: name of class
+
+        """
         return type(self).__name__
 
     @beartype
@@ -109,6 +115,10 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
         return_native: bool, default = True
             Controls whether transformer returns narwhals or native pandas/polars type
+
+        Raises
+        ------
+            ValueError: if columns is empty
 
         """
         self.verbose = verbose
@@ -165,13 +175,17 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
             jsonified transformer. Nested dict containing levels for attributes
             set at init and fit.
 
+        Raises
+        ------
+            RuntimeError: if transformer does not have to/from json functionality enabled
+
         Examples
         --------
-        >>> transformer=BaseTransformer(columns=['a', 'b'])
+            >>> transformer=BaseTransformer(columns=['a', 'b'])
 
-        >>> # version will vary for local vs CI, so use ... as generic match
-        >>> transformer.to_json()
-        {'tubular_version': ..., 'classname': 'BaseTransformer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True}, 'fit': {}}
+            >>> # version will vary for local vs CI, so use ... as generic match
+            >>> transformer.to_json()
+            {'tubular_version': ..., 'classname': 'BaseTransformer', 'init': {'columns': ['a', 'b'], 'copy': False, 'verbose': False, 'return_native': True}, 'fit': {}}
 
         """
         if not self.jsonable:
@@ -208,17 +222,21 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         BaseTransformer:
             reconstructed transformer class, ready for transform
 
+        Raises
+        ------
+            RuntimeError: if transformer does not have to/from json functionality enabled
+
         Examples
         --------
-        >>> json_dict={
-        ... 'init': {
-        ...         'columns' :['a','b']
-        ...         },
-        ... 'fit': {}
-        ... }
+            >>> json_dict={
+            ... 'init': {
+            ...         'columns' :['a','b']
+            ...         },
+            ... 'fit': {}
+            ... }
 
-        >>> BaseTransformer.from_json(json=json_dict)
-        BaseTransformer(columns=['a', 'b'])
+            >>> BaseTransformer.from_json(json=json_dict)
+            BaseTransformer(columns=['a', 'b'])
 
         """
         if not cls.jsonable:
@@ -253,15 +271,23 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         y : None or pd.DataFrame or pd.Series, default = None
             Optional argument only required for the transformer to work with sklearn pipelines.
 
-        Example:
+        Raises
+        ------
+            ValueError: X/y empty
+
+        Returns
+        -------
+            BaseTransformer: returns self
+
+        Examples
         --------
-        >>> import polars as pl
-        >>> transformer=BaseTransformer(
-        ... columns='a',
-        ...    )
-        >>> df=pl.DataFrame({'a': [1,2], 'b': [3,4]})
-        >>> transformer.fit(df)
-        BaseTransformer(columns=['a'])
+            >>> import polars as pl
+            >>> transformer=BaseTransformer(
+            ... columns='a',
+            ...    )
+            >>> df=pl.DataFrame({'a': [1,2], 'b': [3,4]})
+            >>> transformer.fit(df)
+            BaseTransformer(columns=['a'])
 
         """
         if self.verbose:
@@ -300,24 +326,34 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         y : pd/pl.Series
             Response variable.
 
-        Example:
+        Raises
+        ------
+            TypeError: incorrect types passed for X,y
+
+            ValueError: shape of X/y do not match
+
+        Returns
+        -------
+            pd/pl/nw.DataFrame: DataFrame with added column containing y
+
+        Examples
         --------
-        >>> import polars as pl
-        >>> transformer=BaseTransformer(
-        ... columns='a',
-        ...    )
-        >>> X=pl.DataFrame({'a': [1,2], 'b': [3,4]})
-        >>> y=pl.Series(name='a', values=[1,2])
-        >>> transformer._combine_X_y(X, y)
-        shape: (2, 3)
-        ┌─────┬─────┬─────────────────────┐
-        │ a   ┆ b   ┆ _temporary_response │
-        │ --- ┆ --- ┆ ---                 │
-        │ i64 ┆ i64 ┆ i64                 │
-        ╞═════╪═════╪═════════════════════╡
-        │ 1   ┆ 3   ┆ 1                   │
-        │ 2   ┆ 4   ┆ 2                   │
-        └─────┴─────┴─────────────────────┘
+            >>> import polars as pl
+            >>> transformer=BaseTransformer(
+            ... columns='a',
+            ...    )
+            >>> X=pl.DataFrame({'a': [1,2], 'b': [3,4]})
+            >>> y=pl.Series(name='a', values=[1,2])
+            >>> transformer._combine_X_y(X, y)
+            shape: (2, 3)
+            ┌─────┬─────┬─────────────────────┐
+            │ a   ┆ b   ┆ _temporary_response │
+            │ --- ┆ --- ┆ ---                 │
+            │ i64 ┆ i64 ┆ i64                 │
+            ╞═════╪═════╪═════════════════════╡
+            │ 1   ┆ 3   ┆ 1                   │
+            │ 2   ┆ 4   ┆ 2                   │
+            └─────┴─────┴─────────────────────┘
 
         """
         if not isinstance(X, (nw.DataFrame, nw.LazyFrame)):
@@ -389,25 +425,29 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         X : pd/pl.DataFrame
             Input X, copied if specified by user.
 
-        Example:
+        Raises
+        ------
+        ValueError: for empty df
+
+        Examples
         --------
-        >>> import polars as pl
-        >>> transformer=BaseTransformer(
-        ... columns='a',
-        ...    )
+            >>> import polars as pl
+            >>> transformer=BaseTransformer(
+            ... columns='a',
+            ...    )
 
-        >>> df=pl.DataFrame({'a': [1,2], 'b': [3,4]})
+            >>> df=pl.DataFrame({'a': [1,2], 'b': [3,4]})
 
-        >>> transformer.transform(df)
-        shape: (2, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 4   │
-        └─────┴─────┘
+            >>> transformer.transform(df)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 3   │
+            │ 2   ┆ 4   │
+            └─────┴─────┘
 
         """
         return_native = self._process_return_native(return_native_override)
@@ -442,8 +482,8 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         attribute : List
             List of str values giving names of attribute to check exist on self.
 
-        Example:
-        --------
+        Example
+        -------
         >>> transformer=BaseTransformer(
         ... columns='a',
         ...    )
@@ -462,7 +502,11 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
         X : pd/pl.DataFrame
             Data to check columns are in.
 
-        Example:
+        Raises
+        ------
+        ValueError: if columns missing from dataframe
+
+        Examples
         --------
         >>> import polars as pl
         >>> transformer=BaseTransformer(
@@ -475,10 +519,6 @@ class BaseTransformer(BaseEstimator, TransformerMixin):
 
         """
         X = _convert_dataframe_to_narwhals(X)
-
-        if not isinstance(self.columns, list):
-            msg = f"{self.classname()}: self.columns should be a list"
-            raise TypeError(msg)
 
         missing_columns = set(self.columns).difference(X.columns)
         if len(missing_columns) != 0:
@@ -575,6 +615,10 @@ class DataFrameMethodTransformer(DropOriginalMixin, BaseTransformer):
 
         **kwargs
             Arbitrary keyword arguments passed onto BaseTransformer.__init__().
+
+        Raises
+        ------
+        AttributeError: if pd_method_name is not valid pd.DataFrame method
 
         """
         super().__init__(columns=columns, **kwargs)

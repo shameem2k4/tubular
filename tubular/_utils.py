@@ -108,6 +108,10 @@ def _assess_pandas_object_column(pandas_df: pd.DataFrame, col: str) -> tuple[str
     polars_col_type: str
         deduced polars col type
 
+    Raises
+    ------
+    TypeError: if provided column is not object type
+
     """
     if pandas_df[col].dtype.name != "object":
         msg = "_assess_pandas_object_column only works with object dtype columns"
@@ -180,7 +184,13 @@ def new_narwhals_series_with_optimal_pandas_types(
 
 
 def _get_version() -> str:
-    """Dynamically retrieve package version."""
+    """Dynamically retrieve package version.
+
+    Returns
+    -------
+        str: package version
+
+    """
     with suppress(ModuleNotFoundError):
         return version("tubular")
 
@@ -191,6 +201,11 @@ def block_from_json(method):  # noqa: ANN202, ANN001,  no annotations for generi
     """Intercept method and raise a runtime error if the transformer has been initialised from_json.
 
     i.e. if the built_from_json attr is True.
+
+    Returns
+    -------
+        Callable: wrapped method
+
     """
 
     @wraps(method)
