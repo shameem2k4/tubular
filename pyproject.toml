@@ -149,11 +149,9 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "numeric.py"=["D", "DOC"]
 "nominal.py"=["D", "DOC"]
 "mixins.py"=["D", "DOC"]
-"misc.py"=["D", "DOC"]
 "mapping.py"=["D", "DOC"]
 "imputers.py"=["D", "DOC"]
 "dates.py"=["D", "DOC"]
-"comparison.py"=["D", "DOC"]
 
 [tool.ruff.lint.pyupgrade]
 keep-runtime-typing=true
