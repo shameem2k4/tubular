@@ -26,7 +26,7 @@ from tubular.mixins import DropOriginalMixin, NewColumnNameMixin, TwoColumnMixin
 from tubular.types import DataFrame
 
 if TYPE_CHECKING:
-    from narhwals.typing import FrameT
+    from narwhals.typing import FrameT
 
 TIME_UNITS = ["us", "ns", "ms"]
 
