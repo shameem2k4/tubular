@@ -252,7 +252,7 @@ class AggregateRowsOverColumnTransformer(BaseAggregationTransformer):
         ... key='b',
         ... )
         AggregateRowsOverColumnTransformer(aggregations=['min', 'max'], columns=['a'],
-                                        key='b')
+                                           key='b')
 
     """
 
