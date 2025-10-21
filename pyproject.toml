@@ -146,7 +146,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "profiling/*"=["D", "DOC"]
 # too much to turn on D/DOC lints in one go,
 # will tackle individual modules at a time
-"aggregations.py"=["D", "DOC"]
 "numeric.py"=["D", "DOC"]
 "nominal.py"=["D", "DOC"]
 "mixins.py"=["D", "DOC"]
