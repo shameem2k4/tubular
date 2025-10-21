@@ -1,3 +1,5 @@
+"""Contains transformers for performing data aggregations."""
+
 from enum import Enum
 from typing import Union
 
@@ -16,6 +18,8 @@ from tubular.types import DataFrame, NumericTypes
 
 
 class ColumnsOverRowAggregationOptions(str, Enum):
+    """Aggregation options fo ColumnsOverRowAggregationTransformer."""
+
     MIN = "min"
     MAX = "max"
     MEAN = "mean"
@@ -25,6 +29,8 @@ class ColumnsOverRowAggregationOptions(str, Enum):
 
 
 class RowsOverColumnsAggregationOptions(str, Enum):
+    """Aggregation options fo RowsOverColumnAggregationTransformer."""
+
     MIN = "min"
     MAX = "max"
     MEAN = "mean"
@@ -61,19 +67,7 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
     handling common setup tasks such as validating aggregation methods and
     managing column specifications.
 
-    Parameters
-    ----------
-    columns : list[str]
-        List of column names to apply the aggregation transformations to.
-    aggregations : list[str]
-        List of aggregation methods to apply. Valid methods include 'min', 'max',
-        'mean', 'median', and 'count'.
-    drop_original : bool, optional
-        Whether to drop the original columns after transformation. Default is False.
-    verbose : bool, optional
-        If True, enables verbose output for debugging purposes. Default is False.
-
-    Attributes
+    Attributes:
     ----------
     columns : Union[str, list[str]]
         Columns to apply the transformations to.
@@ -101,7 +95,7 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         class attribute, indicates whether transform requires fit to be run first
 
     Example:
-    --------
+    -------
     >>> BaseAggregationTransformer(
     ... columns='a',
     ... aggregations=['min', 'max'],
@@ -127,6 +121,21 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         drop_original: bool = False,
         verbose: bool = False,
     ) -> None:
+        """Initialise class.
+
+        Parameters
+        ----------
+        columns : list[str]
+            List of column names to apply the aggregation transformations to.
+        aggregations : list[str]
+            List of aggregation methods to apply. Valid methods include 'min', 'max',
+            'mean', 'median', and 'count'.
+        drop_original : bool, optional
+            Whether to drop the original columns after transformation. Default is False.
+        verbose : bool, optional
+            If True, enables verbose output for debugging purposes. Default is False.
+
+        """
         super().__init__(columns=columns, verbose=verbose)
 
         self.aggregations = aggregations
@@ -139,7 +148,7 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
         X: DataFrame,
         return_native_override: Optional[bool] = None,
     ) -> DataFrame:
-        """Performs pre-transform safety checks.
+        """Perform pre-transform safety checks.
 
         Parameters
         ----------
@@ -157,31 +166,30 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
 
         Raises
         ------
-        ValueError
-            If columns are non-numeric.
+        TypeError: If columns are non-numeric.
 
-        Example:
+        Examples
         --------
-        >>> import polars as pl
+            >>> import polars as pl
 
-        >>> transformer=BaseAggregationTransformer(
-        ... columns='a',
-        ... aggregations=['min', 'max'],
-        ...    )
+            >>> transformer=BaseAggregationTransformer(
+            ... columns='a',
+            ... aggregations=['min', 'max'],
+            ...    )
 
-        >>> test_df=pl.DataFrame({'a': [1,2], 'b': [3,4]})
+            >>> test_df=pl.DataFrame({'a': [1,2], 'b': [3,4]})
 
-        >>> # base transformers have no effect on data
-        >>> transformer.transform(test_df)
-        shape: (2, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 4   │
-        └─────┴─────┘
+            >>> # base transformers have no effect on data
+            >>> transformer.transform(test_df)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 3   │
+            │ 2   ┆ 4   │
+            └─────┴─────┘
 
         """
         return_native = self._process_return_native(return_native_override)
@@ -207,8 +215,7 @@ class BaseAggregationTransformer(BaseTransformer, DropOriginalMixin):
 
 
 class AggregateRowsOverColumnTransformer(BaseAggregationTransformer):
-    """Transformer that aggregates rows over specified columns, where rows are grouped
-    by provided key column.
+    """Aggregate rows over specified columns, where rows are grouped by provided key column.
 
     Attributes:
     ----------
@@ -239,13 +246,13 @@ class AggregateRowsOverColumnTransformer(BaseAggregationTransformer):
 
     Example:
     -------
-    >>> AggregateRowsOverColumnTransformer(
-    ... columns='a',
-    ... aggregations=['min', 'max'],
-    ... key='b',
-    ... )
-    AggregateRowsOverColumnTransformer(aggregations=['min', 'max'], columns=['a'],
-                                       key='b')
+        >>> AggregateRowsOverColumnTransformer(
+        ... columns='a',
+        ... aggregations=['min', 'max'],
+        ... key='b',
+        ... )
+        AggregateRowsOverColumnTransformer(aggregations=['min', 'max'], columns=['a'],
+                                        key='b')
 
     """
 
