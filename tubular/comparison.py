@@ -1,3 +1,5 @@
+"""Contains transformer for comparing equality between given columns (deprecated)."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, Union
@@ -27,23 +29,8 @@ class EqualityChecker(
 ):
     """Transformer to check if two columns are equal.
 
-    Parameters
-    ----------
-    columns: list
-        List containing names of the two columns to check.
-
-    new_column_name: string
-        string containing the name of the new column.
-
-    drop_original: boolean = False
-        boolean representing dropping the input columns from X after checks.
-
-    **kwargs:
-        Arbitrary keyword arguments passed onto BaseTransformer.init method.
-
     Attributes
     ----------
-
     built_from_json: bool
         indicates if transformer was reconstructed from json, which limits it's supported
         functionality to .transform
@@ -73,6 +60,23 @@ class EqualityChecker(
         drop_original: bool = False,
         **kwargs: Optional[bool],
     ) -> None:
+        """Initialise class instance.
+
+        Parameters
+        ----------
+        columns: list
+            List containing names of the two columns to check.
+
+        new_column_name: string
+            string containing the name of the new column.
+
+        drop_original: boolean = False
+            boolean representing dropping the input columns from X after checks.
+
+        **kwargs:
+            Arbitrary keyword arguments passed onto BaseTransformer.init method.
+
+        """
         super().__init__(columns=columns, **kwargs)
 
         self.drop_original = drop_original
@@ -81,7 +85,7 @@ class EqualityChecker(
         self.check_and_set_new_column_name(new_column_name)
 
     def get_feature_names_out(self) -> list[str]:
-        """list features modified/created by the transformer
+        """Get list of features modified/created by the transformer.
 
         Returns
         -------
@@ -90,7 +94,6 @@ class EqualityChecker(
 
         Examples
         --------
-
         >>> # base classes just return inputs
         >>> transformer  = EqualityChecker(
         ... columns=['a',  'b'],
@@ -99,13 +102,12 @@ class EqualityChecker(
 
         >>> transformer.get_feature_names_out()
         ['bla']
-        """
 
+        """
         return [self.new_column_name]
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """Create a column which is populated by the boolean
-        matching between two columns iterated over rows.
+        """Create a column which indicated equality between given columns.
 
         Parameters
         ----------

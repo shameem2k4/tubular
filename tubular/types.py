@@ -1,3 +1,5 @@
+"""Generic typehints used throughout package."""
+
 from enum import Enum
 from typing import Annotated, Union
 
@@ -77,6 +79,8 @@ ListOfTwoStrs = Annotated[
 
 
 class FloatTypeOptions(Enum):
+    """Options for float dtypes."""
+
     Float32 = "Float32"
     Float64 = "Float64"
 
