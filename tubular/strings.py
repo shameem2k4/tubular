@@ -1,4 +1,4 @@
-"""This module contains transformers that apply string functions."""
+"""Contains transformers that apply string functions."""
 
 from __future__ import annotations
 
@@ -28,26 +28,6 @@ class SeriesStrMethodTransformer(NewColumnNameMixin, BaseTransformer):
     and output sizes. Additionally some methods may only work as expected when called in
     transform with specific key word arguments.
 
-    Parameters
-    ----------
-    new_column_name : str
-        The name of the column to be assigned to the output of running the pd.Series.str in transform.
-
-    pd_method_name : str
-        The name of the pandas.Series.str method to call e.g. 'split' or 'replace'
-
-    columns : list
-        Name of column to apply the transformer to. This needs to be passed as a list of length 1. Value passed
-        in columns is saved in the columns attribute of the object. Note this has no default value so
-        the user has to specify the column when initialising the transformer. This is to avoid all columns
-        being picked up when super transform runs if the user forgets an input.
-
-    pd_method_kwargs : dict, default = {}
-        A dictionary of keyword arguments to be passed to the pd.Series.str method when it is called.
-
-    **kwargs
-        Arbitrary keyword arguments passed onto BaseTransformer.__init__().
-
     Attributes
     ----------
     new_column_name : str
@@ -57,12 +37,24 @@ class SeriesStrMethodTransformer(NewColumnNameMixin, BaseTransformer):
     pd_method_name : str
         The name of the pd.Series.str method to call.
 
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
 
     """
 
     polars_compatible = False
+
+    jsonable = False
 
     def __init__(
         self,
@@ -73,6 +65,42 @@ class SeriesStrMethodTransformer(NewColumnNameMixin, BaseTransformer):
         pd_method_kwargs: dict[str, object] | None = None,
         **kwargs: dict[str, bool],
     ) -> None:
+        """Initialise class.
+
+        Parameters
+        ----------
+        new_column_name : str
+            The name of the column to be assigned to the output of running the pd.Series.str in transform.
+
+        pd_method_name : str
+            The name of the pandas.Series.str method to call e.g. 'split' or 'replace'
+
+        columns : list
+            Name of column to apply the transformer to. This needs to be passed as a list of length 1. Value passed
+            in columns is saved in the columns attribute of the object. Note this has no default value so
+            the user has to specify the column when initialising the transformer. This is to avoid all columns
+            being picked up when super transform runs if the user forgets an input.
+
+        pd_method_kwargs : dict, default = {}
+            A dictionary of keyword arguments to be passed to the pd.Series.str method when it is called.
+
+        copy: bool
+            Perform transform on copy of df?
+
+        **kwargs
+            Arbitrary keyword arguments passed onto BaseTransformer.__init__().
+
+        Raises
+        ------
+            ValueError: if more/less than 1 column is provided
+
+            TypeError: if pd_method_name is not str
+
+            TypeError: if pd_method_kwargs is not dict[str, Any]
+
+            AttributeError: if pd_method_name is not pd.Series method
+
+        """
         super().__init__(columns=columns, copy=copy, **kwargs)
 
         if len(columns) > 1:
@@ -109,8 +137,7 @@ class SeriesStrMethodTransformer(NewColumnNameMixin, BaseTransformer):
             raise AttributeError(msg) from err
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """Transform specific column on input pandas.DataFrame (X) using the given pandas.Series.str method and
-        assign the output back to column in X.
+        """Apply given pandas.Series.str method to given column.
 
         Any keyword arguments set in the pd_method_kwargs attribute are passed onto the pd.Series.str method
         when calling it.
@@ -143,24 +170,30 @@ class SeriesStrMethodTransformer(NewColumnNameMixin, BaseTransformer):
     """,
 )
 class StringConcatenator(NewColumnNameMixin, SeparatorColumnMixin, BaseTransformer):
-    """Transformer to combine data from specified columns, of mixed datatypes, into a new column containing one string.
+    """Combine str data from specified columns.
 
-    Parameters
-    ----------
-    columns : str or list of str
-        Columns to concatenate.
-    new_column_name : str, default = "new_column"
-        New column name
-    separator : str, default = " "
-        Separator for the new string value
+    Columns can be of mixed datatypes, combines into a new column containing one string.
 
     Attributes
     ----------
+    built_from_json: bool
+        indicates if transformer was reconstructed from json, which limits it's supported
+        functionality to .transform
+
     polars_compatible : bool
         class attribute, indicates whether transformer has been converted to polars/pandas agnostic narwhals framework
+
+    jsonable: bool
+        class attribute, indicates if transformer supports to/from_json methods
+
+    FITS: bool
+        class attribute, indicates whether transform requires fit to be run first
+
     """
 
     polars_compatible = False
+
+    jsonable = False
 
     def __init__(
         self,
@@ -169,6 +202,20 @@ class StringConcatenator(NewColumnNameMixin, SeparatorColumnMixin, BaseTransform
         separator: str = " ",
         **kwargs: dict[str, bool],
     ) -> None:
+        """Initialise class.
+
+        Parameters
+        ----------
+        columns : str or list of str
+            Columns to concatenate.
+        new_column_name : str, default = "new_column"
+            New column name
+        separator : str, default = " "
+            Separator for the new string value
+        **kwargs:
+            arguments for base class
+
+        """
         super().__init__(columns=columns, **kwargs)
 
         self.check_and_set_new_column_name(new_column_name)

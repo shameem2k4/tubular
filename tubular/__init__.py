@@ -1,6 +1,6 @@
-from contextlib import suppress
-from importlib.metadata import version
+"""Initialise classes exposed by package."""
 
+from tubular._utils import _get_version
 from tubular.aggregations import (
     AggregateColumnsOverRowTransformer,
     AggregateRowsOverColumnTransformer,
@@ -52,5 +52,4 @@ __all__ = [
     "ToDatetimeTransformer",
 ]
 
-with suppress(ModuleNotFoundError):
-    __version__ = version("tubular")
+__version__ = _get_version()
