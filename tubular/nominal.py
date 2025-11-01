@@ -331,10 +331,18 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
 
         Examples
         --------
-        >>> transformer=GroupRareLevelsTransformer(columns='a', cut_off_percent=0.02,rare_level_name='rare_level')
+        >>> import tests.test_data as d
 
-        >>> transformer.to_json()
-         {'tubular_version': ..., 'classname': 'GroupRareLevelsTransformer', 'init': {'columns': ['a'], 'copy': False, 'verbose': False, 'return_native': True, 'cut_off_percent': 0.02, 'weights_column': None, 'rare_level_name': 'rare_level', 'record_rare_levels': True, 'unseen_levels_to_rare': True}, 'fit': {'non_rare_levels': {}, 'training_data_levels': {}}}
+        >>> df = d.create_df_8("pandas")
+
+        >>> x = GroupRareLevelsTransformer(columns=["b", "c"],cut_off_percent=0.4, unseen_levels_to_rare=False)
+
+        >>> x.fit(df)
+        GroupRareLevelsTransformer(columns=['b', 'c'], cut_off_percent=0.4,
+                                   unseen_levels_to_rare=False)
+
+        >>> x.to_json()
+        {'tubular_version': 'dev', 'classname': 'GroupRareLevelsTransformer', 'init': {'columns': ['b', 'c'], 'copy': False, 'verbose': False, 'return_native': True, 'cut_off_percent': 0.4, 'weights_column': None, 'rare_level_name': 'rare', 'record_rare_levels': True, 'unseen_levels_to_rare': False}, 'fit': {'non_rare_levels': {'b': ['w'], 'c': ['a']}, 'training_data_levels': {'b': ['w', 'x', 'y', 'z'], 'c': ['a', 'b', 'c']}}}
         """
         self.check_is_fitted(["non_rare_levels"])
         json_dict = super().to_json()
