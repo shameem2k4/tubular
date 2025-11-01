@@ -336,7 +336,7 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         >>> transformer.to_json()
          {'tubular_version': ..., 'classname': 'GroupRareLevelsTransformer', 'init': {'columns': ['a'], 'copy': False, 'verbose': False, 'return_native': True, 'cut_off_percent': 0.02, 'weights_column': None, 'rare_level_name': 'rare_level', 'record_rare_levels': True, 'unseen_levels_to_rare': True}, 'fit': {'non_rare_levels': {}, 'training_data_levels': {}}}
         """
-        self.check_is_fitted(["non_rare_levels", "training_data_levels"])
+        self.check_is_fitted(["non_rare_levels"])
         json_dict = super().to_json()
 
         json_dict["init"]["cut_off_percent"] = self.cut_off_percent
@@ -345,7 +345,10 @@ class GroupRareLevelsTransformer(BaseTransformer, WeightColumnMixin):
         json_dict["init"]["record_rare_levels"] = self.record_rare_levels
         json_dict["init"]["unseen_levels_to_rare"] = self.unseen_levels_to_rare
         json_dict["fit"]["non_rare_levels"] = self.non_rare_levels
-        json_dict["fit"]["training_data_levels"] = self.training_data_levels
+        if not self.unseen_levels_to_rare:
+            self.check_is_fitted(["training_data_levels"])
+            json_dict["fit"]["training_data_levels"] = self.training_data_levels
+
         return json_dict
 
     @beartype
